@@ -37,6 +37,7 @@
 {
   "name": "地图设计器.Tests",
   "references": ["Assembly-CSharp-Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
   "includePlatforms": ["Editor"],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
@@ -48,6 +49,8 @@
   "noEngineReferences": false
 }
 ```
+
+> `optionalUnityReferences: ["TestAssemblies"]` 是测试程序集标记，缺了测试运行器不认。若此 Unity 版本改用新标记（`defineConstraints: ["UNITY_INCLUDE_TESTS"]`），改为用 Unity 菜单 `Assets > Create > Testing > Tests Assembly Folder` 生成后再补 `references`。
 
 `Assets/Tests/EditMode/地图设计器/冒烟测试.cs` 内容：
 
@@ -133,20 +136,21 @@ public class 地图编辑数据测试
         Assert.That(数据.数据, Is.Not.Null);
     }
 
-    // 保存：写入后产生 .bak 备份且可再次加载
+    // 保存：写入后产生 .bak 备份且可再次加载（用临时路径，绝不碰真实 map.json）
     [Test]
     public void 保存覆盖并备份()
     {
-        var 数据 = new 地图编辑数据();
-        var 旧备份 = System.IO.File.Exists(地图编辑数据.文件路径 + ".bak");
-        if (System.IO.File.Exists(地图编辑数据.文件路径 + ".bak")) System.IO.File.Delete(地图编辑数据.文件路径 + ".bak");
+        var 临时 = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "地图设计器测试_" + System.Guid.NewGuid().ToString("N") + ".json");
+        var 数据 = new 地图编辑数据(临时);
+        if (System.IO.File.Exists(临时 + ".bak")) System.IO.File.Delete(临时 + ".bak");
         数据.数据.地点 = new[] { new 地图地点 { 标识 = "测试镇", 类型 = "城镇" } };
         数据.Save();
-        Assert.That(System.IO.File.Exists(地图编辑数据.文件路径 + ".bak"), Is.True, "保存应产生 .bak 备份");
-        var 重新加载 = new 地图编辑数据();
+        Assert.That(System.IO.File.Exists(临时 + ".bak"), Is.True, "保存应产生 .bak 备份");
+        var 重新加载 = new 地图编辑数据(临时);
         Assert.That(重新加载.数据.地点.Length, Is.EqualTo(1));
         Assert.That(重新加载.数据.地点[0].标识, Is.EqualTo("测试镇"));
-        数据.Load();
+        System.IO.File.Delete(临时);
+        System.IO.File.Delete(临时 + ".bak");
     }
 }
 ```
@@ -174,18 +178,16 @@ public sealed class 地图编辑数据
 
     public 地图根 数据 { get; private set; }                // 内存副本（编辑全改它，保存才写文件）
     public bool 有未保存修改 { get; set; }
+    private readonly string 路径;                           // 实际读写路径（测试注入临时路径，避免污染真实 map.json）
 
-    public 地图编辑数据()
-    {
-        Load();
-        实例 = this;
-    }
+    public 地图编辑数据() : this(文件路径) { }
+    public 地图编辑数据(string 自定义路径) { 路径 = 自定义路径; Load(); }
 
-    // 从 map.json 读取；文件不存在则建空根
+    // 从 JSON 读取；文件不存在则建空根
     public void Load()
     {
-        数据 = File.Exists(文件路径)
-            ? JsonUtility.FromJson<地图根>(File.ReadAllText(文件路径))
+        数据 = File.Exists(路径)
+            ? JsonUtility.FromJson<地图根>(File.ReadAllText(路径))
             : new 地图根 { 地点 = new 地图地点[0] };
         有未保存修改 = false;
     }
@@ -193,8 +195,8 @@ public sealed class 地图编辑数据
     // 保存：旧文件复制成 .bak，再覆盖写回，刷新资产
     public void Save()
     {
-        if (File.Exists(文件路径)) File.Copy(文件路径, 文件路径 + ".bak", true);
-        File.WriteAllText(文件路径, JsonUtility.ToJson(数据, true));
+        if (File.Exists(路径)) File.Copy(路径, 路径 + ".bak", true);
+        File.WriteAllText(路径, JsonUtility.ToJson(数据, true));
         AssetDatabase.Refresh();
         有未保存修改 = false;
     }
