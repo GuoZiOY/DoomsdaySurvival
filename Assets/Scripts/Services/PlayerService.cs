@@ -1,0 +1,60 @@
+
+    // 玩家服务：持有玩家档案，处理新游戏/读档，注入装备解析，发布初始状态事件
+    public sealed class PlayerService
+    {
+        private readonly EventBus 事件;
+        private readonly DataService 数据;
+        private readonly SaveService 存档;
+
+        public 玩家档案 档案 { get; private set; }
+
+        public PlayerService(EventBus 事件, DataService 数据, SaveService 存档)
+        {
+            this.事件 = 事件;
+            this.数据 = 数据;
+            this.存档 = 存档;
+        }
+
+        // 创建并装配玩家档案（装备加成解析器接 DataService）
+        public void 初始化()
+        {
+            档案 = new 玩家档案();
+            档案.武器攻击解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.攻击加成 : 0;
+            档案.防具防御解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.防御加成 : 0;
+            发布初始状态();
+        }
+
+        // 新游戏：重置档案 + 初始物品
+        public void 新游戏()
+        {
+            初始化();
+            档案.添加物品("面包", 1);
+            档案.当前节点 = "序章_醒来";
+            事件.发布(new 日志事件(日志类型.系统, "新的旅程开始了。"));
+            发布初始状态();
+        }
+
+        // 读档：成功则用存档档案，否则新游戏
+        public void 读档()
+        {
+            var 存档数据 = 存档.读取();
+            if (存档数据?.玩家 != null)
+            {
+                档案 = 存档数据.玩家;
+                档案.武器攻击解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.攻击加成 : 0;
+                档案.防具防御解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.防御加成 : 0;
+                if (档案.生命 <= 0) 档案.生命 = 档案.最大生命;   // 防死档
+                事件.发布(new 日志事件(日志类型.系统, "读取存档，继续冒险。"));
+            }
+            else { 新游戏(); }
+            发布初始状态();
+        }
+
+        // 发布当前生命/魔力/金币，让 HUD 初始化
+        private void 发布初始状态()
+        {
+            事件.发布(new 生命变化事件(档案.生命, 档案.最大生命, 0));
+            事件.发布(new 魔力变化事件(档案.魔力, 档案.最大魔力, 0));
+            事件.发布(new 金币变化事件(档案.金币, 0));
+        }
+    }

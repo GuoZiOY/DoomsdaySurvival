@@ -1,0 +1,80 @@
+    // 日志类型：决定前缀与颜色
+    public enum 日志类型 { 系统, 剧情, 操作, 反馈, 反馈坏, 内心 }
+
+    // 背包变化原因
+    public enum 变化原因 { 获得, 失去, 消耗, 出售, 购买 }
+
+    // —— 玩家状态 ——
+
+    // 生命变化：携带当前/最大/本次变化量，UI 据此刷新
+    public readonly struct 生命变化事件
+    {
+        public readonly int 当前; public readonly int 最大; public readonly int 变化量;
+        public 生命变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
+    }
+
+    public readonly struct 魔力变化事件
+    {
+        public readonly int 当前; public readonly int 最大; public readonly int 变化量;
+        public 魔力变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
+    }
+
+    public readonly struct 金币变化事件
+    {
+        public readonly int 当前; public readonly int 变化量;
+        public 金币变化事件(int 当前, int 变化量) { this.当前 = 当前; this.变化量 = 变化量; }
+    }
+
+    public readonly struct 经验变化事件
+    {
+        public readonly int 等级; public readonly int 当前经验; public readonly int 升级所需; public readonly bool 升级了;
+        public 经验变化事件(int 等级, int 当前经验, int 升级所需, bool 升级了)
+        { this.等级 = 等级; this.当前经验 = 当前经验; this.升级所需 = 升级所需; this.升级了 = 升级了; }
+    }
+
+    // —— 背包 ——
+
+    public readonly struct 背包变化事件
+    {
+        public readonly string 物品标识; public readonly int 数量; public readonly 变化原因 原因;
+        public 背包变化事件(string 物品标识, int 数量, 变化原因 原因) { this.物品标识 = 物品标识; this.数量 = 数量; this.原因 = 原因; }
+    }
+
+    // —— 任务 ——
+
+    public readonly struct 任务进度事件
+    {
+        public readonly string 任务标识; public readonly int 进度; public readonly int 目标; public readonly bool 已完成;
+        public 任务进度事件(string 任务标识, int 进度, int 目标, bool 已完成)
+        { this.任务标识 = 任务标识; this.进度 = 进度; this.目标 = 目标; this.已完成 = 已完成; }
+    }
+
+    public readonly struct 任务完成事件
+    {
+        public readonly string 任务标识; public readonly string 奖励文本;
+        public 任务完成事件(string 任务标识, string 奖励文本) { this.任务标识 = 任务标识; this.奖励文本 = 奖励文本; }
+    }
+
+    // —— 日志 ——
+
+    // 日志即事件：任何系统发日志事件，日志视图订阅渲染
+    public readonly struct 日志事件
+    {
+        public readonly 日志类型 类型; public readonly string 文本;
+        public 日志事件(日志类型 类型, string 文本) { this.类型 = 类型; this.文本 = 文本; }
+    }
+
+    // —— 战斗 ——
+
+    public readonly struct 战斗结束事件
+    {
+        public readonly bool 胜利; public readonly string 敌人标识;
+        public 战斗结束事件(bool 胜利, string 敌人标识) { this.胜利 = 胜利; this.敌人标识 = 敌人标识; }
+    }
+
+    // 战斗消息：战斗视图正文渲染用
+    public readonly struct 战斗消息事件
+    {
+        public readonly string 文本;
+        public 战斗消息事件(string 文本) { this.文本 = 文本; }
+    }
