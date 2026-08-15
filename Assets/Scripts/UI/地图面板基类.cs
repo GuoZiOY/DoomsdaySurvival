@@ -60,18 +60,18 @@ public abstract class 地图面板基类 : 面板基类, IDragHandler, IScrollHa
         if (节点文字.TryGetValue(标识, out var 新)) 新.color = 游戏主题.选中色;
     }
 
-    // 拖拽平移
+    // 拖拽平移（灵敏度 0.5，避免地图跟着鼠标跑太快）
     public void OnDrag(PointerEventData 事件)
     {
-        平移 += 事件.delta;
+        平移 += 事件.delta * 0.5f;
         地图渲染.应用视图(地图内容, 缩放, 平移);
     }
 
-    // 滚轮缩放：以光标为锚点，保持光标下的世界点不动（上滚放大，delta.y 向上为正）
+    // 滚轮缩放：以光标为锚点，保持光标下的世界点不动（上滚放大，delta.y 向上为正；上限 2 倍）
     public void OnScroll(PointerEventData 事件)
     {
         var 旧缩放 = 缩放;
-        缩放 = Mathf.Clamp(缩放 * (1f + 事件.scrollDelta.y * 0.1f), 0.6f, 3f);
+        缩放 = Mathf.Clamp(缩放 * (1f + 事件.scrollDelta.y * 0.05f), 0.6f, 2f);
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(地图区, 事件.position, null, out var 光标))
             平移 = 光标 - (光标 - 平移) * (缩放 / 旧缩放);
         地图渲染.应用视图(地图内容, 缩放, 平移);
