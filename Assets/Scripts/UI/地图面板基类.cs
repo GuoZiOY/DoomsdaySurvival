@@ -67,11 +67,11 @@ public abstract class 地图面板基类 : 面板基类, IDragHandler, IScrollHa
         地图渲染.应用视图(地图内容, 缩放, 平移);
     }
 
-    // 滚轮缩放：以光标为锚点，保持光标下的世界点不动
+    // 滚轮缩放：以光标为锚点，保持光标下的世界点不动（上滚放大，delta.y 向上为正）
     public void OnScroll(PointerEventData 事件)
     {
         var 旧缩放 = 缩放;
-        缩放 = Mathf.Clamp(缩放 * (1f - 事件.scrollDelta.y * 0.1f), 0.6f, 3f);
+        缩放 = Mathf.Clamp(缩放 * (1f + 事件.scrollDelta.y * 0.1f), 0.6f, 3f);
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(地图区, 事件.position, null, out var 光标))
             平移 = 光标 - (光标 - 平移) * (缩放 / 旧缩放);
         地图渲染.应用视图(地图内容, 缩放, 平移);

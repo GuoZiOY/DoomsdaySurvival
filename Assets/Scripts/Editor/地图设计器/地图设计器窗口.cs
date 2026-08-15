@@ -23,8 +23,6 @@ public sealed class 地图设计器窗口 : EditorWindow
 
     void OnEnable()
     {
-        // 顶部工具栏需要足够横向空间：窗口默认开宽些，且可自由拉拽调宽
-        minSize = new Vector2(760f, 460f);
         地图编辑数据.实例 = new 地图编辑数据();
     }
 
@@ -64,7 +62,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         EditorGUILayout.BeginHorizontal();
         刷新层选项(数据);
         var 当前索引 = System.Array.IndexOf(层选项, 数据.当前层);
-        var 选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 当前索引), 层选项, GUILayout.MinWidth(160));
+        var 选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 当前索引), 层选项);
         if (选 >= 0 && 层选项[选] != 数据.当前层)
         {
             数据.当前层 = 层选项[选];
@@ -72,7 +70,7 @@ public sealed class 地图设计器窗口 : EditorWindow
             数据.连接起点 = "";
             缩放 = 1f; 偏移 = Vector2.zero;
         }
-        数据.连接模式 = EditorGUILayout.ToggleLeft("连接模式", 数据.连接模式, GUILayout.Width(90));
+        数据.连接模式 = EditorGUILayout.ToggleLeft("连接模式", 数据.连接模式, GUILayout.Width(80));
         if (GUILayout.Button("新增节点")) 数据.新增节点();
         if (GUILayout.Button("删除选中")) 数据.删除选中();
         GUILayout.FlexibleSpace();
@@ -276,7 +274,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         else if (事件.type == EventType.ScrollWheel)
         {
             var 旧缩放 = 缩放;
-            缩放 = Mathf.Clamp(缩放 * (1f - 事件.delta.y * 0.02f), 0.3f, 5f);
+            缩放 = Mathf.Clamp(缩放 * (1f + 事件.delta.y * 0.02f), 0.3f, 5f);
             // 以光标为中心缩放
             var 光标 = 事件.mousePosition;
             偏移 = 光标 - 区域.center - (光标 - 区域.center - 偏移) * (缩放 / 旧缩放);
