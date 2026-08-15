@@ -15,11 +15,16 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 任务板面板 任务板;
     [SerializeField] private 大地图面板 大地图;
     [SerializeField] private 小地图面板 小地图;
+    [SerializeField] private 角色面板 角色;
 
     [SerializeField] private GameObject 按钮预制体;     // 动态按钮共享（列表行）
     [SerializeField] private GameObject 地图节点预制体; // 地图节点按钮（节点图专用，可选；不设则用 按钮预制体）
 
     private readonly List<面板基类> 可切换面板 = new List<面板基类>();
+
+    // 面板切换追踪：角色面板等全局面板返回用
+    public 面板基类 当前显示面板 { get; private set; }
+    public 面板基类 上一个面板 { get; private set; }
 
     void Awake()
     {
@@ -30,7 +35,7 @@ public sealed class 面板管理器 : MonoBehaviour
         // 先确保核心服务已装配（幂等），否则路由拿不到 EventBus
         GameBootstrap.装配();
 
-        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 商店, 训练场, 任务板, 大地图, 小地图 });
+        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 商店, 训练场, 任务板, 大地图, 小地图, 角色 });
     }
 
     void Start()
@@ -44,11 +49,30 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<显示剧情事件>(e => 显示(主视窗, e));
         事件.订阅<打开战斗事件>(e => 显示(主视窗, e));
         事件.订阅<探索显示事件>(e => 显示(主视窗, e));
+        事件.订阅<打开角色面板事件>(_ => 显示(角色));
 
         // 初始只显示主菜单
         foreach (var 面板 in 可切换面板)
             if (面板 != null && 面板 != 主菜单) 面板.隐藏面板();
         主菜单?.显示面板();
+        当前显示面板 = 主菜单;
+    }
+
+    // 显示目标面板，隐藏其它可切换面板；上下文 传给面板的 刷新(上下文)
+    public void 显示(面板基类 目标, object 上下文 = null)
+    {
+        if (目标 == null) return;
+        if (目标 != 当前显示面板) 上一个面板 = 当前显示面板;
+        foreach (var 面板 in 可切换面板)
+            if (面板 != null && 面板 != 目标) 面板.隐藏面板();
+        目标?.显示面板(上下文);
+        当前显示面板 = 目标;
+    }
+
+    // 全局面板（角色面板等）返回：回到上个面板
+    public void 返回上一面板()
+    {
+        if (上一个面板 != null) 显示(上一个面板);
     }
 
     // 设施事件 → 设施工厂创建逻辑 → 找 设施标识 匹配的面板 → 显示（数据驱动，加新设施不用改这里）
@@ -63,13 +87,5 @@ public sealed class 面板管理器 : MonoBehaviour
             return;
         }
         Debug.LogWarning($"[面板管理器] 未找到 设施标识={e.设施标识} 的面板");
-    }
-
-    // 显示目标面板，隐藏其它可切换面板；上下文 传给面板的 刷新(上下文)
-    public void 显示(面板基类 目标, object 上下文 = null)
-    {
-        foreach (var 面板 in 可切换面板)
-            if (面板 != null && 面板 != 目标) 面板.隐藏面板();
-        目标?.显示面板(上下文);
     }
 }

@@ -4,6 +4,7 @@ public abstract class 设施逻辑
 {
     public string 标识 { get; private set; }
     public string 名称 { get; private set; }
+    public 玩家档案 当前玩家 => 玩家;   // 面板读属性用
     protected 玩家档案 玩家;
     protected DataService 数据;
     protected EventBus 事件;

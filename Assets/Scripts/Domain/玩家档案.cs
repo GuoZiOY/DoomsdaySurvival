@@ -21,6 +21,9 @@ using System.Collections.Generic;
         public bool 已完成;
     }
 
+    // 4 大基础属性类型（加点用）
+    public enum 属性类型 { 体力, 力量, 智力, 敏捷 }
+
     // 玩家档案：纯 C# 领域模型（零 UnityEngine 依赖），可整体序列化存档。
     // 字段名与旧 玩家状态 一致，保证旧档字段兼容。
     [Serializable]
@@ -33,20 +36,40 @@ using System.Collections.Generic;
         // —— 属性 ——
         public int 等级 = 1;
         public int 经验 = 0;
-        public int 最大生命 = 20;
         public int 生命 = 20;
-        public int 攻击 = 5;
-        public int 防御 = 2;
-        public int 金币 = 3;
-        public int 最大魔力 = 20;
         public int 魔力 = 20;
+        public int 金币 = 3;
         public float 游戏分钟数 = 420f;           // 6:00 开始；1 现实秒 = 2 游戏分钟
         public string 武器标识 = "生锈短剑";         // 初始装备
         public string 防具标识 = "";                // 初始无防具
         public string 当前节点 = "";               // 剧情进度（用于存档恢复）
         public List<物品堆叠> 背包 = new List<物品堆叠>();
-        public List<string> 已学技能 = new List<string>();
+        public List<技能掌握> 已学技能 = new List<技能掌握>();
         public List<任务进度> 任务 = new List<任务进度>();
+
+        // —— 4 大基础属性 + 自由属性点 ——
+        public int 体力 = 5;
+        public int 力量 = 5;
+        public int 智力 = 5;
+        public int 敏捷 = 5;
+        public int 自由属性点 = 0;                 // 升级获得，自行分配到 4 大属性
+
+        // 技能熟练度等级上限
+        public const int 熟练等级上限 = 5;
+
+        // —— 派生数值（总属性 = 基础 + 属性 + 装备）——
+        public int 物理伤害 => 力量 * 2 + (武器攻击解析?.Invoke(武器标识) ?? 0);
+        public int 魔法伤害 => 智力 * 2;
+        public int 总攻击 => 物理伤害;             // 兼容现有战斗（普攻走物理）
+        public int 总防御 => 防御 + (防具防御解析?.Invoke(防具标识) ?? 0);
+        public int 最大生命 => 20 + 体力 * 5 + 等级 * 5;
+        public int 最大魔力 => 20 + 智力 * 3 + 等级 * 3;
+        public float 暴击概率 => 敏捷 * 0.01f;
+        public float 闪避概率 => 敏捷 * 0.01f;
+
+        // 防御基础值（旧字段保留，等级不再直接加，靠 防具/属性）
+        public int 防御 = 2;
+        public int 攻击 = 5;
 
         // 升级所需经验（每级递增）
         public int 升级所需经验 => 等级 * 25;
@@ -104,21 +127,102 @@ using System.Collections.Generic;
             return true;
         }
 
-        // ---------- 装备 ----------
+        // ---------- 加点 ----------
 
-        public int 总攻击 => 攻击 + (武器攻击解析?.Invoke(武器标识) ?? 0);
+        // 消耗自由属性点加到 4 大属性；返回是否成功
+        public bool 加点(属性类型 类型, int 点数 = 1)
+        {
+            if (点数 <= 0 || 自由属性点 < 点数) return false;
+            自由属性点 -= 点数;
+            switch (类型)
+            {
+                case 属性类型.体力: 体力 += 点数; break;
+                case 属性类型.力量: 力量 += 点数; break;
+                case 属性类型.智力: 智力 += 点数; break;
+                case 属性类型.敏捷: 敏捷 += 点数; break;
+            }
+            return true;
+        }
 
-        public int 总防御 => 防御 + (防具防御解析?.Invoke(防具标识) ?? 0);
+        // 训练场直接增强属性（不消耗自由属性点）
+        public void 训练属性(属性类型 类型, int 点数 = 1)
+        {
+            switch (类型)
+            {
+                case 属性类型.体力: 体力 += 点数; break;
+                case 属性类型.力量: 力量 += 点数; break;
+                case 属性类型.智力: 智力 += 点数; break;
+                case 属性类型.敏捷: 敏捷 += 点数; break;
+            }
+        }
+
+        // 按属性名取当前值（面板显示用）
+        public int 属性值(string 名)
+        {
+            switch (名)
+            {
+                case "体力": return 体力;
+                case "力量": return 力量;
+                case "智力": return 智力;
+                case "敏捷": return 敏捷;
+                default: return 0;
+            }
+        }
 
         // ---------- 技能 ----------
 
-        public bool 掌握技能(string 标识) => 已学技能.Contains(标识);
+        public bool 掌握技能(string 标识) => 已学技能.Exists(s => s.标识 == 标识);
 
-        public bool 学习技能(string 标识)
+        // 技能熟练等级（未学=0）
+        public int 技能熟练等级(string 标识)
         {
-            if (掌握技能(标识)) return false;
-            已学技能.Add(标识);
+            foreach (var s in 已学技能) if (s.标识 == 标识) return s.熟练等级;
+            return 0;
+        }
+
+        // 当前级内熟练度进度（未学=0）
+        public int 技能熟练度(string 标识)
+        {
+            foreach (var s in 已学技能) if (s.标识 == 标识) return s.熟练度;
+            return 0;
+        }
+
+        // 校验技能属性前提，返回失败原因（空=通过）
+        public string 技能前提失败原因(技能数据 技能)
+        {
+            if (技能 == null) return "技能不存在。";
+            if (体力 < 技能.需要体力) return $"体力不足（需要 {技能.需要体力}）。";
+            if (力量 < 技能.需要力量) return $"力量不足（需要 {技能.需要力量}）。";
+            if (智力 < 技能.需要智力) return $"智力不足（需要 {技能.需要智力}）。";
+            if (敏捷 < 技能.需要敏捷) return $"敏捷不足（需要 {技能.需要敏捷}）。";
+            return "";
+        }
+
+        // 学习技能：属性前提不达标或已学会则失败（统一的唯一入口）
+        public bool 学习技能(技能数据 技能)
+        {
+            if (技能 == null || 掌握技能(技能.标识)) return false;
+            if (!string.IsNullOrEmpty(技能前提失败原因(技能))) return false;
+            已学技能.Add(new 技能掌握(技能.标识));
             return true;
+        }
+
+        // 记录技能熟练度：使用/训练累积，满阈值升级熟练等级；返回新等级（0=未学）
+        public int 记录熟练度(string 标识, int 点数, int 每级阈值)
+        {
+            foreach (var s in 已学技能)
+                if (s.标识 == 标识)
+                {
+                    if (s.熟练等级 >= 熟练等级上限) return s.熟练等级;
+                    s.熟练度 += Math.Max(1, 点数);
+                    while (s.熟练度 >= 每级阈值 && s.熟练等级 < 熟练等级上限)
+                    {
+                        s.熟练度 -= 每级阈值;
+                        s.熟练等级++;
+                    }
+                    return s.熟练等级;
+                }
+            return 0;
         }
 
         // ---------- 任务 ----------
@@ -164,7 +268,7 @@ using System.Collections.Generic;
 
         // ---------- 经验 ----------
 
-        // 获得经验并处理升级链（满血、属性提升）；返回是否升级
+        // 获得经验并处理升级链（给自由属性点 + 满状态）；返回是否升级
         public bool 获得经验(int 数值)
         {
             经验 += 数值;
@@ -173,10 +277,9 @@ using System.Collections.Generic;
             {
                 经验 -= 升级所需经验;
                 等级++;
-                最大生命 += 6;
-                攻击 += 1;
-                防御 += 1;
+                自由属性点 += 3;          // 升级给 3 点自由属性点
                 生命 = 最大生命;
+                魔力 = 最大魔力;
                 升级了 = true;
             }
             return 升级了;

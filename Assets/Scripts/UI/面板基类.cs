@@ -48,6 +48,19 @@ public abstract class 面板基类 : MonoBehaviour
         for (int i = 列表.childCount - 1; i >= 0; i--) Destroy(列表.GetChild(i).gameObject);
     }
 
+    // 创建一行标签（非按钮，纯文字；分区标题等），用 TMP 默认字体
+    protected void 创建标签(RectTransform 父, string 文字)
+    {
+        if (父 == null) return;
+        var 物体 = new GameObject("标签", typeof(RectTransform), typeof(TextMeshProUGUI));
+        物体.transform.SetParent(父, false);
+        var 文本 = 物体.GetComponent<TextMeshProUGUI>();
+        文本.text = 文字;
+        文本.color = 游戏主题.暗淡;
+        文本.fontSize = 20;
+        文本.enableWordWrapping = false;
+    }
+
     // 设文本（空引用安全）
     protected void 设文本(TMP_Text 文本, string 内容)
     {

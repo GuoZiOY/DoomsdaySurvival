@@ -28,6 +28,9 @@ public readonly struct 打开结局事件 { }
 // 打开主菜单面板
 public readonly struct 打开主菜单事件 { }
 
+// 打开角色面板（全局，HUD 按钮触发；返回回到上个面板）
+public readonly struct 打开角色面板事件 { }
+
 // —— 地图导航事件 ——
 
 // 地图模式

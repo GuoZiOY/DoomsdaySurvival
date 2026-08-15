@@ -39,6 +39,14 @@
         { this.等级 = 等级; this.当前经验 = 当前经验; this.升级所需 = 升级所需; this.升级了 = 升级了; }
     }
 
+    // 属性变化：角色面板刷新 4 大基础属性与自由点
+    public readonly struct 属性变化事件
+    {
+        public readonly int 体力; public readonly int 力量; public readonly int 智力; public readonly int 敏捷; public readonly int 自由属性点;
+        public 属性变化事件(int 体力, int 力量, int 智力, int 敏捷, int 自由属性点)
+        { this.体力 = 体力; this.力量 = 力量; this.智力 = 智力; this.敏捷 = 敏捷; this.自由属性点 = 自由属性点; }
+    }
+
     // —— 背包 ——
 
     public readonly struct 背包变化事件

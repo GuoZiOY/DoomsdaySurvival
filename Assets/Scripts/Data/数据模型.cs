@@ -69,11 +69,13 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 类型;       // "恢复" 消耗品 / "任务" 任务物品 / "武器" / "防具"
-        public int 恢复量;        // 类型=恢复 时的恢复值
-        public int 攻击加成;      // 类型=武器
-        public int 防御加成;      // 类型=防具
+        public string 类型;       // "恢复" 消耗品 / "任务" 任务物品 / "武器" / "防具" / "技能书"
+        public int 恢复量;        // 类型=恢复 时的恢复值（受品质倍率影响）
+        public int 攻击加成;      // 类型=武器（受品质倍率影响）
+        public int 防御加成;      // 类型=防具（受品质倍率影响）
+        public string 技能;       // 类型=技能书 时授予的技能标识
         public int 价格;          // 商店买卖价格（0=不可买卖）
+        public 品质 品质;         // 品质（默认普通，效果按倍率放大）
     }
 
     [Serializable]
@@ -88,13 +90,46 @@ using System;
         public string 名称;
         public string 描述;
         public int 消耗魔力;
-        public string 类型;       // "重击" 倍率伤害 / "防御" 减伤 / "回血" 恢复
-        public int 数值;          // 重击=倍率；防御=加成；回血=恢复量
+        public string 类型;       // "重击" 物理倍率伤害 / "魔法" 魔法倍率伤害 / "防御" 减伤 / "回血" 恢复
+        public int 数值;          // 伤害类=倍率；回血=恢复量
         public int 价格;          // 训练场学习费用
+        public 品质 品质;         // 品质（基础伤害按倍率放大）
+        public int 需要体力, 需要力量, 需要智力, 需要敏捷;   // 学习/释放前提（0=无要求）
+        public int 熟练伤害加成 = 10;   // 每级 +% 伤害
+        public int 熟练消耗减少 = 5;    // 每级 -% 消耗
+        public int 熟练度每级 = 100;    // 每级熟练度阈值（累积满升级熟练等级）
+    }
+
+    // 技能掌握：玩家已学技能 + 熟练度（使用/训练累积，满阈值升级熟练等级）
+    [Serializable]
+    public class 技能掌握
+    {
+        public string 标识;
+        public int 熟练等级 = 1;
+        public int 熟练度 = 0;   // 当前级内熟练度进度
+        public 技能掌握() { }
+        public 技能掌握(string 标识) { this.标识 = 标识; }
     }
 
     [Serializable]
     public class 技能根 { public 技能数据[] 技能; }
+
+    // ================= 训练项目 =================
+
+    // 训练项目：训练场属性训练（增强 4 大基础属性）
+    [Serializable]
+    public class 训练项目
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public string 属性;       // "体力"/"力量"/"智力"/"敏捷"
+        public int 加成;          // 每次 +N
+        public int 花费;
+    }
+
+    [Serializable]
+    public class 训练项目根 { public 训练项目[] 训练项目; }
 
     // ================= 任务 =================
 

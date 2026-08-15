@@ -73,12 +73,12 @@ public sealed class 主视窗面板 : 面板基类
         清空(选项区);
         var 玩家 = ServiceRegistry.Get<PlayerService>().档案;
         var 数据 = ServiceRegistry.Get<DataService>();
-        foreach (var 技能标识 in 玩家.已学技能)
+        foreach (var 掌握 in 玩家.已学技能)
         {
-            if (!数据.技能.TryGetValue(技能标识, out var 技能)) continue;
+            if (!数据.技能.TryGetValue(掌握.标识, out var 技能)) continue;
             if (玩家.魔力 < 技能.消耗魔力) continue;
-            var 标识 = 技能标识;
-            创建行(选项区, $"{技能.名称}（{技能.消耗魔力}MP）", () => ServiceRegistry.Get<BattleService>().玩家技能(标识));
+            var 标识 = 掌握.标识;
+            创建行(选项区, $"{品质工具.标签(技能.品质)}{技能.名称}（{技能.消耗魔力}MP 熟练{玩家.技能熟练等级(标识)}）", () => ServiceRegistry.Get<BattleService>().玩家技能(标识));
         }
         创建行(选项区, "返回", 显示主行动);
     }
