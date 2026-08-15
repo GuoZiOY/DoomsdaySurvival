@@ -878,9 +878,190 @@ git commit -m "docs: 地图设计器使用说明"
 
 ---
 
+### Task 7: 运行时地图平移缩放（拖拽移动 / 滚轮缩放）
+
+> 独立于编辑器工具，属于**运行时**地图面板功能：节点增多后地图显示不全，玩家可拖拽平移、滚轮缩放查看。
+
+**Files:**
+- Modify: `Assets/Scripts/UI/地图渲染.cs`（加 `创建内容` / `应用视图`）
+- Modify: `Assets/Scripts/UI/大地图面板.cs`（渲染进 `地图内容` 容器 + IDragHandler/IScrollHandler）
+- Modify: `Assets/Scripts/UI/小地图面板.cs`（同上）
+- Test: 手动验证（运行时交互）
+
+**Interfaces:**
+- Consumes: 现有 `地图渲染.归一化`、`面板基类`
+- Produces:
+  - `地图渲染.创建内容(RectTransform 地图区)` → 地图内容 RectTransform（全幅拉伸子容器）
+  - `地图渲染.应用视图(RectTransform 内容, float 缩放, Vector2 平移)`（只变换容器）
+
+- [ ] **Step 1: 给 `地图渲染` 加容器与视图应用**
+
+追加到 `Assets/Scripts/UI/地图渲染.cs`：
+
+```csharp
+    // 创建/取回「地图内容」容器：节点与连线都放进它，平移缩放只变换它（不重渲染）
+    public static RectTransform 创建内容(RectTransform 地图区)
+    {
+        var 子 = 地图区.Find("地图内容");
+        if (子 != null) return 子 as RectTransform;
+        var 物体 = new GameObject("地图内容", typeof(RectTransform));
+        物体.transform.SetParent(地图区, false);
+        var 矩形 = (RectTransform)物体.transform;
+        矩形.anchorMin = Vector2.zero;
+        矩形.anchorMax = Vector2.one;
+        矩形.offsetMin = Vector2.zero;
+        矩形.offsetMax = Vector2.zero;
+        return 矩形;
+    }
+
+    // 应用平移缩放视图：只动容器变换，节点无需重画
+    public static void 应用视图(RectTransform 内容, float 缩放, Vector2 平移)
+    {
+        if (内容 == null) return;
+        内容.localScale = Vector3.one * 缩放;
+        内容.anchoredPosition = 平移;
+    }
+```
+
+- [ ] **Step 2: 改 `大地图面板`：渲染进容器 + 拖拽平移/滚轮缩放**
+
+`Assets/Scripts/UI/大地图面板.cs`：
+
+```csharp
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+// 大地图面板：大世界节点图的交互表现。单击节点=选中（钢蓝高亮），双击=移动/进入；拖拽平移、滚轮缩放。
+public sealed class 大地图面板 : 面板基类, IDragHandler, IScrollHandler
+{
+    [SerializeField] private RectTransform 地图区;
+    private RectTransform 地图内容;      // 节点/连线容器（平移缩放只动它）
+    private float 缩放 = 1f;
+    private Vector2 平移 = Vector2.zero;
+    private string 选中节点;
+    private readonly Dictionary<string, TMP_Text> 节点文字 = new Dictionary<string, TMP_Text>();
+    private readonly 双击检测 双击 = new 双击检测();
+
+    // 让面板自身能接收拖拽/滚轮（空白区=面板 Image 兜底）
+    void Awake()
+    {
+        var 图像 = GetComponent<Image>();
+        if (图像 != null) 图像.raycastTarget = true;
+    }
+
+    protected override void 刷新(object 上下文)
+    {
+        选中节点 = "";
+        渲染大地图();
+    }
+
+    private void 渲染大地图()
+    {
+        if (地图区 == null) { Debug.LogWarning("[大地图面板] 未在 Inspector 拖入 地图区 容器"); return; }
+        地图内容 = 地图渲染.创建内容(地图区);
+        清空(地图内容);
+        var 服务 = ServiceRegistry.Get<地图服务>();
+        var 数据 = ServiceRegistry.Get<DataService>();
+        节点文字.Clear();
+
+        foreach (var 地点 in 数据.地图.Values)
+        {
+            if (地点.连接 == null) continue;
+            foreach (var 相邻 in 地点.连接)
+            {
+                if (!数据.地图.TryGetValue(相邻, out var 邻点)) continue;
+                if (string.CompareOrdinal(地点.标识, 相邻) > 0) continue;
+                地图渲染.画线(地图内容, 地图渲染.归一化(地图区, 地点.x, 地点.y), 地图渲染.归一化(地图区, 邻点.x, 邻点.y), new Color(0.35f, 0.32f, 0.28f));
+            }
+        }
+
+        foreach (var 地点 in 数据.地图.Values)
+        {
+            var 标识 = 地点.标识;
+            var 文本 = 地图渲染.创建节点(地图内容, 地点.名称, 地图渲染.归一化(地图区, 地点.x, 地点.y), 地点.标识 == 服务.当前大节点, 标识 == 选中节点, () => 处理节点点击(标识));
+            if (文本 != null) 节点文字[标识] = 文本;
+        }
+        地图渲染.应用视图(地图内容, 缩放, 平移);
+    }
+
+    // 拖拽平移
+    public void OnDrag(PointerEventData 事件)
+    {
+        平移 += 事件.delta;
+        地图渲染.应用视图(地图内容, 缩放, 平移);
+    }
+
+    // 滚轮缩放：以光标为锚点，保持光标下的世界点不动
+    public void OnScroll(PointerEventData 事件)
+    {
+        var 旧缩放 = 缩放;
+        缩放 = Mathf.Clamp(缩放 * (1f - 事件.scrollDelta.y * 0.1f), 0.6f, 3f);
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(地图区, 事件.position, null, out var 光标))
+            平移 = 光标 - (光标 - 平移) * (缩放 / 旧缩放);
+        地图渲染.应用视图(地图内容, 缩放, 平移);
+    }
+
+    private void 处理节点点击(string 标识)
+    {
+        var 服务 = ServiceRegistry.Get<地图服务>();
+        if (双击.点击(标识)) { 服务.移动(标识); return; }
+        if (节点文字.TryGetValue(选中节点, out var 旧))
+            旧.color = 选中节点 == 服务.当前大节点 ? 游戏主题.金色 : 游戏主题.文字;
+        选中节点 = 标识;
+        if (节点文字.TryGetValue(标识, out var 新)) 新.color = 游戏主题.选中色;
+    }
+}
+```
+
+- [ ] **Step 3: 改 `小地图面板`：同样的容器 + 平移缩放**
+
+`Assets/Scripts/UI/小地图面板.cs`：在类声明加 `, IDragHandler, IScrollHandler`；加 `using UnityEngine.EventSystems;`；Awake 里加 `GetComponent<Image>().raycastTarget = true`（非空判断）；加字段 `地图内容/缩放/平移`；`渲染小地图` 里把 `清空(地图区)` 与所有 `画线(...地图区...)` / `创建节点(...地图区...)` 改成 `地图内容`（先 `地图内容 = 地图渲染.创建内容(地图区);`）；渲染末尾 `地图渲染.应用视图(地图内容, 缩放, 平移);`；追加两个方法：
+
+```csharp
+    // 拖拽平移
+    public void OnDrag(PointerEventData 事件)
+    {
+        平移 += 事件.delta;
+        地图渲染.应用视图(地图内容, 缩放, 平移);
+    }
+
+    // 滚轮缩放：以光标为锚点
+    public void OnScroll(PointerEventData 事件)
+    {
+        var 旧缩放 = 缩放;
+        缩放 = Mathf.Clamp(缩放 * (1f - 事件.scrollDelta.y * 0.1f), 0.6f, 3f);
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(地图区, 事件.position, null, out var 光标))
+            平移 = 光标 - (光标 - 平移) * (缩放 / 旧缩放);
+        地图渲染.应用视图(地图内容, 缩放, 平移);
+    }
+```
+
+- [ ] **Step 4: 编译确认无错误**
+
+Run: Unity 编译
+Expected: 无编译错误
+
+- [ ] **Step 5: 手动验证（运行时）**
+
+Run: 进 Play → 大地图：鼠标拖空白处地图跟随移动；滚轮缩放（光标处为中心）；再点节点仍可选中/双击进入。进灰烬镇小地图重复验证。
+Expected: 平移/缩放正常，双击/选中不受影响，无报错
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Assets/Scripts/UI/地图渲染.cs Assets/Scripts/UI/大地图面板.cs Assets/Scripts/UI/小地图面板.cs
+git commit -m "feat(地图): 运行时地图拖拽平移 + 滚轮缩放"
+```
+
+---
+
 ## Self-Review 记录
 
 - **Spec 覆盖**：§4 窗口布局 → Task 4；§5 场景画布/拖拽/连线/右键 → Task 5；§6 数据流/备份 → Task 2/3；§7 坐标换算 → Task 2；§8 不污染场景 → Task 5（纯 Handles）；§9 错误处理 → Task 2（空根）/Task 4（画布判空）/Task 5（rect 判空）；§10 范围外 ✓
 - **类型一致性**：`地图编辑数据.实例/当前层/选中标识/连接模式/连接起点/建立连接/断开连接/删除选中/新增节点/当前城镇/当前地点列表/坐标到像素/像素到坐标` 在 Task 2/3 定义，Task 4/5 全程同名引用；`地图设计器窗口.是否打开/当前画布` 在 Task 4 定义，Task 5 引用 ✓
 - **占位扫描**：无 TBD/TODO；所有代码步含完整代码 ✓
 - **已知取舍**：`地图编辑数据.删除选中` 原笔误 `!RemoveAll(...) > 0`（语法非法）已在计划内修正为 `RemoveAll(...) == 0` ✓
+- **Task 7 追加**（2026-08-16 用户新增）：运行时地图拖拽平移 + 滚轮缩放；依赖 `地图渲染.创建内容/应用视图`、两面板加 IDragHandler/IScrollHandler；平移缩放只变换 `地图内容` 容器不重渲染；双击/选中交互不受影响 ✓
