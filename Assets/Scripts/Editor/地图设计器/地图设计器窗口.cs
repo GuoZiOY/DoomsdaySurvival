@@ -142,16 +142,17 @@ public sealed class 地图设计器窗口 : EditorWindow
     }
 
     // —— 画布坐标换算（0-100 ↔ 窗口像素）——
+    // 注意 y 轴取反：游戏 UI 的 y 向上（归一化 里 y=88 在上方），而 OnGUI 的 y 向下，翻转后两者才一致。
     private float 基准比例(Rect 区域) => Mathf.Min(区域.width, 区域.height) / 100f * 0.8f;
     private Vector2 坐标到屏幕(Rect 区域, Vector2 坐标)
     {
         var 比例 = 缩放 * 基准比例(区域);
-        return 区域.center + new Vector2((坐标.x - 50f) * 比例, (坐标.y - 50f) * 比例) + 偏移;
+        return 区域.center + new Vector2((坐标.x - 50f) * 比例, -(坐标.y - 50f) * 比例) + 偏移;
     }
     private Vector2 屏幕到坐标(Rect 区域, Vector2 屏幕)
     {
         var 比例 = 缩放 * 基准比例(区域);
-        return new Vector2(50f + (屏幕.x - 区域.center.x - 偏移.x) / 比例, 50f + (屏幕.y - 区域.center.y - 偏移.y) / 比例);
+        return new Vector2(50f + (屏幕.x - 区域.center.x - 偏移.x) / 比例, 50f - (屏幕.y - 区域.center.y - 偏移.y) / 比例);
     }
 
     // 网格背景（每 10 单位一条线）

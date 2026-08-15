@@ -2,6 +2,8 @@ using UnityEngine;
 
     // 组合根：装配全部服务（幂等）。数据校验失败时记日志并置 装配失败，停止装配后续服务。
     // M1 起挂在场景「框架引导」物体上；M4 起接管游戏主流程。
+    // DefaultExecutionOrder=-100：保证 Awake 装配先于所有面板（默认 0），否则面板 Awake 取 EventBus 会因未装配抛异常。
+    [DefaultExecutionOrder(-100)]
     public sealed class GameBootstrap : MonoBehaviour
     {
         private static bool 已装配;
