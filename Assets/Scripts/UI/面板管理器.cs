@@ -51,16 +51,18 @@ public sealed class 面板管理器 : MonoBehaviour
         主菜单?.显示面板();
     }
 
-    // 设施事件 → 对应设施面板（返回节点随事件传入）
+    // 设施事件 → 设施工厂创建逻辑 → 找 设施标识 匹配的面板 → 显示（数据驱动，加新设施不用改这里）
     private void 路由设施(打开设施事件 e)
     {
-        switch (e.设施标识)
+        var 逻辑 = 设施工厂.创建(e.设施标识);
+        if (逻辑 == null) { Debug.LogWarning($"[面板管理器] 无法创建设施: {e.设施标识}"); return; }
+        foreach (var 面板 in 可切换面板)
         {
-            case "商店": 显示(商店, e); break;
-            case "训练场": 显示(训练场, e); break;
-            case "任务板": 显示(任务板, e); break;
-            default: Debug.LogWarning($"[面板管理器] 未路由的设施: {e.设施标识}"); break;
+            if (面板 == null || 面板.设施标识值 != e.设施标识) continue;
+            显示(面板, new 设施打开上下文(逻辑, e.返回节点));
+            return;
         }
+        Debug.LogWarning($"[面板管理器] 未找到 设施标识={e.设施标识} 的面板");
     }
 
     // 显示目标面板，隐藏其它可切换面板；上下文 传给面板的 刷新(上下文)

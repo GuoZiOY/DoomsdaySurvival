@@ -2,48 +2,41 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 商店面板：酒馆商店的交互表现（购买补给与装备）。
-// 打开由 面板管理器 路由（刷新 里从 打开设施事件 取返回节点）；本面板只处理自己的交互。
+// 商店面板：商店设施的交互表现（薄视图——数据从 商店设施 逻辑拿，点行调逻辑方法）。
 public sealed class 商店面板 : 面板基类
 {
     [SerializeField] private TMP_Text 标题;
     [SerializeField] private RectTransform 商品列表;
     [SerializeField] private Button 返回按钮;
     private string 返回节点;
+    private 商店设施 商店;
 
     void Awake()
     {
         var 事件 = ServiceRegistry.Get<EventBus>();
-        事件.订阅<金币变化事件>(_ => 刷新(null));   // 购买后刷新可购状态
+        事件.订阅<金币变化事件>(_ => 刷新(null));   // 购买/卖出后刷新可购可卖状态
         返回按钮?.onClick.AddListener(() => 返回设施(返回节点));
     }
 
     protected override void 刷新(object 上下文)
     {
-        if (上下文 is 打开设施事件 e) 返回节点 = e.返回节点;
-        设文本(标题, "—— 酒馆 · 补给 ——");
+        if (上下文 is 设施打开上下文 c) { 商店 = c.逻辑 as 商店设施; 返回节点 = c.返回节点; }
+        if (商店 == null) return;
+        设文本(标题, $"—— {商店.名称} ——");
         清空(商品列表);
-        var 玩家 = ServiceRegistry.Get<PlayerService>().档案;
-        var 数据 = ServiceRegistry.Get<DataService>();
-        foreach (var 物品 in 数据.物品.Values)
+        // 购买区
+        foreach (var 物品 in 商店.可购买商品())
         {
-            if (物品.价格 <= 0 || 物品.类型 == "任务") continue;
             var 标识 = 物品.标识;
-            创建行(商品列表, $"{物品.名称}（{物品.描述}）  {物品.价格}金", () => 购买(玩家, 数据, 标识));
+            创建行(商品列表, $"【买】{物品.名称}（{物品.描述}）  {物品.价格}金", () => 商店.尝试购买(标识));
         }
-    }
-
-    // 购买：扣金币，武器/防具直接装备，其余入包，发事件
-    private void 购买(玩家档案 玩家, DataService 数据, string 物品标识)
-    {
-        var 事件 = ServiceRegistry.Get<EventBus>();
-        if (!数据.物品.TryGetValue(物品标识, out var 物品)) return;
-        if (玩家.金币 < 物品.价格) { 事件.发布(new 日志事件(日志类型.反馈坏, $"金币不足（需要 {物品.价格}）。")); return; }
-        玩家.金币 -= 物品.价格;
-        if (物品.类型 == "武器") 玩家.武器标识 = 物品.标识;
-        else if (物品.类型 == "防具") 玩家.防具标识 = 物品.标识;
-        else 玩家.添加物品(物品.标识);
-        事件.发布(new 金币变化事件(玩家.金币, -物品.价格));
-        事件.发布(new 日志事件(日志类型.反馈, $"购买 {物品.名称}（-{物品.价格} 金币）"));
+        // 卖出区（背包里价格>0 的）
+        foreach (var 堆叠 in 商店.可卖出物品())
+        {
+            if (!ServiceRegistry.Get<DataService>().物品.TryGetValue(堆叠.标识, out var 物品)) continue;
+            int 价 = Mathf.Max(1, 物品.价格 / 2);
+            var 标识 = 堆叠.标识;
+            创建行(商品列表, $"【卖】{物品.名称} ×{堆叠.数量}  {价}金/个", () => 商店.尝试卖出(标识));
+        }
     }
 }

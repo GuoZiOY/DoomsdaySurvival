@@ -2,13 +2,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 训练场面板：技能学习的交互表现（列出全部技能，点击学习）。
+// 训练场面板：训练场设施的交互表现（薄视图——数据从 训练场设施 逻辑拿，点行调逻辑方法）。
 public sealed class 训练场面板 : 面板基类
 {
     [SerializeField] private TMP_Text 标题;
     [SerializeField] private RectTransform 技能列表;
     [SerializeField] private Button 返回按钮;
     private string 返回节点;
+    private 训练场设施 训练场;
 
     void Awake()
     {
@@ -19,27 +20,14 @@ public sealed class 训练场面板 : 面板基类
 
     protected override void 刷新(object 上下文)
     {
-        if (上下文 is 打开设施事件 e) 返回节点 = e.返回节点;
-        设文本(标题, "—— 训练场 ——");
+        if (上下文 is 设施打开上下文 c) { 训练场 = c.逻辑 as 训练场设施; 返回节点 = c.返回节点; }
+        if (训练场 == null) return;
+        设文本(标题, $"—— {训练场.名称} ——");
         清空(技能列表);
-        var 玩家 = ServiceRegistry.Get<PlayerService>().档案;
-        var 数据 = ServiceRegistry.Get<DataService>();
-        foreach (var 技能 in 数据.技能.Values)
+        foreach (var 技能 in 训练场.可学习技能())
         {
             var 标识 = 技能.标识;
-            创建行(技能列表, $"{技能.名称}（{技能.描述}）  {技能.价格}金", () => 学习(玩家, 数据, 标识));
+            创建行(技能列表, $"{技能.名称}（{技能.描述}）  {技能.价格}金", () => 训练场.尝试学习(标识));
         }
-    }
-
-    private void 学习(玩家档案 玩家, DataService 数据, string 技能标识)
-    {
-        var 事件 = ServiceRegistry.Get<EventBus>();
-        if (!数据.技能.TryGetValue(技能标识, out var 技能)) return;
-        if (玩家.掌握技能(技能标识)) { 事件.发布(new 日志事件(日志类型.系统, "你已经掌握这个技能了。")); return; }
-        if (玩家.金币 < 技能.价格) { 事件.发布(new 日志事件(日志类型.反馈坏, $"金币不足（需要 {技能.价格}）。")); return; }
-        玩家.金币 -= 技能.价格;
-        玩家.学习技能(技能标识);
-        事件.发布(new 金币变化事件(玩家.金币, -技能.价格));
-        事件.发布(new 日志事件(日志类型.反馈, $"你学会了技能：{技能.名称}（-{技能.价格} 金币）"));
     }
 }

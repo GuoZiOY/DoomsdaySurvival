@@ -13,6 +13,10 @@ public abstract class 面板基类 : MonoBehaviour
     // 常驻面板（HUD/日志）：不被 面板管理器 隐藏切换
     public bool 常驻;
 
+    // 设施面板认领标识（如 "商店"）；非设施面板留空。路由器靠它做数据路由。
+    [SerializeField] private string 设施标识;
+    public string 设施标识值 => 设施标识;
+
     // 面板管理器调用：激活自己 + 刷新内容
     public void 显示面板(object 上下文 = null)
     {
