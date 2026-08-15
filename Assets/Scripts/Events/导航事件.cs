@@ -27,3 +27,36 @@ public readonly struct 打开结局事件 { }
 
 // 打开主菜单面板
 public readonly struct 打开主菜单事件 { }
+
+// —— 地图导航事件 ——
+
+// 地图模式
+public enum 地图模式 { 大地图, 城镇, 野外 }
+
+// 打开大地图面板
+public readonly struct 打开大地图事件 { }
+
+// 打开小地图面板：城镇标识 + 入口节点
+public readonly struct 打开小地图事件
+{
+    public readonly string 城镇标识;
+    public readonly string 入口节点;
+    public 打开小地图事件(string 城镇标识, string 入口节点) { this.城镇标识 = 城镇标识; this.入口节点 = 入口节点; }
+}
+
+// 打开野外面板：区域标识 + 返回节点（回大地图用）
+public readonly struct 打开野外面板事件
+{
+    public readonly string 区域标识;
+    public readonly string 返回节点;
+    public 打开野外面板事件(string 区域标识, string 返回节点) { this.区域标识 = 区域标识; this.返回节点 = 返回节点; }
+}
+
+// 地图位置变化：HUD 地点栏更新用
+public readonly struct 地图位置事件
+{
+    public readonly 地图模式 所在模式;
+    public readonly string 大节点;
+    public readonly string 小节点;
+    public 地图位置事件(地图模式 所在模式, string 大节点, string 小节点) { this.所在模式 = 所在模式; this.大节点 = 大节点; this.小节点 = 小节点; }
+}

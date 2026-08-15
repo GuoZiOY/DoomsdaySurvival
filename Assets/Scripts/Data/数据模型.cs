@@ -117,6 +117,21 @@ using System;
 
     // ================= 地图 =================
 
+    // 地图节点：小地图内的节点（空地/设施/剧情/入口）
+    [Serializable]
+    public class 地图节点
+    {
+        public string 标识;
+        public string 名称;
+        public string 类型;       // "空地" / "设施" / "剧情" / "入口"
+        public string 设施;       // 类型=设施 时的设施标识（可选）
+        public string 目标;       // 类型=剧情 时的剧情节点标识（可选）
+        public float x;           // 0~100 归一化坐标
+        public float y;
+        public string[] 连接;     // 相邻节点标识
+    }
+
+    // 大地图地点（节点）：城镇/荒野
     [Serializable]
     public class 地图地点
     {
@@ -125,9 +140,13 @@ using System;
         public string 描述;
         public float x;           // 0~100 归一化坐标
         public float y;
+        public string 类型;       // "城镇" / "荒野"
+        public string 区域;       // 类型=荒野 时关联的区域标识（探索用）
+        public string 入口节点;   // 类型=城镇 时进入小地图的起始节点
         public string 目标;       // 剧情节点标识；或 "探索:区域标识"
         public string 解锁物品;   // 需要持有才能前往
-        public string[] 连接;     // 相邻地点标识
+        public string[] 连接;     // 相邻大地图节点标识
+        public 地图节点[] 小地图; // 类型=城镇 时的内部节点图（设施网络）
     }
 
     [Serializable]

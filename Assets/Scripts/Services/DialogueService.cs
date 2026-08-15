@@ -89,6 +89,14 @@ using UnityEngine;
                 事件.发布(new 打开探索事件(ServiceRegistry.Get<探索服务>().返回节点));
                 return;
             }
+            if (目标.StartsWith("地图:"))
+            {
+                // 地图:大地图 —— 打开大地图（世界导航）；地图:小地图 —— 返回当前城镇的小地图
+                var 地图目标 = 目标.Length > 3 ? 目标.Substring(3) : "";
+                if (地图目标 == "小地图") ServiceRegistry.Get<地图服务>().回到城镇地图();
+                else ServiceRegistry.Get<地图服务>().打开大地图(string.IsNullOrEmpty(地图目标) ? "灰烬镇" : 地图目标);
+                return;
+            }
             进入节点(目标);
         }
     }

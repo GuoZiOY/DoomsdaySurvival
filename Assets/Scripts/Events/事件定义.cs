@@ -25,6 +25,13 @@
         public 金币变化事件(int 当前, int 变化量) { this.当前 = 当前; this.变化量 = 变化量; }
     }
 
+    // 时间变化：游戏内分钟数推进（游戏时钟 每分钟发布一次，UI 据此刷新）
+    public readonly struct 时间变化事件
+    {
+        public readonly float 游戏分钟数;
+        public 时间变化事件(float 游戏分钟数) { this.游戏分钟数 = 游戏分钟数; }
+    }
+
     public readonly struct 经验变化事件
     {
         public readonly int 等级; public readonly int 当前经验; public readonly int 升级所需; public readonly bool 升级了;

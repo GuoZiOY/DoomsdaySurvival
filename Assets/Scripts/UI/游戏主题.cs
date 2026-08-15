@@ -13,6 +13,7 @@ public static class 游戏主题
     public static readonly Color 危险 = new Color(0.78f, 0.28f, 0.24f);      // 血烬红
     public static readonly Color 成功 = new Color(0.50f, 0.68f, 0.42f);      // 苔绿
     public static readonly Color 内心 = new Color(0.62f, 0.55f, 0.72f);      // 暮紫
+    public static readonly Color 选中色 = new Color(0.42f, 0.66f, 0.82f);    // 钢蓝（地图节点选中高亮，区别于当前节点金色）
 
     // —— 富文本十六进制 ——
     public static readonly string 金色色值 = "#d9a441";

@@ -76,7 +76,7 @@ using UnityEngine;
                         // 设施由 UI管理器 的 switch 硬编码处理，其余为剧情引擎指令，普通节点目标必须存在。
                         else if (!选项.目标.StartsWith("设施:") && !选项.目标.StartsWith("战斗:") && !选项.目标.StartsWith("探索:") &&
                                  !选项.目标.StartsWith("区域:") && !选项.目标.StartsWith("任务:") &&
-                                 !选项.目标.StartsWith("购买:") && !选项.目标.StartsWith("学习:") &&
+                                 !选项.目标.StartsWith("购买:") && !选项.目标.StartsWith("学习:") && !选项.目标.StartsWith("地图:") &&
                                  !选项.目标.StartsWith("__") &&
                                  !剧情.ContainsKey(选项.目标))
                         {
