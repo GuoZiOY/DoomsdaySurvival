@@ -65,8 +65,13 @@ public sealed class 地图设计器窗口 : EditorWindow
     {
         EditorGUILayout.BeginHorizontal();
         刷新层选项(数据);
-        // 主下拉：大地图 / 城镇（当前为设施内部时显示所属城镇）
-        var 主显示 = 数据.当前层.StartsWith("内部:") ? 数据.当前层.Substring(3) : 数据.当前层;
+        // 主下拉：大地图 / 城镇（当前为设施内部时显示设施所属城镇）
+        var 主显示 = 数据.当前层;
+        if (数据.当前层.StartsWith("内部:"))
+        {
+            var 设施 = 数据.设施(数据.当前层.Substring(3));
+            主显示 = 设施 != null && 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : 数据.当前层;
+        }
         var 主索引 = System.Array.IndexOf(层键, 主显示);
         var 主选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 主索引), 层选项);
         if (主选 >= 0 && 层键[主选] != 主显示)

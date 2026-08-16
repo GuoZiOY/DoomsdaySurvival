@@ -276,6 +276,10 @@ public sealed class 地图编辑数据
         return System.Array.Find(设施.内部节点, n => n.标识 == 标识);
     }
 
+    // 按设施标识查 设施定义（任意层，不只当前层）
+    public 设施定义 设施(string 设施标识)
+        => System.Array.Find(设施数据.设施, f => f.标识 == 设施标识);
+
     // —— 私有工具 ——
 
     private void 加连接(string 谁, string 目标)
