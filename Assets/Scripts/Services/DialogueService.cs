@@ -56,12 +56,13 @@ using UnityEngine;
             if (目标 == "__结束") { 事件.发布(new 日志事件(日志类型.系统, "序章结束。")); 事件.发布(new 打开结局事件()); return; }
             if (目标.StartsWith("战斗:"))
             {
-                // 战斗:敌人标识:胜利节点 —— 开始战斗并让 UI 打开战斗面板
+                // 战斗:敌人组标识:胜利节点 —— 先打开战斗面板（激活），再开始战斗
+                //（面板需处于激活态才能渲染/启动敌方停顿协程）
                 var 部分 = 目标.Split(':');
                 if (部分.Length >= 3)
                 {
-                    ServiceRegistry.Get<BattleService>().开始战斗(部分[1], 部分[2], 玩家.档案.当前节点);
                     事件.发布(new 打开战斗事件(玩家.档案.当前节点));
+                    ServiceRegistry.Get<BattleService>().开始战斗(部分[1], 部分[2], 玩家.档案.当前节点);
                 }
                 return;
             }

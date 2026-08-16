@@ -18,6 +18,8 @@ using UnityEngine;
         public Dictionary<string, 区域数据> 区域 { get; private set; } = new Dictionary<string, 区域数据>();
         public Dictionary<string, 设施定义> 设施 { get; private set; } = new Dictionary<string, 设施定义>();
         public Dictionary<string, 训练项目> 训练项目 { get; private set; } = new Dictionary<string, 训练项目>();
+        public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
+        public Dictionary<string, 敌人组数据> 敌人组 { get; private set; } = new Dictionary<string, 敌人组数据>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -40,6 +42,8 @@ using UnityEngine;
             加载("regions", 区域, (区域根 根) => 根.区域);
             加载("facilities", 设施, (设施根 根) => 根.设施);   // 允许缺失（M4 才有）
             加载("training", 训练项目, (训练项目根 根) => 根.训练项目);
+            加载("buffs", Buffs, (Buff根 根) => 根.Buffs);
+            加载("encounters", 敌人组, (敌人组根 根) => 根.敌人组);
         }
 
         private void 加载<T, TRoot>(string 文件, Dictionary<string, T> 目标, Func<TRoot, T[]> 提取) where T : class

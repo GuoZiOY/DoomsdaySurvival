@@ -21,19 +21,19 @@ public static class 游戏主题
     public static readonly string 成功色值 = "#7fae6a";
     public static readonly string 暗淡色值 = "#73706a";
     public static readonly string 内心色值 = "#9e8fb8";
-    public static readonly string 时间戳色值 = "#5a5750";
+    public static readonly string 时间戳色值 = "#8a8f96";   // 提亮灰蓝（灰半透明底上可读，仍次级于正文）
 
-    // 日志类型 → 富文本颜色
+    // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色）
     public static string 日志色(日志类型 类型)
     {
         switch (类型)
         {
-            case 日志类型.系统: return 暗淡色值;
-            case 日志类型.操作: return 金色色值;
-            case 日志类型.反馈: return 成功色值;
-            case 日志类型.反馈坏: return 危险色值;
-            case 日志类型.内心: return 内心色值;
-            default: return "#d8d3c8";   // 剧情 = 正文色
+            case 日志类型.系统: return "#a8b0ba";    // 亮灰蓝（避开灰底，与之区分）
+            case 日志类型.操作: return "#e8b84c";    // 提亮金
+            case 日志类型.反馈: return "#8fcf78";    // 提亮苔绿
+            case 日志类型.反馈坏: return "#e05a50";  // 提亮血烬红
+            case 日志类型.内心: return "#b09fd0";    // 提亮暮紫
+            default: return "#f0ead9";               // 剧情 = 近白暖色（主叙事最亮）
         }
     }
 }

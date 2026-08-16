@@ -17,12 +17,12 @@ public static class 地图渲染
     }
 
     // 创建/取回「地图内容」容器：节点与连线都放进它，平移缩放只变换它（不重渲染，拖拽/滚轮流畅）
-    public static RectTransform 创建内容(RectTransform 地图区)
+    public static RectTransform 创建内容(RectTransform 内容区)
     {
-        var 子 = 地图区.Find("地图内容");
+        var 子 = 内容区.Find("地图内容");
         if (子 != null) return 子 as RectTransform;
         var 物体 = new GameObject("地图内容", typeof(RectTransform));
-        物体.transform.SetParent(地图区, false);
+        物体.transform.SetParent(内容区, false);
         var 矩形 = (RectTransform)物体.transform;
         矩形.anchorMin = Vector2.zero;
         矩形.anchorMax = Vector2.one;
@@ -51,7 +51,11 @@ public static class 地图渲染
         var 矩形 = (RectTransform)物体.transform;
         矩形.anchoredPosition = 位置;
         var 按钮 = 物体.GetComponent<Button>();
-        if (按钮 != null) 按钮.onClick.AddListener(() => 点击());
+        if (按钮 != null)
+        {
+            按钮.onClick.AddListener(() => 点击());
+            音效管理器.实例?.注册按钮(按钮);   // 地图节点动态按钮成功音效
+        }
         return 文本;
     }
 

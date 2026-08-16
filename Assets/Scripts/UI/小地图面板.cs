@@ -3,8 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 小地图面板：城镇内部设施节点网络的交互表现。单击节点=选中，双击=移动/进入/离开城镇；拖拽平移、滚轮缩放。
-// 平移缩放/选中/双击由 地图面板基类 提供；这里负责：城镇数据、剧情/设施节点、离开按钮、位置监听。
+// 小地图面板：城镇内部设施节点网络的交互表现。单击=沿互通路径移动，双击=进入（入口→离开城镇/有内部→节点内部）；拖拽平移、滚轮缩放。
+// 平移缩放/单击移动/双击进入由 地图面板基类 提供；这里负责：城镇数据、剧情/设施节点、离开按钮、位置监听。
 public sealed class 小地图面板 : 地图面板基类
 {
     [SerializeField] private TMP_Text 标题;
@@ -14,20 +14,28 @@ public sealed class 小地图面板 : 地图面板基类
 
     protected override bool 是当前节点(string 标识) => 标识 == ServiceRegistry.Get<地图服务>().当前小节点;
 
-    // 双击动作：入口节点离开城镇；设施/剧情/空地 小地图移动
+    // 单击：镇内沿互通路径移动（地图服务 校验相邻）
+    protected override void 执行移动(string 标识) => ServiceRegistry.Get<地图服务>().小地图移动(标识);
+
+    // 双击：进入节点（需已站在该节点上；入口→离开城镇 / 有内部→节点内部）
     protected override void 执行进入(string 标识)
     {
-        if (!节点数据.TryGetValue(标识, out var 节点)) return;
         var 服务 = ServiceRegistry.Get<地图服务>();
-        if (节点.类型 == "入口") 服务.离开城镇();
-        else 服务.小地图移动(标识);
+        if (标识 != 服务.当前小节点)
+        {
+            // 未到达该节点就试图进入 → 失败反馈（否则静默且按钮成功音效会响）
+            音效管理器.实例?.播放失败();
+            ServiceRegistry.Get<EventBus>().发布(new 日志事件(日志类型.系统, "那里无法直接到达。"));
+            return;
+        }
+        服务.进入当前小节点();
     }
 
     protected override void Awake()
     {
         base.Awake();
         离开按钮?.onClick.AddListener(() => ServiceRegistry.Get<地图服务>().离开城镇());
-        // 监听地图位置：镇内移动（空地节点）不触发导航事件，靠它重绘当前节点高亮
+        // 监听地图位置：镇内移动（普通节点）不触发导航事件，靠它重绘当前节点高亮
         ServiceRegistry.Get<EventBus>().订阅<地图位置事件>(e =>
         {
             if (e.所在模式 == 地图模式.城镇)
@@ -41,8 +49,6 @@ public sealed class 小地图面板 : 地图面板基类
     protected override void 刷新(object 上下文)
     {
         if (上下文 is 打开小地图事件 e) 当前城镇 = e.城镇标识;
-        // 打开面板时清空选中，避免上次选中残留
-        选中节点 = "";
         渲染小地图();
     }
 
@@ -75,7 +81,7 @@ public sealed class 小地图面板 : 地图面板基类
             {
                 var 邻点 = 找节点(地点, 相邻);
                 if (邻点 == null || string.CompareOrdinal(节点.标识, 相邻) > 0) continue;
-                地图渲染.画线(地图内容, 地图渲染.归一化(地图区, 节点.x, 节点.y), 地图渲染.归一化(地图区, 邻点.x, 邻点.y), new Color(0.35f, 0.32f, 0.28f));
+                地图渲染.画线(地图内容, 地图渲染.归一化(内容区, 节点.x, 节点.y), 地图渲染.归一化(内容区, 邻点.x, 邻点.y), new Color(0.35f, 0.32f, 0.28f));
             }
         }
 

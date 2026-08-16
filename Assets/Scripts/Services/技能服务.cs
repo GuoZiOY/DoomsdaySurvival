@@ -7,13 +7,14 @@ public sealed class 技能服务
 {
     private readonly EventBus 事件;
     private readonly DataService 数据;
-    private readonly 玩家档案 档案;
+    private readonly PlayerService 玩家服务;
+    private 玩家档案 档案 => 玩家服务.档案;   // 动态取当前档案
 
-    public 技能服务(EventBus 事件, DataService 数据, 玩家档案 档案)
+    public 技能服务(EventBus 事件, DataService 数据, PlayerService 玩家服务)
     {
         this.事件 = 事件;
         this.数据 = 数据;
-        this.档案 = 档案;
+        this.玩家服务 = 玩家服务;
     }
 
     // 尝试学习：属性前提达标才能学（唯一入口）
@@ -21,8 +22,8 @@ public sealed class 技能服务
     {
         if (!数据.技能.TryGetValue(技能标识, out var 技能)) return false;
         var 原因 = 档案.技能前提失败原因(技能);
-        if (!string.IsNullOrEmpty(原因)) { 事件.发布(new 日志事件(日志类型.反馈坏, $"无法学习 {技能.名称}：{原因}")); return false; }
-        if (档案.掌握技能(技能.标识)) { 事件.发布(new 日志事件(日志类型.系统, "你已经掌握这个技能了。")); return false; }
+        if (!string.IsNullOrEmpty(原因)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.反馈坏, $"无法学习 {技能.名称}：{原因}")); return false; }
+        if (档案.掌握技能(技能.标识)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.系统, "你已经掌握这个技能了。")); return false; }
         if (!档案.学习技能(技能)) return false;
         事件.发布(new 日志事件(日志类型.反馈, $"你学会了技能：{技能.名称}！"));
         return true;

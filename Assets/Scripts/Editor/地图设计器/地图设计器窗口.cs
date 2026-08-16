@@ -57,7 +57,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         画节点(区域, 数据);
         处理画布输入(区域, 数据);
 
-        EditorGUILayout.LabelField("左键拖节点移动 · 双击进入下级(城镇/设施) · 返回上层按钮 · 滚轮缩放 · 拖空白平移 · 连接模式连线 · 右键删除", EditorStyles.centeredGreyMiniLabel);
+        EditorGUILayout.LabelField("左键拖节点移动 · 双击进入下级(城镇/节点内部) · 返回上层按钮 · 滚轮缩放 · 拖空白平移 · 连接模式连线 · 右键删除", EditorStyles.centeredGreyMiniLabel);
     }
 
     // —— 顶部：层下拉 + 连接模式 + 增删保存 ——
@@ -109,7 +109,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         EditorGUILayout.BeginVertical(GUILayout.Height(150));
         if (string.IsNullOrEmpty(数据.选中标识))
         {
-            EditorGUILayout.HelpBox("单击节点 → 编辑属性；双击节点 → 进入下级（城镇/设施内部）。", MessageType.Info);
+            EditorGUILayout.HelpBox("单击节点 → 编辑属性；双击节点 → 进入下级（城镇/节点内部）。", MessageType.Info);
             EditorGUILayout.EndVertical();
             return;
         }
@@ -152,9 +152,8 @@ public sealed class 地图设计器窗口 : EditorWindow
             var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 数据.选中标识);
             if (节点 == null) return;
             节点.名称 = EditorGUILayout.TextField("名称", 节点.名称);
-            节点.类型 = EditorGUILayout.TextField("类型(入口/设施/剧情/空地)", 节点.类型);
+            节点.类型 = EditorGUILayout.TextField("类型(入口/设施/空)", 节点.类型);
             if (节点.类型 == "设施") 节点.设施 = EditorGUILayout.TextField("设施标识", 节点.设施);
-            if (节点.类型 == "剧情") 节点.目标 = EditorGUILayout.TextField("剧情目标", 节点.目标);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.PrefixLabel("位置");
             节点.x = EditorGUILayout.FloatField(节点.x);
@@ -318,7 +317,7 @@ public sealed class 地图设计器窗口 : EditorWindow
             if (命中 != null)
             {
                 if (数据.连接模式) { 数据.处理连接点击(命中); 事件.Use(); return; }
-                // 双击节点：进入下级编辑（城镇→小地图；设施→设施内部）
+                // 双击节点：进入下级编辑（城镇→小地图；任意节点→节点内部）
                 var 现在 = (float)UnityEditor.EditorApplication.timeSinceStartup;
                 bool 双击 = 命中 == 上次点击节点 && 现在 - 上次点击时间 < 0.3f;
                 上次点击节点 = 命中;

@@ -102,7 +102,7 @@ public sealed class 地图编辑数据
             var 镇 = 当前城镇;
             if (镇 == null) return;
             var 列表 = new System.Collections.Generic.List<地图节点>(镇.小地图 ?? new 地图节点[0])
-            { new 地图节点 { 标识 = "新节点", 名称 = "新节点", 类型 = "", x = 50, y = 50 } };
+            { new 地图节点 { 标识 = "新节点", 名称 = "新节点", 类型 = "空", x = 50, y = 50 } };
             镇.小地图 = 列表.ToArray();
             选中标识 = "新节点";
         }

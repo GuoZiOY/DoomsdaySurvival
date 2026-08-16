@@ -13,7 +13,7 @@ public sealed class HUD面板 : 面板基类
 
     void Awake()
     {
-        常驻 = true;   // 常驻顶栏，不被面板管理器隐藏
+        // HUD 常驻顶栏：不在 面板管理器 的可切换列表，始终显示
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<生命变化事件>(e => 设文本(生命, $"生命 {e.当前}/{e.最大}"));
         事件.订阅<魔力变化事件>(e => 设文本(魔力, $"魔 {e.当前}/{e.最大}"));

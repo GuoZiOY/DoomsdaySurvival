@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 30f39ff113b2a8e42bdaa38511a623f6
+guid: cb2103924fb9b424092419ba1a9035e5
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7290542807825757137
-    second: Hills Free (update 3.0).png.morning.bak_0
+      213: 8596835732862471233
+    second: UI_background_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Hills Free (update 3.0).png.morning.bak_0
+      name: UI_background_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 512
-        height: 256
+        width: 53
+        height: 53
       alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 1, y: 1, z: 1, w: 1}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f2c44c771f9c2da90800000000000000
-      internalID: -7290542807825757137
+      spriteID: 14c07a11d881e4770800000000000000
+      internalID: 8596835732862471233
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: e99ae787a9e85974caba2a488b30b5bf
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Hills Free (update 3.0).png.morning.bak_0: -7290542807825757137
+      UI_background_0: 8596835732862471233
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

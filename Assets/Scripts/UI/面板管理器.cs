@@ -11,6 +11,7 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 主菜单面板 主菜单;
     [SerializeField] private 主视窗面板 主视窗;
     [SerializeField] private 对话面板 对话;
+    [SerializeField] private 战斗面板 战斗;
     [SerializeField] private 大地图面板 大地图;
     [SerializeField] private 小地图面板 小地图;
     [SerializeField] private 节点内部面板 节点内部;
@@ -24,6 +25,7 @@ public sealed class 面板管理器 : MonoBehaviour
 
     [SerializeField] private GameObject 按钮预制体;     // 动态按钮共享（列表行）
     [SerializeField] private GameObject 地图节点预制体; // 地图节点按钮（节点图专用，可选；不设则用 按钮预制体）
+    [SerializeField] private GameObject[] 常驻UI;       // 第二级常驻 UI（HUD条/日志面板/底部状态栏/游戏时钟）：开始流程后常驻，主菜单时收起
 
     private readonly List<面板基类> 可切换面板 = new List<面板基类>();
 
@@ -40,7 +42,7 @@ public sealed class 面板管理器 : MonoBehaviour
         // 先确保核心服务已装配（幂等），否则路由拿不到 EventBus
         GameBootstrap.装配();
 
-        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 大地图, 小地图, 节点内部, 买卖, 训练, 任务, 教学, 恢复, 睡觉, 角色 });
+        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 战斗, 大地图, 小地图, 节点内部, 买卖, 训练, 任务, 教学, 恢复, 睡觉, 角色 });
     }
 
     void Start()
@@ -53,16 +55,18 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<显示剧情事件>(e => 显示(对话, e));   // 剧情从主视窗剥离到对话面板
         事件.订阅<打开大地图事件>(_ => 显示(大地图));
         事件.订阅<打开小地图事件>(e => 显示(小地图, e));
-        事件.订阅<打开结局事件>(_ => 显示(主视窗, new 打开结局事件()));
-        事件.订阅<打开战斗事件>(e => 显示(主视窗, e));
+        事件.订阅<打开结局事件>(e => 显示(对话, e));
+        事件.订阅<打开战斗事件>(e => 显示(战斗 != null ? 战斗 : 主视窗, e));
         事件.订阅<探索显示事件>(e => 显示(主视窗, e));
         事件.订阅<打开角色面板事件>(_ => 显示(角色));
 
-        // 初始只显示主菜单
+        // 初始只显示主菜单（Level1）：中央视窗框架、HUD/日志 等二级 UI 全部收起
         foreach (var 面板 in 可切换面板)
             if (面板 != null && 面板 != 主菜单) 面板.隐藏面板();
         主菜单?.显示面板();
         当前显示面板 = 主菜单;
+        if (主视窗 != null && 主视窗.容器模式) 主视窗.gameObject.SetActive(false);
+        foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(false);
     }
 
     // 显示目标面板，隐藏其它可切换面板；上下文 传给面板的 刷新(上下文)
@@ -74,6 +78,9 @@ public sealed class 面板管理器 : MonoBehaviour
             if (面板 != null && 面板 != 目标) 面板.隐藏面板();
         目标?.显示面板(上下文);
         当前显示面板 = 目标;
+        // 二级 UI（Level2 常驻）：主菜单时整个收起；开始流程后 中央视窗框架 + HUD/日志 激活
+        if (主视窗 != null && 主视窗.容器模式) 主视窗.gameObject.SetActive(目标 != 主菜单);
+        foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(目标 != 主菜单);
     }
 
     // 全局面板（角色面板等）返回：回到上个面板

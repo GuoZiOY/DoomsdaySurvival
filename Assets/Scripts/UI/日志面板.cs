@@ -9,16 +9,28 @@ public sealed class 日志面板 : 面板基类
 {
     [SerializeField] private RectTransform 日志内容;
     [SerializeField] private ScrollRect 日志滚动;
+    [SerializeField] private float 字号 = 20f;   // 日志统一字号（Inspector 可调 / 运行时 设置字号 动态改）
     private readonly List<GameObject> 条目表 = new List<GameObject>();
     private const int 上限 = 200;
 
     void Awake()
     {
-        常驻 = true;   // 常驻日志栏，不被面板管理器隐藏
+        // 日志常驻左侧栏：不在 面板管理器 的可切换列表，始终显示
         ServiceRegistry.Get<EventBus>().订阅<日志事件>(追加);
     }
 
     protected override void 刷新(object 上下文) { }
+
+    // 统一改字号：更新新条目 + 应用到已存在条目（动态改动）
+    public void 设置字号(float 新字号)
+    {
+        字号 = 新字号;
+        foreach (var 条目 in 条目表)
+        {
+            var 文本 = 条目.GetComponent<TMP_Text>();
+            if (文本 != null) 文本.fontSize = 新字号;
+        }
+    }
 
     // 追加一条日志（动态创建 TMP 文本，动态内容可代码生成）
     private void 追加(日志事件 e)
@@ -27,7 +39,7 @@ public sealed class 日志面板 : 面板基类
         var 条目 = new GameObject("日志条目", typeof(RectTransform), typeof(TextMeshProUGUI));
         条目.transform.SetParent(日志内容, false);
         var 文本 = 条目.GetComponent<TextMeshProUGUI>();
-        文本.fontSize = 20f;
+        文本.fontSize = 字号;
         文本.enableWordWrapping = true;
         文本.raycastTarget = false;
         文本.color = 游戏主题.文字;

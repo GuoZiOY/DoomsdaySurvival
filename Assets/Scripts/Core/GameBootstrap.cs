@@ -43,13 +43,12 @@ using UnityEngine;
             var 对话 = new DialogueService(事件, 数据, 玩家);
             ServiceRegistry.Register(对话);
 
-            var 档案 = 玩家.档案;
-            ServiceRegistry.Register(new InventoryService(事件, 档案));
-            ServiceRegistry.Register(new QuestService(事件, 数据, 档案));
-            var 战斗服务 = new BattleService(事件, 数据, 档案);
+            ServiceRegistry.Register(new InventoryService(事件, 玩家));
+            ServiceRegistry.Register(new QuestService(事件, 数据, 玩家));
+            var 战斗服务 = new BattleService(事件, 数据, 玩家);
             ServiceRegistry.Register(战斗服务);
             ServiceRegistry.Register(new 探索服务(事件, 数据, 玩家, 战斗服务));
-            ServiceRegistry.Register(new 技能服务(事件, 数据, 档案));
+            ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
             ServiceRegistry.Register(new 地图服务(事件, 数据, 玩家, ServiceRegistry.Get<探索服务>(), 对话));
 
             Debug.Log($"[GameBootstrap] 核心服务装配完成：剧情 {数据.剧情.Count} / 敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 区域 {数据.区域.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 地点 {数据.地图.Count}");

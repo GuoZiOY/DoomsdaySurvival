@@ -4,9 +4,10 @@
     {
         private readonly EventBus 事件;
         private readonly DataService 数据;
-        private readonly 玩家档案 档案;
+        private readonly PlayerService 玩家服务;
+        private 玩家档案 档案 => 玩家服务.档案;   // 动态取当前档案
 
-        public QuestService(EventBus 事件, DataService 数据, 玩家档案 档案) { this.事件 = 事件; this.数据 = 数据; this.档案 = 档案; }
+        public QuestService(EventBus 事件, DataService 数据, PlayerService 玩家服务) { this.事件 = 事件; this.数据 = 数据; this.玩家服务 = 玩家服务; }
 
         // 接取任务：重复接取返回 false
         public bool 接取(string 任务标识)

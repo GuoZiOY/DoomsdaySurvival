@@ -27,7 +27,7 @@ public sealed class 买卖逻辑
     public bool 尝试购买(string 物品标识)
     {
         if (!数据.物品.TryGetValue(物品标识, out var 物品)) return false;
-        if (玩家.金币 < 物品.价格) { 事件.发布(new 日志事件(日志类型.反馈坏, $"金币不足（需要 {物品.价格}）。")); return false; }
+        if (玩家.金币 < 物品.价格) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.反馈坏, $"金币不足（需要 {物品.价格}）。")); return false; }
         玩家.金币 -= 物品.价格;
         if (物品.类型 == "武器") 玩家.武器标识 = 物品.标识;
         else if (物品.类型 == "防具") 玩家.防具标识 = 物品.标识;
@@ -50,7 +50,7 @@ public sealed class 买卖逻辑
     public bool 尝试卖出(string 物品标识)
     {
         if (!数据.物品.TryGetValue(物品标识, out var 物品) || 物品.价格 <= 0) return false;
-        if (!玩家.移除物品(物品标识)) { 事件.发布(new 日志事件(日志类型.反馈坏, "你没有这件物品。")); return false; }
+        if (!玩家.移除物品(物品标识)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.反馈坏, "你没有这件物品。")); return false; }
         int 价 = Mathf.Max(1, 物品.价格 / 2);
         玩家.金币 += 价;
         事件.发布(new 金币变化事件(玩家.金币, 价));

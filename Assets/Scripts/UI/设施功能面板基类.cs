@@ -2,12 +2,12 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 设施功能面板基类：功能面板通用骨架（标题 + 列表区 + 返回设施内部）。
+// 设施功能面板基类：功能面板通用骨架（标题 + 内容区 + 返回设施内部）。
 // 子类只实现 标题文字()/渲染列表()；数据从 逻辑（设施逻辑实例）经 功能接口 取，跨设施复用。
 public abstract class 设施功能面板基类 : 面板基类
 {
     [SerializeField] protected TMP_Text 标题;
-    [SerializeField] protected RectTransform 列表区;
+    // 列表容器统一用基类 内容区（面板基类），不再另设 列表区
     [SerializeField] private Button 返回按钮;
     protected 设施逻辑 逻辑;       // 打开时由 设施打开上下文 注入
     protected 地图节点 节点;       // 来源节点（返回内部用）
@@ -25,12 +25,15 @@ public abstract class 设施功能面板基类 : 面板基类
         if (上下文 is 设施打开上下文 c) { 逻辑 = c.逻辑; 节点 = c.节点; 返回节点 = c.返回节点; }
         if (逻辑 == null) return;
         设文本(标题, 标题文字());
-        清空(列表区);
+        清空(内容区);
         渲染列表();
     }
 
     protected abstract string 标题文字();
     protected abstract void 渲染列表();
+
+    // 全局右键 = 返回设施内部（替代点返回按钮）
+    public override void 回退() => 返回设施内部();
 
     // 返回节点内部（三级导航）
     protected void 返回设施内部()
