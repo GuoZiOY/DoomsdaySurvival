@@ -7,8 +7,8 @@ public sealed class 地图设计器窗口 : EditorWindow
 {
     private string[] 层选项;          // 主下拉显示标签（大地图 / 城镇）
     private string[] 层键;            // 主下拉实际键
-    private string[] 设施层选项;      // 设施内部下拉显示（当前城镇的设施）
-    private string[] 设施层键;        // 设施内部下拉实际键（设施标识）
+    private string 上次点击节点;      // 双击进入下级 判定
+    private float 上次点击时间;
     private Vector2 滚动;
 
     // —— 画布视图状态 ——
@@ -57,7 +57,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         画节点(区域, 数据);
         处理画布输入(区域, 数据);
 
-        EditorGUILayout.LabelField("左键拖节点移动 · 滚轮缩放 · 拖空白平移 · 连接模式下点两节点连线 · 右键节点删除", EditorStyles.centeredGreyMiniLabel);
+        EditorGUILayout.LabelField("左键拖节点移动 · 双击进入下级(城镇/设施) · 返回上层按钮 · 滚轮缩放 · 拖空白平移 · 连接模式连线 · 右键删除", EditorStyles.centeredGreyMiniLabel);
     }
 
     // —— 顶部：层下拉 + 连接模式 + 增删保存 ——
@@ -79,22 +79,17 @@ public sealed class 地图设计器窗口 : EditorWindow
             数据.当前层 = 层键[主选];
             重置选择();
         }
-        // 设施内部下拉：选城镇时列出该镇设施（单独一个下拉）
+        // 返回上层：设施内部 → 城镇小地图；城镇小地图 → 大地图
         if (数据.当前层 != "大地图")
         {
-            刷新设施选项(数据);
-            var 设施索引 = 0;   // 0 = 关闭设施内部
-            if (数据.当前层.StartsWith("内部:"))
+            if (GUILayout.Button("← 返回上层", GUILayout.Width(90)))
             {
-                var 设施名 = 数据.当前层.Substring(3);
-                for (int i = 1; i < 设施层键.Length; i++)
-                    if (设施层键[i] == 设施名) { 设施索引 = i; break; }
-            }
-            var 设施选 = EditorGUILayout.Popup("设施内部", 设施索引, 设施层选项);
-            if (设施选 != 设施索引)
-            {
-                if (设施选 == 0) 数据.当前层 = 主显示;   // 关闭设施内部 → 回城镇小地图
-                else 数据.当前层 = "内部:" + 设施层键[设施选];
+                if (数据.当前层.StartsWith("内部:"))
+                {
+                    var 设施 = 数据.设施(数据.当前层.Substring(3));
+                    数据.当前层 = 设施 != null && 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : "大地图";
+                }
+                else 数据.当前层 = "大地图";
                 重置选择();
             }
         }
@@ -192,22 +187,6 @@ public sealed class 地图设计器窗口 : EditorWindow
         层选项 = 显.ToArray();
     }
 
-    // 设施内部下拉：列出当前城镇所属的设施
-    private void 刷新设施选项(地图编辑数据 数据)
-    {
-        var 城镇标识 = 数据.当前层.StartsWith("内部:") ? 数据.当前层.Substring(3) : 数据.当前层;
-        var 键 = new List<string> { "" };   // 0 = 城镇小地图（不编辑设施内部）
-        var 显 = new List<string> { "（城镇小地图）" };
-        foreach (var 设施 in 数据.设施数据.设施)
-            if (设施.地点 != null && System.Array.IndexOf(设施.地点, 城镇标识) >= 0)
-            {
-                键.Add(设施.标识);
-                显.Add(设施.名称);
-            }
-        设施层键 = 键.ToArray();
-        设施层选项 = 显.ToArray();
-    }
-
     // 切换层后重置选中/视图
     private void 重置选择()
     {
@@ -216,6 +195,26 @@ public sealed class 地图设计器窗口 : EditorWindow
         数据.选中标识 = "";
         数据.连接起点 = "";
         缩放 = 1f; 偏移 = Vector2.zero;
+    }
+
+    // 双击节点进入下级编辑：大地图城镇→小地图；小地图设施节点→设施内部（每个设施节点都能进，因有 NPC）
+    private void 进入编辑(地图编辑数据 数据, string 标识)
+    {
+        if (数据.当前层 == "大地图")
+        {
+            var 地点 = System.Array.Find(数据.数据.地点, p => p.标识 == 标识);
+            if (地点 != null && 地点.类型 == "城镇") { 数据.当前层 = 地点.标识; 重置选择(); }
+        }
+        else if (!数据.当前层.StartsWith("内部:"))
+        {
+            // 城镇小地图：双击设施节点 → 进入该设施内部
+            var 镇 = 数据.当前城镇;
+            if (镇?.小地图 == null) return;
+            var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+            if (节点 != null && 节点.类型 == "设施" && !string.IsNullOrEmpty(节点.设施))
+            { 数据.当前层 = "内部:" + 节点.设施; 重置选择(); }
+        }
+        // 设施内部是叶子，不深入
     }
 
     // —— 画布坐标换算（0-100 ↔ 窗口像素）——
@@ -314,6 +313,12 @@ public sealed class 地图设计器窗口 : EditorWindow
             if (命中 != null)
             {
                 if (数据.连接模式) { 数据.处理连接点击(命中); 事件.Use(); return; }
+                // 双击节点：进入下级编辑（城镇→小地图；设施→设施内部）
+                var 现在 = (float)UnityEditor.EditorApplication.timeSinceStartup;
+                bool 双击 = 命中 == 上次点击节点 && 现在 - 上次点击时间 < 0.3f;
+                上次点击节点 = 命中;
+                上次点击时间 = 现在;
+                if (双击) { 进入编辑(数据, 命中); 事件.Use(); return; }
                 数据.选中标识 = 命中;
                 拖动节点 = 命中;
                 平移中 = false;
