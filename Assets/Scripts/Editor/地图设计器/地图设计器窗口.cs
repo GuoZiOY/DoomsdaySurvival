@@ -103,12 +103,18 @@ public sealed class 地图设计器窗口 : EditorWindow
         EditorGUILayout.EndHorizontal();
     }
 
-    // —— 选中节点的属性表单 ——
+    // —— 选中节点的属性表单（固定高度区域，选中与否都占同样空间，避免地图区跳动）——
     private void 属性表单(地图编辑数据 数据)
     {
-        if (string.IsNullOrEmpty(数据.选中标识)) return;
+        EditorGUILayout.BeginVertical(GUILayout.Height(150));
+        if (string.IsNullOrEmpty(数据.选中标识))
+        {
+            EditorGUILayout.HelpBox("单击节点 → 编辑属性；双击节点 → 进入下级（城镇/设施内部）。", MessageType.Info);
+            EditorGUILayout.EndVertical();
+            return;
+        }
         EditorGUILayout.LabelField($"—— {数据.节点名称(数据.选中标识)} 属性 ——", EditorStyles.boldLabel);
-        滚动 = EditorGUILayout.BeginScrollView(滚动, GUILayout.MaxHeight(160));
+        滚动 = EditorGUILayout.BeginScrollView(滚动, GUILayout.Height(120));
         EditorGUI.BeginChangeCheck();
         if (数据.当前层 == "大地图")
         {
@@ -158,6 +164,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         }
         if (EditorGUI.EndChangeCheck()) 数据.有未保存修改 = true;
         EditorGUILayout.EndScrollView();
+        EditorGUILayout.EndVertical();
     }
 
     // 连接多选：勾选即建/断连接
@@ -187,14 +194,13 @@ public sealed class 地图设计器窗口 : EditorWindow
         层选项 = 显.ToArray();
     }
 
-    // 切换层后重置选中/视图
+    // 切换层后只清选中/连接起点，视图（缩放/平移）保持不变，避免跳来跳去
     private void 重置选择()
     {
         var 数据 = 地图编辑数据.实例;
         if (数据 == null) return;
         数据.选中标识 = "";
         数据.连接起点 = "";
-        缩放 = 1f; 偏移 = Vector2.zero;
     }
 
     // 双击节点进入下级编辑：大地图城镇→小地图；小地图设施节点→设施内部（每个设施节点都能进，因有 NPC）
