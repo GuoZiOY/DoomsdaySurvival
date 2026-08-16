@@ -21,31 +21,14 @@ public sealed class 主视窗面板 : 面板基类
         事件.订阅<战斗结束事件>(处理战斗结束);
     }
 
-    // 面板管理器 路由后调用：按事件类型渲染对应模式
+    // 面板管理器 路由后调用：按事件类型渲染对应模式（剧情已剥离到 对话面板）
     protected override void 刷新(object 上下文)
     {
         switch (上下文)
         {
-            case 显示剧情事件 剧情: 渲染剧情(剧情); break;
             case 打开战斗事件: 渲染战斗(); break;
             case 探索显示事件 探索: 渲染探索(探索); break;
             case 打开结局事件: 渲染结局(); break;
-        }
-    }
-
-    // ===== 剧情（选项只服务剧情分支）=====
-
-    private void 渲染剧情(显示剧情事件 e)
-    {
-        设标题("剧情", 游戏主题.金色);
-        设文本(正文, e.文本);
-        返回主菜单?.gameObject.SetActive(false);
-        清空(选项区);
-        if (e.选项 == null) return;
-        foreach (var 选项 in e.选项)
-        {
-            var 目标 = 选项.目标;
-            创建行(选项区, 选项.文本, () => ServiceRegistry.Get<DialogueService>().处理选项(目标));
         }
     }
 

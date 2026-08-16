@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 
-// 任务板设施：任务接取与进度展示 业务规则（UI 无关）
-public sealed class 任务板设施 : 设施逻辑
+// 任务板设施：任务接取与进度展示（任务功能；任务栏共用任务面板）
+public sealed class 任务板设施 : 设施逻辑, 任务功能
 {
     // 可接任务：全部任务
     public 任务数据[] 可接任务()

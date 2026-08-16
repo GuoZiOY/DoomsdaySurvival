@@ -220,7 +220,30 @@ using System;
 
     // ================= 设施 =================
 
-    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）；视图为 UXML 路径
+    // 设施 NPC：交谈触发剧情
+    [Serializable]
+    public class 设施Npc
+    {
+        public string 名称;
+        public string 描述;
+        public string 剧情节点;   // 交谈进入的剧情节点
+    }
+
+    // 设施内部节点：设施内部图节点（NPC 或 功能物）
+    [Serializable]
+    public class 设施内部节点
+    {
+        public string 标识;
+        public string 名称;
+        public string 类型;       // "NPC" / "功能物"
+        public string 功能;       // 类型=功能物 时：教学/买卖/训练/任务/恢复/睡觉
+        public string 剧情节点;   // 类型=NPC 时：交谈进入的剧情节点
+        public float x;           // 0-100 归一化坐标
+        public float y;
+        public string[] 连接;     // 相邻节点标识
+    }
+
+    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）；含 NPC 与内部节点图
     [Serializable]
     public class 设施定义
     {
@@ -231,6 +254,8 @@ using System;
         public string 视图;
         public string 数据;       // 可选：该设施自己的数据文件
         public string[] 地点;     // 挂接的地点标识
+        public 设施Npc[] NPC;           // 设施里的 NPC（交谈触发剧情）
+        public 设施内部节点[] 内部节点;  // 设施内部图节点（NPC + 功能物）
     }
 
     [Serializable]

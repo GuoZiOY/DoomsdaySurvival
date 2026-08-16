@@ -1,20 +1,25 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 面板管理器 = 导航路由器：唯一订阅导航事件，决定"哪个事件 → 显示哪个面板"。
-// 不装面板业务逻辑（列表/购买/学习都在各面板）；各面板专注内容呈现与交互。
+// 面板管理器 = 导航路由器：订阅导航事件，决定"哪个事件 → 显示哪个面板"。
+// 三级导航：大地图 → 小地图 → 设施内部图（对话/功能面板）。
 public sealed class 面板管理器 : MonoBehaviour
 {
     public static 面板管理器 实例 { get; private set; }
 
-    // —— 各可切换面板引用（Inspector 拖入，导航映射一目了然）——
+    // —— 各面板引用（Inspector 拖入）——
     [SerializeField] private 主菜单面板 主菜单;
     [SerializeField] private 主视窗面板 主视窗;
-    [SerializeField] private 商店面板 商店;
-    [SerializeField] private 训练场面板 训练场;
-    [SerializeField] private 任务板面板 任务板;
+    [SerializeField] private 对话面板 对话;
     [SerializeField] private 大地图面板 大地图;
     [SerializeField] private 小地图面板 小地图;
+    [SerializeField] private 设施内部面板 设施内部;
+    [SerializeField] private 买卖面板 买卖;
+    [SerializeField] private 训练面板 训练;
+    [SerializeField] private 任务面板 任务;
+    [SerializeField] private 教学面板 教学;
+    [SerializeField] private 恢复面板 恢复;
+    [SerializeField] private 睡觉面板 睡觉;
     [SerializeField] private 角色面板 角色;
 
     [SerializeField] private GameObject 按钮预制体;     // 动态按钮共享（列表行）
@@ -35,18 +40,20 @@ public sealed class 面板管理器 : MonoBehaviour
         // 先确保核心服务已装配（幂等），否则路由拿不到 EventBus
         GameBootstrap.装配();
 
-        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 商店, 训练场, 任务板, 大地图, 小地图, 角色 });
+        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 大地图, 小地图, 设施内部, 买卖, 训练, 任务, 教学, 恢复, 睡觉, 角色 });
     }
 
     void Start()
     {
-        // 订阅导航事件并路由（HUD/日志 常驻，不在路由内）
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<打开设施事件>(路由设施);
+        事件.订阅<打开设施内部事件>(e => 显示(设施内部, e));
+        事件.订阅<打开功能面板事件>(路由功能);
+        事件.订阅<打开对话事件>(e => 显示(对话, e));
+        事件.订阅<显示剧情事件>(e => 显示(对话, e));   // 剧情从主视窗剥离到对话面板
         事件.订阅<打开大地图事件>(_ => 显示(大地图));
         事件.订阅<打开小地图事件>(e => 显示(小地图, e));
         事件.订阅<打开结局事件>(_ => 显示(主视窗, new 打开结局事件()));
-        事件.订阅<显示剧情事件>(e => 显示(主视窗, e));
         事件.订阅<打开战斗事件>(e => 显示(主视窗, e));
         事件.订阅<探索显示事件>(e => 显示(主视窗, e));
         事件.订阅<打开角色面板事件>(_ => 显示(角色));
@@ -75,17 +82,26 @@ public sealed class 面板管理器 : MonoBehaviour
         if (上一个面板 != null) 显示(上一个面板);
     }
 
-    // 设施事件 → 设施工厂创建逻辑 → 找 设施标识 匹配的面板 → 显示（数据驱动，加新设施不用改这里）
+    // 设施事件（剧情/旧入口）→ 设施内部图（三级导航）
     private void 路由设施(打开设施事件 e)
     {
-        var 逻辑 = 设施工厂.创建(e.设施标识);
-        if (逻辑 == null) { Debug.LogWarning($"[面板管理器] 无法创建设施: {e.设施标识}"); return; }
-        foreach (var 面板 in 可切换面板)
+        显示(设施内部, new 打开设施内部事件(e.设施标识, e.返回节点));
+    }
+
+    // 功能事件 → 对应功能面板（设施内部功能物节点触发）
+    private void 路由功能(打开功能面板事件 e)
+    {
+        面板基类 目标 = null;
+        switch (e.功能标识)
         {
-            if (面板 == null || 面板.设施标识值 != e.设施标识) continue;
-            显示(面板, new 设施打开上下文(逻辑, e.返回节点));
-            return;
+            case "买卖": 目标 = 买卖; break;
+            case "训练": 目标 = 训练; break;
+            case "任务": 目标 = 任务; break;
+            case "教学": 目标 = 教学; break;
+            case "恢复": 目标 = 恢复; break;
+            case "睡觉": 目标 = 睡觉; break;
+            default: Debug.LogWarning($"[面板管理器] 未路由的功能: {e.功能标识}"); return;
         }
-        Debug.LogWarning($"[面板管理器] 未找到 设施标识={e.设施标识} 的面板");
+        显示(目标, new 设施打开上下文(e.逻辑, e.返回节点));
     }
 }
