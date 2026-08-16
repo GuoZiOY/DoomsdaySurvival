@@ -6,8 +6,8 @@ using UnityEngine.UI;
 // 子类只实现 标题文字()/渲染列表()；数据从 逻辑（设施逻辑实例）经 功能接口 取，跨设施复用。
 public abstract class 设施功能面板基类 : 面板基类
 {
-    [SerializeField] private TMP_Text 标题;
-    [SerializeField] private RectTransform 列表区;
+    [SerializeField] protected TMP_Text 标题;
+    [SerializeField] protected RectTransform 列表区;
     [SerializeField] private Button 返回按钮;
     protected 设施逻辑 逻辑;       // 打开时由 设施打开上下文 注入
     protected string 返回节点;
