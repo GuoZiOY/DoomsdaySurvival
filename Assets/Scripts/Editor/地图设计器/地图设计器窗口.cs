@@ -191,8 +191,8 @@ public sealed class 地图设计器窗口 : EditorWindow
     private void 刷新设施选项(地图编辑数据 数据)
     {
         var 城镇标识 = 数据.当前层.StartsWith("内部:") ? 数据.当前层.Substring(3) : 数据.当前层;
-        var 键 = new List<string> { "" };   // 0 = 关闭设施内部
-        var 显 = new List<string> { "（不编辑设施内部）" };
+        var 键 = new List<string> { "" };   // 0 = 城镇小地图（不编辑设施内部）
+        var 显 = new List<string> { "（城镇小地图）" };
         foreach (var 设施 in 数据.设施数据.设施)
             if (设施.地点 != null && System.Array.IndexOf(设施.地点, 城镇标识) >= 0)
             {
