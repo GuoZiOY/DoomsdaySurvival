@@ -26,27 +26,24 @@ public interface 睡觉功能 { string 睡觉描述(); bool 尝试睡觉(); }
 
 // 设施逻辑基类：设施的功能系统（业务规则），完全不碰 UI；反馈走 EventBus 事件。
 // 子类实现各自领域方法，由 设施工厂 按 facilities.json 的 逻辑类型 反射实例化。
+// 注意：NPC/内部节点 属 设施定义（facilities.json 数据），面板直接读 DataService.设施，不在逻辑里重复。
 public abstract class 设施逻辑
 {
     public string 标识 { get; private set; }
     public string 名称 { get; private set; }
     public 玩家档案 当前玩家 => 玩家;   // 面板读属性用
-    public 设施Npc[] NPC { get; private set; }         // 设施 NPC（交谈触发剧情）
-    public 设施内部节点[] 内部节点 { get; private set; } // 设施内部图节点
     protected 玩家档案 玩家;
     protected DataService 数据;
     protected EventBus 事件;
 
-    // 工厂创建后调用：注入环境 + 设施定义里的 NPC/内部节点
-    public void 装配(string 标识, string 名称, 玩家档案 玩家, DataService 数据, EventBus 事件, 设施Npc[] npc, 设施内部节点[] 内部节点)
+    // 工厂创建后调用：注入环境
+    public void 装配(string 标识, string 名称, 玩家档案 玩家, DataService 数据, EventBus 事件)
     {
         this.标识 = 标识;
         this.名称 = 名称;
         this.玩家 = 玩家;
         this.数据 = 数据;
         this.事件 = 事件;
-        this.NPC = npc ?? new 设施Npc[0];
-        this.内部节点 = 内部节点 ?? new 设施内部节点[0];
     }
 }
 

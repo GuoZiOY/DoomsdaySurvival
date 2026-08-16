@@ -25,7 +25,7 @@ public static class 设施工厂
             return null;
         }
         var 实例 = (设施逻辑)System.Activator.CreateInstance(类型);
-        实例.装配(定义.标识, 定义.名称, ServiceRegistry.Get<PlayerService>().档案, 数据, ServiceRegistry.Get<EventBus>(), 定义.NPC, 定义.内部节点);
+        实例.装配(定义.标识, 定义.名称, ServiceRegistry.Get<PlayerService>().档案, 数据, ServiceRegistry.Get<EventBus>());
         return 实例;
     }
 }
