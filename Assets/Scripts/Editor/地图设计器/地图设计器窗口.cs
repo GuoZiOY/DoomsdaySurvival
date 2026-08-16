@@ -5,8 +5,10 @@ using UnityEngine;
 // 地图设计器窗口：真正的可视化节点图编辑器。画布内完整显示地图，直接拖拽节点改位置、连线、缩放平移、改属性、增删、保存。
 public sealed class 地图设计器窗口 : EditorWindow
 {
-    private string[] 层选项;          // 下拉显示标签（含城镇归属）
-    private string[] 层键;            // 实际层键（"大地图" / 城镇标识 / "内部:设施标识"）
+    private string[] 层选项;          // 主下拉显示标签（大地图 / 城镇）
+    private string[] 层键;            // 主下拉实际键
+    private string[] 设施层选项;      // 设施内部下拉显示（当前城镇的设施）
+    private string[] 设施层键;        // 设施内部下拉实际键（设施标识）
     private Vector2 滚动;
 
     // —— 画布视图状态 ——
@@ -63,14 +65,33 @@ public sealed class 地图设计器窗口 : EditorWindow
     {
         EditorGUILayout.BeginHorizontal();
         刷新层选项(数据);
-        var 当前索引 = System.Array.IndexOf(层键, 数据.当前层);
-        var 选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 当前索引), 层选项);
-        if (选 >= 0 && 层键[选] != 数据.当前层)
+        // 主下拉：大地图 / 城镇（当前为设施内部时显示所属城镇）
+        var 主显示 = 数据.当前层.StartsWith("内部:") ? 数据.当前层.Substring(3) : 数据.当前层;
+        var 主索引 = System.Array.IndexOf(层键, 主显示);
+        var 主选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 主索引), 层选项);
+        if (主选 >= 0 && 层键[主选] != 主显示)
         {
-            数据.当前层 = 层键[选];
-            数据.选中标识 = "";
-            数据.连接起点 = "";
-            缩放 = 1f; 偏移 = Vector2.zero;
+            数据.当前层 = 层键[主选];
+            重置选择();
+        }
+        // 设施内部下拉：选城镇时列出该镇设施（单独一个下拉）
+        if (数据.当前层 != "大地图")
+        {
+            刷新设施选项(数据);
+            var 设施索引 = 0;   // 0 = 关闭设施内部
+            if (数据.当前层.StartsWith("内部:"))
+            {
+                var 设施名 = 数据.当前层.Substring(3);
+                for (int i = 1; i < 设施层键.Length; i++)
+                    if (设施层键[i] == 设施名) { 设施索引 = i; break; }
+            }
+            var 设施选 = EditorGUILayout.Popup("设施内部", 设施索引, 设施层选项);
+            if (设施选 != 设施索引)
+            {
+                if (设施选 == 0) 数据.当前层 = 主显示;   // 关闭设施内部 → 回城镇小地图
+                else 数据.当前层 = "内部:" + 设施层键[设施选];
+                重置选择();
+            }
         }
         数据.连接模式 = EditorGUILayout.ToggleLeft("连接模式", 数据.连接模式, GUILayout.Width(80));
         if (GUILayout.Button("新增节点")) 数据.新增节点();
@@ -151,6 +172,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         }
     }
 
+    // 主层下拉：大地图 / 城镇（不混入设施）
     private void 刷新层选项(地图编辑数据 数据)
     {
         var 键 = new List<string> { "大地图" };
@@ -161,15 +183,34 @@ public sealed class 地图设计器窗口 : EditorWindow
                 键.Add(地点.标识);
                 显.Add(地点.名称 + "（小地图）");
             }
-        // 设施内部层：按所属城镇标注（地点[0]）
-        foreach (var 设施 in 数据.设施数据.设施)
-        {
-            var 城镇 = 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : "未归属";
-            键.Add("内部:" + 设施.标识);
-            显.Add($"内部:{设施.名称}（{城镇}）");
-        }
         层键 = 键.ToArray();
         层选项 = 显.ToArray();
+    }
+
+    // 设施内部下拉：列出当前城镇所属的设施
+    private void 刷新设施选项(地图编辑数据 数据)
+    {
+        var 城镇标识 = 数据.当前层.StartsWith("内部:") ? 数据.当前层.Substring(3) : 数据.当前层;
+        var 键 = new List<string> { "" };   // 0 = 关闭设施内部
+        var 显 = new List<string> { "（不编辑设施内部）" };
+        foreach (var 设施 in 数据.设施数据.设施)
+            if (设施.地点 != null && System.Array.IndexOf(设施.地点, 城镇标识) >= 0)
+            {
+                键.Add(设施.标识);
+                显.Add(设施.名称);
+            }
+        设施层键 = 键.ToArray();
+        设施层选项 = 显.ToArray();
+    }
+
+    // 切换层后重置选中/视图
+    private void 重置选择()
+    {
+        var 数据 = 地图编辑数据.实例;
+        if (数据 == null) return;
+        数据.选中标识 = "";
+        数据.连接起点 = "";
+        缩放 = 1f; 偏移 = Vector2.zero;
     }
 
     // —— 画布坐标换算（0-100 ↔ 窗口像素）——
