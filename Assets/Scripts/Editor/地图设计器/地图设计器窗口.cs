@@ -65,12 +65,12 @@ public sealed class 地图设计器窗口 : EditorWindow
     {
         EditorGUILayout.BeginHorizontal();
         刷新层选项(数据);
-        // 主下拉：大地图 / 城镇（当前为设施内部时显示设施所属城镇）
+        // 主下拉：大地图 / 城镇（当前为节点内部时显示所属城镇）
         var 主显示 = 数据.当前层;
         if (数据.当前层.StartsWith("内部:"))
         {
-            var 设施 = 数据.设施(数据.当前层.Substring(3));
-            主显示 = 设施 != null && 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : 数据.当前层;
+            var 部分 = 数据.当前层.Substring(3).Split(':');
+            主显示 = 部分.Length > 0 ? 部分[0] : 数据.当前层;
         }
         var 主索引 = System.Array.IndexOf(层键, 主显示);
         var 主选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 主索引), 层选项);
@@ -86,8 +86,8 @@ public sealed class 地图设计器窗口 : EditorWindow
             {
                 if (数据.当前层.StartsWith("内部:"))
                 {
-                    var 设施 = 数据.设施(数据.当前层.Substring(3));
-                    数据.当前层 = 设施 != null && 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : "大地图";
+                    var 部分 = 数据.当前层.Substring(3).Split(':');
+                    数据.当前层 = 部分.Length > 0 ? 部分[0] : "大地图";
                 }
                 else 数据.当前层 = "大地图";
                 重置选择();
@@ -131,8 +131,8 @@ public sealed class 地图设计器窗口 : EditorWindow
         }
         else if (数据.当前层.StartsWith("内部:"))
         {
-            // 设施内部节点：NPC / 功能物
-            var 节点 = 数据.设施内部节点(数据.选中标识);
+            // 节点内部：NPC / 功能物
+            var 节点 = 数据.内部节点(数据.选中标识);
             if (节点 == null) return;
             节点.名称 = EditorGUILayout.TextField("名称", 节点.名称);
             节点.类型 = EditorGUILayout.TextField("类型(NPC/功能物)", 节点.类型);
@@ -203,7 +203,7 @@ public sealed class 地图设计器窗口 : EditorWindow
         数据.连接起点 = "";
     }
 
-    // 双击节点进入下级编辑：大地图城镇→小地图；小地图设施节点→设施内部（每个设施节点都能进，因有 NPC）
+    // 双击节点进入下级编辑：大地图城镇→小地图；小地图任意节点→该节点内部（每个节点都能进，因可有 NPC）
     private void 进入编辑(地图编辑数据 数据, string 标识)
     {
         if (数据.当前层 == "大地图")
@@ -213,14 +213,13 @@ public sealed class 地图设计器窗口 : EditorWindow
         }
         else if (!数据.当前层.StartsWith("内部:"))
         {
-            // 城镇小地图：双击设施节点 → 进入该设施内部
+            // 城镇小地图：双击任意节点 → 进入该节点内部（可新建 NPC/功能物）
             var 镇 = 数据.当前城镇;
             if (镇?.小地图 == null) return;
             var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-            if (节点 != null && 节点.类型 == "设施" && !string.IsNullOrEmpty(节点.设施))
-            { 数据.当前层 = "内部:" + 节点.设施; 重置选择(); }
+            if (节点 != null) { 数据.当前层 = "内部:" + 数据.当前层 + ":" + 标识; 重置选择(); }
         }
-        // 设施内部是叶子，不深入
+        // 节点内部是叶子，不深入
     }
 
     // —— 画布坐标换算（0-100 ↔ 窗口像素）——

@@ -113,17 +113,24 @@ public sealed class 地图服务
         事件.发布(new 地图位置事件(所在模式, 当前大节点, 当前小节点));
         // 低概率镇内事件（NPC事件）在 M-D 完善
 
-        // 到达处理：设施节点 → 打开设施内部图（三级导航，返回「城镇:标识」）；剧情节点 → 进入剧情；空地 → 无事
-        if (目标节点.类型 == "设施" && !string.IsNullOrEmpty(目标节点.设施))
-            事件.发布(new 打开设施内部事件(目标节点.设施, $"城镇:{当前大节点}"));
-        else if (目标节点.类型 == "剧情" && !string.IsNullOrEmpty(目标节点.目标))
-            对话.进入节点(目标节点.目标);
+        // 到达处理：节点有 内部 → 打开节点内部图（任意节点，NPC 对话触发剧情）；否则只是移动
+        if (目标节点.内部 != null && 目标节点.内部.Length > 0)
+            事件.发布(new 打开节点内部事件(目标节点, $"城镇:{当前大节点}"));
     }
 
     private 地图节点 找小节点(地图地点 地点, string 标识)
     {
         if (地点.小地图 == null) return null;
         foreach (var 节点 in 地点.小地图) if (节点.标识 == 标识) return 节点;
+        return null;
+    }
+
+    // 按设施标识找当前城镇里的节点（故事 设施: 入口 / 返回内部用）
+    public 地图节点 找设施节点(string 设施标识)
+    {
+        if (!数据.地图.TryGetValue(当前大节点, out var 地点) || 地点.小地图 == null) return null;
+        foreach (var 节点 in 地点.小地图)
+            if (节点.设施 == 设施标识) return 节点;
         return null;
     }
 }

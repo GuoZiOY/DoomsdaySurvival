@@ -152,18 +152,19 @@ using System;
 
     // ================= 地图 =================
 
-    // 地图节点：小地图内的节点（空地/设施/剧情/入口）
+    // 地图节点：小地图内的节点（空地/设施/剧情/入口）。任何节点都可选挂「内部」（NPC+功能物图）。
     [Serializable]
     public class 地图节点
     {
         public string 标识;
         public string 名称;
         public string 类型;       // "空地" / "设施" / "剧情" / "入口"
-        public string 设施;       // 类型=设施 时的设施标识（可选）
+        public string 设施;       // 类型=设施 时的设施标识（内部功能物靠它提供功能逻辑）
         public string 目标;       // 类型=剧情 时的剧情节点标识（可选）
         public float x;           // 0~100 归一化坐标
         public float y;
         public string[] 连接;     // 相邻节点标识
+        public 设施内部节点[] 内部; // 可选：该节点的内部图（NPC + 功能物 节点）
     }
 
     // 大地图地点（节点）：城镇/荒野
@@ -220,16 +221,7 @@ using System;
 
     // ================= 设施 =================
 
-    // 设施 NPC：交谈触发剧情
-    [Serializable]
-    public class 设施Npc
-    {
-        public string 名称;
-        public string 描述;
-        public string 剧情节点;   // 交谈进入的剧情节点
-    }
-
-    // 设施内部节点：设施内部图节点（NPC 或 功能物）
+    // 节点内部节点：内部图节点（NPC 或 功能物）。NPC 就是 类型=NPC 的节点，无单独数组。
     [Serializable]
     public class 设施内部节点
     {
@@ -243,7 +235,7 @@ using System;
         public string[] 连接;     // 相邻节点标识
     }
 
-    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）；含 NPC 与内部节点图
+    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）。内部已归地图节点所有。
     [Serializable]
     public class 设施定义
     {
@@ -254,8 +246,6 @@ using System;
         public string 视图;
         public string 数据;       // 可选：该设施自己的数据文件
         public string[] 地点;     // 挂接的地点标识
-        public 设施Npc[] NPC;           // 设施里的 NPC（交谈触发剧情）
-        public 设施内部节点[] 内部节点;  // 设施内部图节点（NPC + 功能物）
     }
 
     [Serializable]

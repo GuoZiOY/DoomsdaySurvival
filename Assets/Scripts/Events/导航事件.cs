@@ -31,30 +31,32 @@ public readonly struct 打开主菜单事件 { }
 // 打开角色面板（全局，HUD 按钮触发；返回回到上个面板）
 public readonly struct 打开角色面板事件 { }
 
-// 打开设施内部图：设施标识 + 返回节点（回小地图用，如 "城镇:灰烬镇"）
-public readonly struct 打开设施内部事件
+// 打开节点内部图：任意节点（有 内部 数组）进入内部，携带节点 + 返回节点（回小地图用）
+public readonly struct 打开节点内部事件
 {
-    public readonly string 设施标识;
+    public readonly 地图节点 节点;
     public readonly string 返回节点;
-    public 打开设施内部事件(string 设施标识, string 返回节点) { this.设施标识 = 设施标识; this.返回节点 = 返回节点; }
+    public 打开节点内部事件(地图节点 节点, string 返回节点) { this.节点 = 节点; this.返回节点 = 返回节点; }
 }
 
-// 打开对话：进入剧情节点（NPC 交谈用），携带返回设施标识与返回节点
+// 打开对话：进入剧情节点（内部 NPC 交谈用），携带来源节点与返回节点
 public readonly struct 打开对话事件
 {
     public readonly string 剧情节点;
-    public readonly string 设施标识;
+    public readonly 地图节点 节点;    // 来源节点（返回内部用）
     public readonly string 返回节点;
-    public 打开对话事件(string 剧情节点, string 设施标识, string 返回节点) { this.剧情节点 = 剧情节点; this.设施标识 = 设施标识; this.返回节点 = 返回节点; }
+    public 打开对话事件(string 剧情节点, 地图节点 节点, string 返回节点) { this.剧情节点 = 剧情节点; this.节点 = 节点; this.返回节点 = 返回节点; }
 }
 
-// 打开功能面板：设施内部功能物节点触发，逻辑 + 功能标识 + 返回节点
+// 打开功能面板：内部功能物节点触发，设施逻辑 + 功能标识 + 来源节点 + 返回节点
 public readonly struct 打开功能面板事件
 {
     public readonly 设施逻辑 逻辑;
     public readonly string 功能标识;
+    public readonly 地图节点 节点;    // 来源节点（返回内部用）
     public readonly string 返回节点;
-    public 打开功能面板事件(设施逻辑 逻辑, string 功能标识, string 返回节点) { this.逻辑 = 逻辑; this.功能标识 = 功能标识; this.返回节点 = 返回节点; }
+    public 打开功能面板事件(设施逻辑 逻辑, string 功能标识, 地图节点 节点, string 返回节点)
+    { this.逻辑 = 逻辑; this.功能标识 = 功能标识; this.节点 = 节点; this.返回节点 = 返回节点; }
 }
 
 // —— 地图导航事件 ——

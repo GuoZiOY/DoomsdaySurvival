@@ -13,7 +13,7 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 对话面板 对话;
     [SerializeField] private 大地图面板 大地图;
     [SerializeField] private 小地图面板 小地图;
-    [SerializeField] private 设施内部面板 设施内部;
+    [SerializeField] private 节点内部面板 节点内部;
     [SerializeField] private 买卖面板 买卖;
     [SerializeField] private 训练面板 训练;
     [SerializeField] private 任务面板 任务;
@@ -40,14 +40,14 @@ public sealed class 面板管理器 : MonoBehaviour
         // 先确保核心服务已装配（幂等），否则路由拿不到 EventBus
         GameBootstrap.装配();
 
-        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 大地图, 小地图, 设施内部, 买卖, 训练, 任务, 教学, 恢复, 睡觉, 角色 });
+        可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 大地图, 小地图, 节点内部, 买卖, 训练, 任务, 教学, 恢复, 睡觉, 角色 });
     }
 
     void Start()
     {
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<打开设施事件>(路由设施);
-        事件.订阅<打开设施内部事件>(e => 显示(设施内部, e));
+        事件.订阅<打开节点内部事件>(e => 显示(节点内部, e));
         事件.订阅<打开功能面板事件>(路由功能);
         事件.订阅<打开对话事件>(e => 显示(对话, e));
         事件.订阅<显示剧情事件>(e => 显示(对话, e));   // 剧情从主视窗剥离到对话面板
@@ -82,13 +82,15 @@ public sealed class 面板管理器 : MonoBehaviour
         if (上一个面板 != null) 显示(上一个面板);
     }
 
-    // 设施事件（剧情/旧入口）→ 设施内部图（三级导航）
+    // 设施事件（故事/旧入口）→ 找当前城镇的设施节点 → 节点内部
     private void 路由设施(打开设施事件 e)
     {
-        显示(设施内部, new 打开设施内部事件(e.设施标识, e.返回节点));
+        var 节点 = ServiceRegistry.Get<地图服务>().找设施节点(e.设施标识);
+        if (节点 != null) 显示(节点内部, new 打开节点内部事件(节点, e.返回节点));
+        else Debug.LogWarning($"[面板管理器] 当前城镇找不到设施节点: {e.设施标识}");
     }
 
-    // 功能事件 → 对应功能面板（设施内部功能物节点触发）
+    // 功能事件 → 对应功能面板（节点内部功能物触发）
     private void 路由功能(打开功能面板事件 e)
     {
         面板基类 目标 = null;
@@ -102,6 +104,6 @@ public sealed class 面板管理器 : MonoBehaviour
             case "睡觉": 目标 = 睡觉; break;
             default: Debug.LogWarning($"[面板管理器] 未路由的功能: {e.功能标识}"); return;
         }
-        显示(目标, new 设施打开上下文(e.逻辑, e.返回节点));
+        显示(目标, new 设施打开上下文(e.逻辑, e.节点, e.返回节点));
     }
 }
