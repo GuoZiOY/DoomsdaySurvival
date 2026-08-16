@@ -5,7 +5,8 @@ using UnityEngine;
 // 地图设计器窗口：真正的可视化节点图编辑器。画布内完整显示地图，直接拖拽节点改位置、连线、缩放平移、改属性、增删、保存。
 public sealed class 地图设计器窗口 : EditorWindow
 {
-    private string[] 层选项;
+    private string[] 层选项;          // 下拉显示标签（含城镇归属）
+    private string[] 层键;            // 实际层键（"大地图" / 城镇标识 / "内部:设施标识"）
     private Vector2 滚动;
 
     // —— 画布视图状态 ——
@@ -62,11 +63,11 @@ public sealed class 地图设计器窗口 : EditorWindow
     {
         EditorGUILayout.BeginHorizontal();
         刷新层选项(数据);
-        var 当前索引 = System.Array.IndexOf(层选项, 数据.当前层);
+        var 当前索引 = System.Array.IndexOf(层键, 数据.当前层);
         var 选 = EditorGUILayout.Popup("编辑层", Mathf.Max(0, 当前索引), 层选项);
-        if (选 >= 0 && 层选项[选] != 数据.当前层)
+        if (选 >= 0 && 层键[选] != 数据.当前层)
         {
-            数据.当前层 = 层选项[选];
+            数据.当前层 = 层键[选];
             数据.选中标识 = "";
             数据.连接起点 = "";
             缩放 = 1f; 偏移 = Vector2.zero;
@@ -152,13 +153,23 @@ public sealed class 地图设计器窗口 : EditorWindow
 
     private void 刷新层选项(地图编辑数据 数据)
     {
-        var 列表 = new List<string> { "大地图" };
+        var 键 = new List<string> { "大地图" };
+        var 显 = new List<string> { "大地图" };
         foreach (var 地点 in 数据.数据.地点)
-            if (地点.类型 == "城镇") 列表.Add(地点.标识);
-        // 设施内部层（编辑 facilities.json 的内部节点）
+            if (地点.类型 == "城镇")
+            {
+                键.Add(地点.标识);
+                显.Add(地点.名称 + "（小地图）");
+            }
+        // 设施内部层：按所属城镇标注（地点[0]）
         foreach (var 设施 in 数据.设施数据.设施)
-            列表.Add("内部:" + 设施.标识);
-        层选项 = 列表.ToArray();
+        {
+            var 城镇 = 设施.地点 != null && 设施.地点.Length > 0 ? 设施.地点[0] : "未归属";
+            键.Add("内部:" + 设施.标识);
+            显.Add($"内部:{设施.名称}（{城镇}）");
+        }
+        层键 = 键.ToArray();
+        层选项 = 显.ToArray();
     }
 
     // —— 画布坐标换算（0-100 ↔ 窗口像素）——
