@@ -31,7 +31,7 @@ public sealed class 地图设计器窗口 : EditorWindow
     {
         var 数据 = 地图编辑数据.实例;
         if (数据 != null && 数据.有未保存修改)
-            if (EditorUtility.DisplayDialog("地图设计器", "有未保存的修改，退出前保存到 map.json？", "保存", "放弃"))
+            if (EditorUtility.DisplayDialog("地图设计器", "有未保存的修改，退出前保存？", "保存", "放弃"))
                 数据.Save();
     }
 
@@ -101,6 +101,22 @@ public sealed class 地图设计器窗口 : EditorWindow
             地点.解锁物品 = EditorGUILayout.TextField("解锁物品", 地点.解锁物品);
             连接编辑(地点.连接, 数据);
         }
+        else if (数据.当前层.StartsWith("内部:"))
+        {
+            // 设施内部节点：NPC / 功能物
+            var 节点 = 数据.设施内部节点(数据.选中标识);
+            if (节点 == null) return;
+            节点.名称 = EditorGUILayout.TextField("名称", 节点.名称);
+            节点.类型 = EditorGUILayout.TextField("类型(NPC/功能物)", 节点.类型);
+            if (节点.类型 == "NPC") 节点.剧情节点 = EditorGUILayout.TextField("剧情节点", 节点.剧情节点);
+            if (节点.类型 == "功能物") 节点.功能 = EditorGUILayout.TextField("功能(教学/买卖/训练/任务/恢复/睡觉)", 节点.功能);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.PrefixLabel("位置");
+            节点.x = EditorGUILayout.FloatField(节点.x);
+            节点.y = EditorGUILayout.FloatField(节点.y);
+            EditorGUILayout.EndHorizontal();
+            连接编辑(节点.连接, 数据);
+        }
         else
         {
             var 镇 = 数据.当前城镇;
@@ -139,6 +155,9 @@ public sealed class 地图设计器窗口 : EditorWindow
         var 列表 = new List<string> { "大地图" };
         foreach (var 地点 in 数据.数据.地点)
             if (地点.类型 == "城镇") 列表.Add(地点.标识);
+        // 设施内部层（编辑 facilities.json 的内部节点）
+        foreach (var 设施 in 数据.设施数据.设施)
+            列表.Add("内部:" + 设施.标识);
         层选项 = 列表.ToArray();
     }
 

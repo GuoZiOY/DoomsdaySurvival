@@ -2,27 +2,32 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-// 地图编辑数据：地图设计器的内存副本。持有 地图根，负责 加载/保存(自动备份)/坐标换算/增删节点/连接操作。
+// 地图编辑数据：地图设计器的内存副本。持有 地图根 + 设施根，负责 加载/保存(自动备份)/坐标换算/增删节点/连接操作。
+// 支持三层编辑：大地图 / 城镇小地图 / 设施内部（当前层="内部:设施标识"）。
 public sealed class 地图编辑数据
 {
     public const string 文件路径 = "Assets/Resources/Data/map.json";
+    public const string 设施文件路径 = "Assets/Resources/Data/facilities.json";
 
-    public static 地图编辑数据 实例 { get; set; }           // 窗口打开时 new 赋值，场景绘制/窗口共用
+    public static 地图编辑数据 实例 { get; set; }           // 窗口打开时 new 赋值，窗口共用
 
-    public 地图根 数据 { get; private set; }                // 内存副本（编辑全改它，保存才写文件）
+    public 地图根 数据 { get; private set; }                // 地图内存副本
+    public 设施根 设施数据 { get; private set; }            // 设施内存副本（内部节点在这）
     public bool 有未保存修改 { get; set; }
-    private readonly string 路径;                           // 实际读写路径（测试可注入临时路径，避免污染真实 map.json）
+    private readonly string 路径;                           // map.json 实际路径
+    private readonly string 设施路径;                       // facilities.json 实际路径
 
     // —— 编辑状态 ——
-    public string 当前层 { get; set; } = "大地图";           // "大地图" 或 城镇标识
+    public string 当前层 { get; set; } = "大地图";           // "大地图" / 城镇标识 / "内部:设施标识"
     public string 选中标识 { get; set; } = "";
-    public bool 连接模式 { get; set; }                      // true=点两个节点连线
-    public string 连接起点 { get; set; } = "";              // 连接模式下第一次点选的节点
+    public bool 连接模式 { get; set; }
+    public string 连接起点 { get; set; } = "";
 
     public 地图编辑数据() : this(文件路径) { }
     public 地图编辑数据(string 自定义路径)
     {
         路径 = 自定义路径;
+        设施路径 = 设施文件路径;
         Load();
         实例 = this;
     }
@@ -33,14 +38,19 @@ public sealed class 地图编辑数据
         数据 = File.Exists(路径)
             ? JsonUtility.FromJson<地图根>(File.ReadAllText(路径))
             : new 地图根 { 地点 = new 地图地点[0] };
+        设施数据 = File.Exists(设施路径)
+            ? JsonUtility.FromJson<设施根>(File.ReadAllText(设施路径))
+            : new 设施根 { 设施 = new 设施定义[0] };
         有未保存修改 = false;
     }
 
-    // 保存：旧文件复制成 .bak，再覆盖写回，刷新资产
+    // 保存：两份文件都备份并写回，刷新资产
     public void Save()
     {
         if (File.Exists(路径)) File.Copy(路径, 路径 + ".bak", true);
         File.WriteAllText(路径, JsonUtility.ToJson(数据, true));
+        if (File.Exists(设施路径)) File.Copy(设施路径, 设施路径 + ".bak", true);
+        File.WriteAllText(设施路径, JsonUtility.ToJson(设施数据, true));
         AssetDatabase.Refresh();
         有未保存修改 = false;
     }
@@ -62,11 +72,15 @@ public sealed class 地图编辑数据
     // 大地图层 → 全部地点数组
     public 地图地点[] 当前地点列表 => 数据.地点;
 
-    // 小地图层 → 对应城镇地点；大地图层返回 null
+    // 小地图层 → 对应城镇地点；非小地图层返回 null
     public 地图地点 当前城镇 =>
-        当前层 == "大地图" ? null : System.Array.Find(数据.地点, p => p.标识 == 当前层);
+        当前层 == "大地图" || 当前层.StartsWith("内部:") ? null : System.Array.Find(数据.地点, p => p.标识 == 当前层);
 
-    // 新增节点：大地图加 地图地点；小地图给当前城镇加 地图节点
+    // 设施内部层 → 对应设施定义；否则 null
+    public 设施定义 当前设施 =>
+        当前层.StartsWith("内部:") ? System.Array.Find(设施数据.设施, f => f.标识 == 当前层.Substring(3)) : null;
+
+    // 新增节点：大地图=地点；小地图=节点；设施内部=内部节点
     public void 新增节点()
     {
         if (当前层 == "大地图")
@@ -75,6 +89,15 @@ public sealed class 地图编辑数据
             { new 地图地点 { 标识 = "新地点", 名称 = "新地点", x = 50, y = 50 } };
             数据.地点 = 列表.ToArray();
             选中标识 = "新地点";
+        }
+        else if (当前层.StartsWith("内部:"))
+        {
+            var 设施 = 当前设施;
+            if (设施 == null) return;
+            var 列表 = new System.Collections.Generic.List<设施内部节点>(设施.内部节点 ?? new 设施内部节点[0])
+            { new 设施内部节点 { 标识 = "新节点", 名称 = "新节点", 类型 = "功能物", x = 50, y = 50 } };
+            设施.内部节点 = 列表.ToArray();
+            选中标识 = "新节点";
         }
         else
         {
@@ -97,6 +120,15 @@ public sealed class 地图编辑数据
             if (列表.RemoveAll(p => p.标识 == 选中标识) == 0) return;
             数据.地点 = 列表.ToArray();
             foreach (var 地点 in 数据.地点) 地点.连接 = 移除(地点.连接, 选中标识);
+        }
+        else if (当前层.StartsWith("内部:"))
+        {
+            var 设施 = 当前设施;
+            if (设施 == null) return;
+            var 列表 = new System.Collections.Generic.List<设施内部节点>(设施.内部节点 ?? new 设施内部节点[0]);
+            if (列表.RemoveAll(n => n.标识 == 选中标识) == 0) return;
+            设施.内部节点 = 列表.ToArray();
+            foreach (var 节点 in 设施.内部节点) 节点.连接 = 移除(节点.连接, 选中标识);
         }
         else
         {
@@ -138,16 +170,21 @@ public sealed class 地图编辑数据
 
     // —— 图编辑器查询/写入（窗口画布用）——
 
-    // 当前层所有节点标识
+    // 当前层所有节点标识（三层通用）
     public string[] 当前层标识()
     {
         if (当前层 == "大地图")
             return System.Array.ConvertAll(数据.地点 ?? new 地图地点[0], p => p.标识);
+        if (当前层.StartsWith("内部:"))
+        {
+            var 设施 = 当前设施;
+            return 设施?.内部节点 == null ? new string[0] : System.Array.ConvertAll(设施.内部节点, n => n.标识);
+        }
         var 镇 = 当前城镇;
         return 镇?.小地图 == null ? new string[0] : System.Array.ConvertAll(镇.小地图, n => n.标识);
     }
 
-    // 节点名称
+    // 节点名称（三层通用）
     public string 节点名称(string 标识)
     {
         if (当前层 == "大地图")
@@ -155,13 +192,18 @@ public sealed class 地图编辑数据
             var 地点 = System.Array.Find(数据.地点, p => p.标识 == 标识);
             return 地点?.名称 ?? 标识;
         }
+        if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            return 节点?.名称 ?? 标识;
+        }
         var 镇 = 当前城镇;
         if (镇?.小地图 == null) return 标识;
-        var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-        return 节点?.名称 ?? 标识;
+        var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+        return 小节点?.名称 ?? 标识;
     }
 
-    // 节点坐标
+    // 节点坐标（三层通用）
     public Vector2 节点坐标(string 标识)
     {
         if (当前层 == "大地图")
@@ -169,13 +211,18 @@ public sealed class 地图编辑数据
             var 地点 = System.Array.Find(数据.地点, p => p.标识 == 标识);
             return 地点 != null ? new Vector2(地点.x, 地点.y) : Vector2.zero;
         }
+        if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            return 节点 != null ? new Vector2(节点.x, 节点.y) : Vector2.zero;
+        }
         var 镇 = 当前城镇;
         if (镇?.小地图 == null) return Vector2.zero;
-        var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-        return 节点 != null ? new Vector2(节点.x, 节点.y) : Vector2.zero;
+        var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+        return 小节点 != null ? new Vector2(小节点.x, 小节点.y) : Vector2.zero;
     }
 
-    // 设置节点坐标（钳制 0-100，标记未保存）
+    // 设置节点坐标（钳制 0-100，标记未保存；三层通用）
     public void 设置节点坐标(string 标识, Vector2 坐标)
     {
         var 钳制 = new Vector2(Mathf.Clamp(坐标.x, 0f, 100f), Mathf.Clamp(坐标.y, 0f, 100f));
@@ -185,18 +232,24 @@ public sealed class 地图编辑数据
             if (地点 == null) return;
             地点.x = 钳制.x; 地点.y = 钳制.y;
         }
+        else if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            if (节点 == null) return;
+            节点.x = 钳制.x; 节点.y = 钳制.y;
+        }
         else
         {
             var 镇 = 当前城镇;
             if (镇?.小地图 == null) return;
-            var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-            if (节点 == null) return;
-            节点.x = 钳制.x; 节点.y = 钳制.y;
+            var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+            if (小节点 == null) return;
+            小节点.x = 钳制.x; 小节点.y = 钳制.y;
         }
         有未保存修改 = true;
     }
 
-    // 节点连接数组
+    // 节点连接数组（三层通用）
     public string[] 节点连接(string 标识)
     {
         if (当前层 == "大地图")
@@ -204,10 +257,23 @@ public sealed class 地图编辑数据
             var 地点 = System.Array.Find(数据.地点, p => p.标识 == 标识);
             return 地点?.连接 ?? new string[0];
         }
+        if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            return 节点?.连接 ?? new string[0];
+        }
         var 镇 = 当前城镇;
         if (镇?.小地图 == null) return new string[0];
-        var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-        return 节点?.连接 ?? new string[0];
+        var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+        return 小节点?.连接 ?? new string[0];
+    }
+
+    // 取设施内部节点（属性表单用）
+    public 设施内部节点 设施内部节点(string 标识)
+    {
+        var 设施 = 当前设施;
+        if (设施?.内部节点 == null) return null;
+        return System.Array.Find(设施.内部节点, n => n.标识 == 标识);
     }
 
     // —— 私有工具 ——
@@ -233,10 +299,15 @@ public sealed class 地图编辑数据
             var 地点 = System.Array.Find(数据.地点, p => p.标识 == 标识);
             return 地点?.连接;
         }
+        if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            return 节点?.连接;
+        }
         var 镇 = 当前城镇;
         if (镇 == null || 镇.小地图 == null) return null;
-        var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-        return 节点?.连接;
+        var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+        return 小节点?.连接;
     }
 
     private void 设当前层连接(string 标识, string[] 连接)
@@ -247,10 +318,16 @@ public sealed class 地图编辑数据
             if (地点 != null) 地点.连接 = 连接;
             return;
         }
+        if (当前层.StartsWith("内部:"))
+        {
+            var 节点 = 设施内部节点(标识);
+            if (节点 != null) 节点.连接 = 连接;
+            return;
+        }
         var 镇 = 当前城镇;
         if (镇 == null || 镇.小地图 == null) return;
-        var 节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
-        if (节点 != null) 节点.连接 = 连接;
+        var 小节点 = System.Array.Find(镇.小地图, n => n.标识 == 标识);
+        if (小节点 != null) 小节点.连接 = 连接;
     }
 
     // 从连接数组移除指定标识
