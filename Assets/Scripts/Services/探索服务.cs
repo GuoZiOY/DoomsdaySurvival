@@ -1,97 +1,391 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-    // 探索事件类型
-    public enum 探索事件类型 { 遭遇敌人, 发现地点, 获得资源, 无事发生 }
-
-    // 探索服务：进入区域反复深入探索，随机触发事件（权重表）
+    // 探索服务：深度分层区域状态机（层[] 数据驱动）+ 精力系统。
+    // 核心循环：进入 → 层1 → 反复[搜索]（耗精力）→ 事件（无事/资源[是][否]/战斗三形态/事件/通路事件）→ 深入 → … → Boss层 → 通关（可再刷）。
+    // 张力：HP/MP/精力 带入不恢复 → 血线+精力下降 → "再搜 or 见好就收"；精力 0 只能返回。
+    // 战斗三形态：遇见[战斗][逃跑] / 被偷袭（敌方先手强制战） / 偷袭（我方先手可选）。
+    // 通路事件：阈值+概率发现 → [强行突破]（必然战斗，胜后进下层）/ [悄悄绕行]（70%无事，30%战斗，然后进下层）。
     public sealed class 探索服务
     {
         private readonly EventBus 事件;
         private readonly DataService 数据;
-        private readonly PlayerService 玩家;
+        private readonly PlayerService 玩家服务;
         private readonly BattleService 战斗;
+        private 玩家档案 档案 => 玩家服务.档案;
 
+        // —— 状态 ——
         private 区域数据 当前区域;
-        public string 返回节点 { get; private set; }
-        public string 当前区域标识 { get; private set; }
+        private int 层索引 = -1;
+        private 探索事件表 当前事件表;   // 岔路层选定后锁定；null=未定（普通层直接用 层.事件表）
+        private int 搜索次数;
+        public string 返回节点 { get; private set; }   // 撤离回来源（大地图）
+        private string 遭遇组;           // 遭遇待处理；null=无
+        private int 遭遇先手;            // 战斗先手（0速度/1敌方/2我方）
+        private bool 待遭遇计数;         // 遭遇战后才计数本次搜索
+        private 资源项 当前资源;         // 资源事件待确认 [是][否]
+        private bool 通路后深入;         // 通路事件触发战斗，胜利后深入
+        private 选择事件 当前选择;       // 选择类事件（选择:索引）
 
-        // 当前显示缓存：探索控制器绑定时先拉取
+        public string 当前区域标识 { get; private set; }
         public 探索显示事件 当前显示 { get; private set; }
 
         public 探索服务(EventBus 事件, DataService 数据, PlayerService 玩家, BattleService 战斗)
         {
-            this.事件 = 事件; this.数据 = 数据; this.玩家 = 玩家; this.战斗 = 战斗;
+            this.事件 = 事件; this.数据 = 数据; this.玩家服务 = 玩家; this.战斗 = 战斗;
         }
 
-        // 进入区域：显示描述 + 危险度 + 深入/返回
+        // ===== 进入 / 状态 =====
+
         public void 进入区域(string 区域标识, string 返回节点)
         {
             if (!数据.区域.TryGetValue(区域标识, out 当前区域)) { Debug.LogError($"[探索服务] 区域不存在: {区域标识}"); return; }
             this.返回节点 = 返回节点;
             当前区域标识 = 区域标识;
-            显示(当前区域.描述 + "\n\n" + 危险度文本(当前区域.危险度));
+            层索引 = 0;
+            初始化层();
+            显示当前层();
         }
 
-        // 从地点节点回到区域继续探索（不改变返回节点）
+        // 从剧情节点（区域:指令）回到区域，保留层状态
         public void 回到区域()
         {
             if (当前区域 == null) return;
-            显示(当前区域.描述);
+            显示当前层();
         }
 
-        // 深入探索一步：抽取事件并执行
-        public void 深入探索() => 执行事件(抽取事件());
-
-        // 探索战斗胜利/逃跑后回调：回探索界面继续
-        public void 战斗胜利() => 显示("你喘了口气，握紧武器继续深入。");
-        public void 战斗逃跑() => 显示("你退回安全处，惊魂未定。");
-
-        // 显示探索界面内容
-        private void 显示(string 文本)
+        private void 初始化层()
         {
-            当前显示 = new 探索显示事件(文本, new[] { new 探索选项数据("深入探索", "深入"), new 探索选项数据("返回", "返回") });
-            事件.发布(当前显示);
+            当前事件表 = null;
+            搜索次数 = 0;
+            遭遇组 = null;
+            遭遇先手 = 0;
+            待遭遇计数 = false;
+            当前资源 = null;
+            通路后深入 = false;
+            当前选择 = null;
         }
 
-        // 权重随机抽取事件（复用旧 区域探索 逻辑）
-        private (探索事件类型, string, string, string, 剧情效果) 抽取事件()
-        {
-            var 候选 = new List<(探索事件类型, string, string, string, 剧情效果, int)>();
-            if (当前区域.遭遇 != null) foreach (var e in 当前区域.遭遇) if (!string.IsNullOrEmpty(e.敌人)) 候选.Add((探索事件类型.遭遇敌人, null, e.敌人, null, null, e.权重));
-            if (当前区域.发现 != null) foreach (var d in 当前区域.发现) if (!string.IsNullOrEmpty(d.节点)) 候选.Add((探索事件类型.发现地点, null, null, d.节点, null, d.权重));
-            if (当前区域.资源 != null) foreach (var r in 当前区域.资源) if (r.效果 != null) 候选.Add((探索事件类型.获得资源, r.文本, null, null, r.效果, r.权重));
-            if (当前区域.无事文本 != null) foreach (var t in 当前区域.无事文本) 候选.Add((探索事件类型.无事发生, t, null, null, null, 1));
-            if (候选.Count == 0) return (探索事件类型.无事发生, "这里什么也没有。", null, null, null);
+        private 探索层数据 当前层 => 当前区域?.层[层索引];
 
-            int 总权重 = 0; foreach (var c in 候选) 总权重 += Mathf.Max(1, c.Item6);
-            int 掷点 = Random.Range(0, 总权重);
-            foreach (var c in 候选) { 掷点 -= Mathf.Max(1, c.Item6); if (掷点 < 0) return (c.Item1, c.Item2, c.Item3, c.Item4, c.Item5); }
-            return (候选[候选.Count - 1].Item1, 候选[候选.Count - 1].Item2, 候选[候选.Count - 1].Item3, 候选[候选.Count - 1].Item4, 候选[候选.Count - 1].Item5);
+        private bool 已通关 => 当前区域 != null && 档案.已通关(当前区域标识);
+
+        // ===== 动作 =====
+
+        // 选岔路：锁定本层事件表
+        public void 选岔路(string 路)
+        {
+            var 岔路 = 当前层?.岔路;
+            if (岔路 == null) return;
+            当前事件表 = 路 == "危险" ? 岔路.危险 : 岔路.安全;
+            显示(当前层.描述 + "\n\n" + (路 == "危险" ? "你选择了危险捷径。" : "你选择了安全小路。"), 标准选项());
         }
 
-        // 执行事件：遭遇→开战斗；发现→进剧情节点；资源→应用效果；无事→显示
-        private void 执行事件((探索事件类型, string, string, string, 剧情效果) 事件项)
+        // 搜索：耗精力（1点）→ Boss 层 / 通路判定 → 抽事件
+        public void 搜索()
         {
-            switch (事件项.Item1)
+            if (当前层 == null || 遭遇组 != null || 当前资源 != null) return;
+            if (!档案.消耗精力(1))   // 行动消耗 1 精力
             {
-                case 探索事件类型.遭遇敌人:
-                    战斗.开始战斗(事件项.Item3, "__探索胜利", "__探索返回");
-                    事件.发布(new 探索显示事件($"你遇上了{数据.敌人[事件项.Item3].名称}！", new[] { new 探索选项数据("进入战斗", "战斗"), new 探索选项数据("落荒而逃", "返回") }));
-                    break;
-                case 探索事件类型.发现地点:
-                    ServiceRegistry.Get<DialogueService>().进入节点(事件项.Item4);
-                    break;
-                case 探索事件类型.获得资源:
-                    效果结算.应用(事件, 玩家.档案, 事件项.Item5);
-                    显示(事件项.Item2);
-                    break;
-                default:
-                    显示(事件项.Item2);
-                    break;
+                事件.发布(new 精力变化事件(档案.精力, 档案.最大精力, 0));
+                显示("体力透支……你再也走不动了。", 仅返回选项());
+                return;
+            }
+            事件.发布(new 精力变化事件(档案.精力, 档案.最大精力, -1));
+            // Boss 层：未通关 → 直接遭遇 Boss；已通关 → 普通化
+            if (!string.IsNullOrEmpty(当前层.Boss))
+            {
+                if (已通关) { 抽事件(当前层.通关后 ?? 空表()); return; }
+                遭遇(当前层.Boss, 0);
+                return;
+            }
+            // 通路判定（非底层）：搜满阈值后每次掷通路概率 → 通路事件
+            if (搜索次数 >= 当前层.搜索阈值 && 层索引 < 当前区域.层.Length - 1 && Random.value < 当前层.通路概率)
+            {
+                触发通路事件();
+                return;
+            }
+            抽事件(当前事件表 ?? 当前层.事件表);
+        }
+
+        // 深入：进入下一层（通路事件解决后调用）
+        public void 深入()
+        {
+            if (当前区域 == null) return;
+            if (层索引 + 1 >= 当前区域.层.Length) return;   // 底层无深入
+            层索引++;
+            初始化层();
+            显示当前层();
+        }
+
+        // 返回：撤离回来源（大地图），保留所得
+        public void 返回()
+        {
+            if (当前区域 == null) return;
+            当前区域 = null;
+            当前区域标识 = null;
+            层索引 = -1;
+            ServiceRegistry.Get<地图服务>().打开大地图(返回节点);
+        }
+
+        // ===== 资源事件（发现 → [是]耗精力+获得 / [否]略过） =====
+
+        public void 资源是()
+        {
+            if (当前资源 == null) return;
+            var 资源 = 当前资源;
+            当前资源 = null;
+            if (!档案.消耗精力(资源.消耗精力))
+            {
+                事件.发布(new 精力变化事件(档案.精力, 档案.最大精力, 0));
+                显示("你太累了，采集不动。", 标准选项());
+                return;
+            }
+            事件.发布(new 精力变化事件(档案.精力, 档案.最大精力, -资源.消耗精力));
+            效果结算.应用(事件, 档案, 资源.效果);
+            显示(资源.文本, 标准选项());
+            事件.发布(new 日志事件(日志类型.探索, 资源.文本));
+        }
+
+        public void 资源否()
+        {
+            当前资源 = null;
+            显示当前层();
+        }
+
+        // ===== 战斗三形态 =====
+
+        private void 遭遇(string 敌人组, int 先手)
+        {
+            遭遇组 = 敌人组;
+            遭遇先手 = 先手;
+            待遭遇计数 = true;   // 战斗胜利后才计数本次搜索
+            string 名称 = 数据.敌人组.TryGetValue(敌人组, out var 组) ? 组.名称 : 敌人组;
+            if (先手 == 1)   // 被偷袭：敌方先手，强制战斗
+            {
+                事件.发布(new 日志事件(日志类型.探索, $"你被{名称}偷袭了！"));
+                战斗遭遇();
+                return;
+            }
+            if (先手 == 2)   // 偷袭：敌方未察觉，可偷袭（我方先手）或绕开
+            {
+                显示($"你发现了{名称}，它没有察觉到你。", new[] { new 探索选项数据("偷袭", "偷袭"), new 探索选项数据("绕开", "绕开") });
+                return;
+            }
+            // 遇见
+            显示($"你遇上了{名称}！", new[] { new 探索选项数据("战斗", "战斗"), new 探索选项数据("落荒而逃", "逃跑") });
+        }
+
+        // 战斗/偷袭 → 开战（按遭遇先手）
+        public void 战斗遭遇()
+        {
+            if (遭遇组 == null) return;
+            var 组 = 遭遇组;
+            var 先手 = 遭遇先手;
+            遭遇组 = null;
+            战斗.开始战斗(组, "__探索胜利", "__探索返回", 先手);
+        }
+
+        public void 逃跑遭遇()
+        {
+            遭遇组 = null;
+            待遭遇计数 = false;
+            显示("你退回安全处，惊魂未定。", 标准选项());
+        }
+
+        // 偷袭时绕开
+        public void 偷袭绕开()
+        {
+            遭遇组 = null;
+            待遭遇计数 = false;
+            显示("你悄悄绕开了它，没有惊动任何东西。", 标准选项());
+        }
+
+        // 战斗胜利回调：计数 + 通路后深入 + Boss 通关
+        public void 战斗胜利()
+        {
+            if (待遭遇计数) { 待遭遇计数 = false; 搜索次数++; }
+            if (通路后深入) { 通路后深入 = false; 深入(); return; }
+            if (当前层 != null && !string.IsNullOrEmpty(当前层.Boss) && !已通关)
+            {
+                档案.标记通关(当前区域标识);
+                显示(当前区域.通关文案, 标准选项());
+                return;
+            }
+            显示("你喘了口气，握紧武器继续深入。", 标准选项());
+        }
+
+        public void 战斗逃跑() => 逃跑遭遇();
+
+        // ===== 通路事件 =====
+
+        private void 触发通路事件()
+        {
+            string 文本 = string.IsNullOrEmpty(当前层.通路文本) ? "你发现了通往下层的道路，但出口有守卫把守。" : 当前层.通路文本;
+            显示(文本, new[] { new 探索选项数据("强行突破", "强行突破"), new 探索选项数据("悄悄绕行", "悄悄绕行") });
+        }
+
+        // 强行突破：必然战斗，胜后深入
+        public void 强行突破()
+        {
+            通路战斗(1f);
+        }
+
+        // 悄悄绕行：70% 无事直接深入；30% 战斗后深入
+        public void 悄悄绕行()
+        {
+            通路战斗(0.3f);
+        }
+
+        private void 通路战斗(float 战斗概率)
+        {
+            var 组 = 随机遭遇组(当前事件表 ?? 当前层?.事件表);
+            if (组 == null || Random.value >= 战斗概率)
+            {
+                // 无事 → 直接深入
+                显示("你绕开了守卫，摸到了下一层的入口。", 标准选项());
+                深入();
+                return;
+            }
+            // 战斗 → 胜后深入
+            通路后深入 = true;
+            战斗.开始战斗(组, "__探索胜利", "__探索返回");
+        }
+
+        private string 随机遭遇组(探索事件表 表)
+        {
+            if (表?.遭遇 == null || 表.遭遇.Length == 0) return null;
+            return 表.遭遇[Random.Range(0, 表.遭遇.Length)].敌人;
+        }
+
+        // ===== 选择类事件 =====
+
+        public void 选择(int 选项索引)
+        {
+            if (当前选择?.选项 == null || 选项索引 < 0 || 选项索引 >= 当前选择.选项.Length) return;
+            var 选项 = 当前选择.选项[选项索引];
+            当前选择 = null;
+            if (!string.IsNullOrEmpty(选项.战斗)) { 遭遇(选项.战斗, 0); return; }
+            if (选项.效果 != null) { 效果结算.应用(事件, 档案, 选项.效果); 搜索次数++; 显示当前层(); return; }
+            if (!string.IsNullOrEmpty(选项.节点)) { ServiceRegistry.Get<DialogueService>().进入节点(选项.节点); return; }
+            搜索次数++;
+            显示当前层();
+        }
+
+        // ===== 事件抽取 =====
+
+        private void 抽事件(探索事件表 表)
+        {
+            if (表 == null) { 无事("这里什么也没有。"); return; }
+            // 候选池：0遭遇 1发现 2资源 3无事 4选择
+            var 候选 = new List<(int 类型, string 文本, string 标识, 剧情效果 效果, int 权重)>();
+            if (表.遭遇 != null) foreach (var e in 表.遭遇) if (!string.IsNullOrEmpty(e.敌人)) 候选.Add((0, e.形态, e.敌人, null, e.权重));
+            if (表.发现 != null) foreach (var d in 表.发现) if (!string.IsNullOrEmpty(d.节点)) 候选.Add((1, null, d.节点, null, d.权重));
+            if (表.资源 != null) foreach (var r in 表.资源) if (r.效果 != null) 候选.Add((2, r.文本, null, r.效果, r.权重));
+            if (表.无事文本 != null) foreach (var t in 表.无事文本) 候选.Add((3, t, null, null, 1));
+            if (表.选择 != null) for (int i = 0; i < 表.选择.Length; i++) 候选.Add((4, null, i.ToString(), null, 1));
+            if (候选.Count == 0) { 无事("这里什么也没有。"); return; }
+
+            int 总权重 = 0; foreach (var c in 候选) 总权重 += Mathf.Max(1, c.权重);
+            int 掷 = Random.Range(0, 总权重);
+            var 选中 = 候选[0];
+            foreach (var c in 候选) { 掷 -= Mathf.Max(1, c.权重); if (掷 < 0) { 选中 = c; break; } }
+
+            // 派发
+            switch (选中.类型)
+            {
+                case 0: 遭遇(选中.标识, 形态先手(选中.文本)); break;   // 遭遇（文本=形态）
+                case 1: ServiceRegistry.Get<DialogueService>().进入节点(选中.标识); break;   // 发现 → 剧情节点（区域:指令回区域）
+                case 2: 发现资源(选中.文本, 选中.效果); break;        // 资源 → [是][否] 确认
+                case 3: 无事(选中.文本); break;                       // 无事
+                case 4: 显示选择(int.Parse(选中.标识)); break;         // 选择类事件
             }
         }
 
+        // 遭遇形态 → 先手：空=遇见(0) "被偷袭"=1 "偷袭"=2
+        private static int 形态先手(string 形态)
+        {
+            if (形态 == "被偷袭") return 1;
+            if (形态 == "偷袭") return 2;
+            return 0;
+        }
+
+        // 资源事件：显示发现文本 + [是][否]（发现即算一次搜索）
+        private void 发现资源(string 文本, 剧情效果 效果)
+        {
+            搜索次数++;
+            // 找到对应资源项（记录 消耗精力）
+            var 表 = 当前事件表 ?? 当前层?.事件表;
+            if (表?.资源 != null)
+                foreach (var r in 表.资源)
+                    if (r.文本 == 文本 && r.效果 == 效果) { 当前资源 = r; break; }
+            if (当前资源 == null) 当前资源 = new 资源项 { 文本 = 文本, 效果 = 效果, 消耗精力 = 1 };
+            显示(文本 + "\n\n（获取需消耗 1 点精力）", new[] { new 探索选项数据("是", "资源:是"), new 探索选项数据("否", "资源:否") });
+        }
+
+        // 选择类事件：正文显示事件文本，选项走 战斗/效果/节点（动作 选择:索引）
+        private void 显示选择(int 索引)
+        {
+            var 表 = 当前事件表 ?? 当前层?.事件表;
+            var 选择 = 表?.选择;
+            if (选择 == null || 索引 < 0 || 索引 >= 选择.Length) return;
+            当前选择 = 选择[索引];
+            var 选项 = new List<探索选项数据>();
+            if (当前选择.选项 != null)
+                for (int i = 0; i < 当前选择.选项.Length; i++)
+                    选项.Add(new 探索选项数据(当前选择.选项[i].文本, "选择:" + i));
+            选项.Add(new 探索选项数据("返回", "返回"));
+            显示(当前选择.文本, 选项.ToArray());
+        }
+
+        private void 无事(string 文本)
+        {
+            搜索次数++;
+            显示(文本, 标准选项());
+            事件.发布(new 日志事件(日志类型.探索, 文本));
+        }
+
+        // ===== 显示 =====
+
+        private void 显示当前层()
+        {
+            var 层 = 当前层;
+            if (层 == null) return;
+            // 岔路层未选路 → 先选
+            if (层.岔路 != null && 当前事件表 == null)
+            {
+                显示(层.描述 + "\n\n" + 层.岔路.文本,
+                    new[] { new 探索选项数据("走安全小路", "岔路:安全"), new 探索选项数据("走危险捷径", "岔路:危险"), new 探索选项数据("返回", "返回") });
+                return;
+            }
+            显示(层.描述, 标准选项());
+        }
+
+        // 标准动作：搜索（精力>0 时）+ 返回
+        private 探索选项数据[] 标准选项()
+        {
+            var 列表 = new List<探索选项数据>();
+            if (档案.精力 > 0) 列表.Add(new 探索选项数据("搜索", "搜索"));
+            列表.Add(new 探索选项数据("返回", "返回"));
+            return 列表.ToArray();
+        }
+
+        private 探索选项数据[] 仅返回选项() => new[] { new 探索选项数据("返回", "返回") };
+
+        private void 显示(string 正文, 探索选项数据[] 选项)
+        {
+            当前显示 = new 探索显示事件(信息条文本(), 正文, 选项);
+            事件.发布(当前显示);
+        }
+
+        private string 信息条文本()
+        {
+            if (当前区域 == null) return "";
+            return $"{当前区域.名称} · {危险度文本(当前区域.危险度)}    层 {层索引 + 1}/{当前区域.层.Length}    精力 {档案.精力}/{档案.最大精力}";
+        }
+
         private static string 危险度文本(int 危险度)
-            => 危险度 switch { 1 => "<color=#7fae6a>危险度：低</color>", 2 => "<color=#d9a441>危险度：中</color>", _ => "<color=#c7473d>危险度：高</color>" };
+            => 危险度 switch { 1 => "危险度:低", 2 => "危险度:中", _ => "危险度:高" };
+
+        private static 探索事件表 空表() => new 探索事件表 { 无事文本 = new[] { "这里已经安全了，什么也没有。" } };
     }

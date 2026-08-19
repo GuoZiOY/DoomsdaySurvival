@@ -33,6 +33,9 @@ public static class 游戏主题
             case 日志类型.反馈: return "#8fcf78";    // 提亮苔绿
             case 日志类型.反馈坏: return "#e05a50";  // 提亮血烬红
             case 日志类型.内心: return "#b09fd0";    // 提亮暮紫
+            case 日志类型.战斗: return "#e0826a";    // 提亮余烬橙红（战斗过程）
+            case 日志类型.探索: return "#7fc0a8";    // 提亮青绿（探索事件）
+            case 日志类型.任务: return "#d9b36a";    // 提亮土金（任务接取/完成）
             default: return "#f0ead9";               // 剧情 = 近白暖色（主叙事最亮）
         }
     }

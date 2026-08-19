@@ -7,6 +7,7 @@ public sealed class HUD面板 : 面板基类
 {
     [SerializeField] private TMP_Text 生命;
     [SerializeField] private TMP_Text 魔力;
+    [SerializeField] private TMP_Text 精力;
     [SerializeField] private TMP_Text 金币;
     [SerializeField] private TMP_Text 时间;
     [SerializeField] private TMP_Text 地点;
@@ -17,14 +18,16 @@ public sealed class HUD面板 : 面板基类
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<生命变化事件>(e => 设文本(生命, $"生命 {e.当前}/{e.最大}"));
         事件.订阅<魔力变化事件>(e => 设文本(魔力, $"魔 {e.当前}/{e.最大}"));
-        事件.订阅<金币变化事件>(e => 设文本(金币, $"{e.当前} 金"));
+        事件.订阅<精力变化事件>(e => 设文本(精力, $"精力 {e.当前}/{e.最大}"));
+        事件.订阅<金币变化事件>(e => 设文本(金币, 货币工具.文本(e.当前)));
         事件.订阅<地图位置事件>(e => 设文本(地点, 地点名(e)));
 
         // 初始值（装配期事件可能已发出）
         var 玩家 = ServiceRegistry.Get<PlayerService>().档案;
         设文本(生命, $"生命 {玩家.生命}/{玩家.最大生命}");
         设文本(魔力, $"魔 {玩家.魔力}/{玩家.最大魔力}");
-        设文本(金币, $"{玩家.金币} 金");
+        设文本(精力, $"精力 {玩家.精力}/{玩家.最大精力}");
+        设文本(金币, 货币工具.文本(玩家.铜币));
         设文本(时间, 时间文本(玩家));
     }
 

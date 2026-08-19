@@ -36,6 +36,7 @@ public sealed class BattleService
     private string 胜利节点;
     private string 返回节点;
     private string 结果节点;
+    private int 先手模式;   // 0=速度序 1=敌方先手 2=我方先手
     private readonly List<string> 消耗道具 = new List<string>();
     private int 累计金币, 累计经验;
 
@@ -47,7 +48,8 @@ public sealed class BattleService
     { this.事件 = 事件; this.数据 = 数据; this.玩家服务 = 玩家服务; }
 
     // ===== 开始战斗 =====
-    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点)
+    // 先手：0=速度序（遇见） 1=敌方绝对先手（被偷袭） 2=我方绝对先手（偷袭）
+    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点, int 先手 = 0)
     {
         if (!数据.敌人组.TryGetValue(敌人组标识, out var 组))
         {
@@ -55,6 +57,7 @@ public sealed class BattleService
             return;
         }
         this.胜利节点 = 胜利后节点; this.返回节点 = 返回节点;
+        this.先手模式 = 先手;
         战斗中 = true; 回合数 = 0;
         我方.Clear(); 敌方.Clear(); 消耗道具.Clear(); 行动队列.Clear();
         累计金币 = 0; 累计经验 = 0; 当前行动单位 = null;
@@ -85,15 +88,28 @@ public sealed class BattleService
             检查单位死亡(单位);
         }
         if (检查战斗结束()) return;
-        // 按速度降序生成本回合完整行动序（队列执行 + 信息条显示全轮）
+        // 按速度降序生成本回合完整行动序（队列执行 + 信息条显示全轮）；先手方同速优先（偷袭/被偷袭）
         行动队列.Clear();
         本回合行动列表.Clear();
         本回合行动列表.AddRange(全部单位());
-        本回合行动列表.Sort((a, b) => b.基础速度.CompareTo(a.基础速度));
+        本回合行动列表.Sort((a, b) =>
+        {
+            int 先 = 先手优先级(a).CompareTo(先手优先级(b));
+            if (先 != 0) return 先;
+            return b.基础速度.CompareTo(a.基础速度);
+        });
         当前行动索引 = -1;
         foreach (var u in 本回合行动列表) 行动队列.Enqueue(u);
         事件.发布(new 回合开始事件(回合数));
         推进();
+    }
+
+    // 先手优先级：1=敌方绝对先手 / 2=我方绝对先手 / 0=纯速度序（同速比速度）
+    private int 先手优先级(战斗单位 单位)
+    {
+        if (先手模式 == 1) return 单位.是否我方 ? 1 : 0;
+        if (先手模式 == 2) return 单位.是否我方 ? 0 : 1;
+        return 0;
     }
 
     // 弹出下一个可行动单位；玩家回合停下等操作，敌人回合跑AI
@@ -210,7 +226,14 @@ public sealed class BattleService
     {
         if (!数据.技能.TryGetValue(技能标识, out var 技能)) return;
         if (施法者.冷却剩余(技能标识) > 0) return;
-        if (!施法者.消耗魔力(技能.消耗魔力)) { if (施法者.是否我方) { 音效管理器.实例?.播放失败(); 发消息("魔力不足！"); } return; }
+        // 资源规则：物理攻击类技能耗精力，其余（魔法/治疗/增益/减益/控制）耗魔力
+        bool 物理技能 = 技能.类别枚举 == 技能类别.攻击 && 技能.伤害类型枚举 == 伤害类型.物理;
+        bool 够资源 = 物理技能 ? 施法者.消耗精力(技能.消耗魔力) : 施法者.消耗魔力(技能.消耗魔力);
+        if (!够资源)
+        {
+            if (施法者.是否我方) { 音效管理器.实例?.播放失败(); 发消息(物理技能 ? "精力不足！" : "魔力不足！"); }
+            return;
+        }
         int 熟练 = 施法者.熟练等级(技能标识);
         float 品质倍 = 品质工具.倍率(技能.品质档);
         switch (技能.类别枚举)
@@ -219,6 +242,7 @@ public sealed class BattleService
                 {
                     int 倍率 = Mathf.RoundToInt(技能.数值 * 品质倍 * (1f + 熟练 * 技能.熟练伤害加成 / 100f));
                     造成伤害(施法者, 目标, 技能.伤害类型枚举, 倍率);
+                    附加Buff(施法者, 目标, 技能);   // 攻击技能可同时挂载减益（如 撕咬→中毒）
                     break;
                 }
             case 技能类别.治疗:
@@ -230,19 +254,23 @@ public sealed class BattleService
                     break;
                 }
             default:   // 增益 / 减益 / 控制：挂载 buff
-                if (!string.IsNullOrEmpty(技能.挂载Buff) && 数据.Buffs.TryGetValue(技能.挂载Buff, out var buff))
-                {
-                    目标.添加Buff(buff);
-                    var 实例 = 目标.Buffs.Find(b => b.定义.标识 == buff.标识);
-                    事件.发布(new 状态变化事件(目标, buff.标识, 实例?.层数 ?? 1, buff.持续回合, false));
-                    发消息($"{目标.名称} 获得「{buff.名称}」！");
-                }
+                附加Buff(施法者, 目标, 技能);
                 break;
         }
         施法者.开始冷却(技能标识, 技能.冷却);
         // 玩家使用技能累积熟练度
         if (施法者.是否我方 && 熟练 < 玩家档案.熟练等级上限)
             ServiceRegistry.Get<技能服务>().记录熟练度(技能标识, 1);
+    }
+
+    // 技能挂载 Buff（攻击技能也可携带减益，如 撕咬→中毒 / 骨刺→防御削弱）
+    private void 附加Buff(战斗单位 施法者, 战斗单位 目标, 技能数据 技能)
+    {
+        if (string.IsNullOrEmpty(技能.挂载Buff) || !数据.Buffs.TryGetValue(技能.挂载Buff, out var buff)) return;
+        目标.添加Buff(buff);
+        var 实例 = 目标.Buffs.Find(b => b.定义.标识 == buff.标识);
+        事件.发布(new 状态变化事件(目标, buff.标识, 实例?.层数 ?? 1, buff.持续回合, false));
+        发消息($"{目标.名称} 获得「{buff.名称}」！");
     }
 
     private void 执行道具(战斗单位 使用者, string 物品标识, 战斗单位 目标)
@@ -308,14 +336,14 @@ public sealed class BattleService
         发消息($"{单位.名称} 倒下了！");
     }
 
-    // ===== 胜利结算（每死一个敌人即时结算） =====
+    // ===== 胜利结算（每死一个敌人即时结算；金币奖励单位 = 铜币） =====
     private void 结算单个敌人(战斗单位 敌人)
     {
         var 敌 = 敌人.源数据;
         if (敌 == null) return;
-        档案.金币 += 敌.金币奖励; 累计金币 += 敌.金币奖励;
+        档案.铜币 += 敌.金币奖励; 累计金币 += 敌.金币奖励;
         bool 升级 = 档案.获得经验(敌.经验奖励); 累计经验 += 敌.经验奖励;
-        事件.发布(new 金币变化事件(档案.金币, 敌.金币奖励));
+        事件.发布(new 金币变化事件(档案.铜币, 敌.金币奖励));
         事件.发布(new 经验变化事件(档案.等级, 档案.经验, 档案.升级所需经验, 升级));
         if (升级) 事件.发布(new 属性变化事件(档案.体力, 档案.力量, 档案.智力, 档案.敏捷, 档案.自由属性点));
         if (!string.IsNullOrEmpty(敌.掉落物品) && Random.value < 敌.掉落概率)
@@ -324,7 +352,7 @@ public sealed class BattleService
             事件.发布(new 背包变化事件(敌.掉落物品, 1, 变化原因.获得));
         }
         ServiceRegistry.Get<QuestService>().记录击败(敌.标识);
-        发消息($"击败{敌.名称}！获得 {敌.金币奖励} 金币、{敌.经验奖励} 经验。");
+        发消息($"击败{敌.名称}！获得 {货币工具.文本(敌.金币奖励)}、{敌.经验奖励} 经验。");
     }
 
     // ===== 行动完成 → 推进/结束 =====
@@ -337,7 +365,7 @@ public sealed class BattleService
     private bool 检查战斗结束()
     {
         if (!战斗中) return true;
-        if (敌方.Count == 0) { 结束战斗(true, $"战斗胜利！共获得 {累计金币} 金币、{累计经验} 经验。", 胜利节点); return true; }
+        if (敌方.Count == 0) { 结束战斗(true, $"战斗胜利！共获得 {货币工具.文本(累计金币)}、{累计经验} 经验。", 胜利节点); return true; }
         if (我方.Count == 0) { 结束战斗(false, "你被击败了……", 返回节点); return true; }
         return false;
     }
@@ -353,25 +381,26 @@ public sealed class BattleService
         事件.发布(new 战斗结束事件(胜利, 文本));
     }
 
-    // 失败惩罚：掉 10% 金币 + 回城满状态（D15-A）
+    // 失败惩罚：掉 10% 铜币 + 回城满状态（D15-A）
     private void 结算失败惩罚()
     {
-        int 损失 = 档案.金币 * 10 / 100;
+        int 损失 = 档案.铜币 * 10 / 100;
         if (损失 > 0)
         {
-            档案.金币 -= 损失;
-            事件.发布(new 金币变化事件(档案.金币, -损失));
+            档案.铜币 -= 损失;
+            事件.发布(new 金币变化事件(档案.铜币, -损失));
         }
         档案.生命 = 档案.最大生命;
         档案.魔力 = 档案.最大魔力;
-        发消息($"你损失了 {损失} 金币，被送回安全处。");
+        发消息($"你损失了 {货币工具.文本(损失)}，被送回安全处。");
     }
 
-    // 离场回写：生命/魔力 + 道具消耗统一扣；Buff/临时状态丢弃（战斗外无临时buff）
+    // 离场回写：生命/魔力/精力 + 道具消耗统一扣；Buff/临时状态丢弃（战斗外无临时buff）
     private void 结算回写()
     {
         档案.生命 = 玩家.生命;
         档案.魔力 = 玩家.魔力;
+        档案.精力 = 玩家.精力;   // 物理技能消耗的精力随战斗保留（探索血线/精力张力）
         foreach (var 标识 in 消耗道具) 档案.移除物品(标识);
         消耗道具.Clear();
     }
@@ -394,6 +423,6 @@ public sealed class BattleService
     private void 发消息(string 文本)
     {
         当前消息 = 文本;
-        事件.发布(new 日志事件(日志类型.操作, 文本));
+        事件.发布(new 日志事件(日志类型.战斗, 文本));
     }
 }

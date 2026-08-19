@@ -18,12 +18,17 @@ public sealed class 音效管理器 : MonoBehaviour
     private AudioSource 音效源;
     private bool 本帧失败;   // 防重：本帧已判失败，成功音效跳过（失败点击只响错误音）
 
+    // —— 音量/静音（AudioListener.volume 全局缩放；设置面板滑条 + 侧边栏音量开关）——
+    public static float 当前音量 { get; private set; } = 1f;
+    public bool 已静音 { get; private set; }
+
     void Awake()
     {
         if (实例 != null && 实例 != this) { Destroy(gameObject); return; }
         实例 = this;
         音乐源 = 配置源(false);
         音效源 = 配置源(true);
+        AudioListener.volume = 已静音 ? 0f : 当前音量;
     }
 
     void Start()
@@ -61,12 +66,13 @@ public sealed class 音效管理器 : MonoBehaviour
         }
     }
 
-    // 注册单个按钮：点击播放成功音效（移除再添加，幂等，重复注册不叠音）
+    // 注册单个按钮：点击播放成功音效（移除再添加，幂等，重复注册不叠音）；同时自动挂 悬停反馈（已有则跳过）
     public void 注册按钮(Button 按钮)
     {
         if (按钮 == null) return;
         按钮.onClick.RemoveListener(播放成功);
         按钮.onClick.AddListener(播放成功);
+        悬停反馈.注册按钮(按钮);
     }
 
     // 按钮成功音效：按钮点击时播放；本帧已判失败则跳过
@@ -90,5 +96,19 @@ public sealed class 音效管理器 : MonoBehaviour
     {
         if (片段 == null || 音效源 == null) return;
         音效源.PlayOneShot(片段);
+    }
+
+    // 音量开关：静音/恢复（侧边栏 音量按钮）
+    public void 切换静音()
+    {
+        已静音 = !已静音;
+        AudioListener.volume = 已静音 ? 0f : 当前音量;
+    }
+
+    // 设置音量（0~1，设置面板滑条）；静音状态下不生效，取消静音后恢复
+    public void 设置音量(float 音量)
+    {
+        当前音量 = Mathf.Clamp01(音量);
+        if (!已静音) AudioListener.volume = 当前音量;
     }
 }

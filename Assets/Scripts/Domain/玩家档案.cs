@@ -24,28 +24,44 @@ using System.Collections.Generic;
     // 4 大基础属性类型（加点用）
     public enum 属性类型 { 体力, 力量, 智力, 敏捷 }
 
+    // 装备记录：已装备物品（槽位 + 标识）。存档结构（8 槽：主手/副手/头盔/盔甲/靴子/手套/饰品1/饰品2）
+    [Serializable]
+    public class 装备记录
+    {
+        public string 槽位;
+        public string 标识;
+        public 装备记录() { }
+        public 装备记录(string 槽位, string 标识) { this.槽位 = 槽位; this.标识 = 标识; }
+    }
+
     // 玩家档案：纯 C# 领域模型（零 UnityEngine 依赖），可整体序列化存档。
     // 字段名与旧 玩家状态 一致，保证旧档字段兼容。
     [Serializable]
     public class 玩家档案
     {
-        // 注入：装备加成解析器（由装配层接到 DataService；标识 -> 加成值）
-        [NonSerialized] public Func<string, int> 武器攻击解析;
-        [NonSerialized] public Func<string, int> 防具防御解析;
+        // 注入：装备数值解析器（由装配层接到 DataService；标识 -> 加成值），派生数值遍历已装备求和
+        [NonSerialized] public Func<string, int> 攻击加成解析;
+        [NonSerialized] public Func<string, int> 防御加成解析;
+        [NonSerialized] public Func<string, int> 生命加成解析;
 
         // —— 属性 ——
         public int 等级 = 1;
         public int 经验 = 0;
         public int 生命 = 20;
         public int 魔力 = 20;
-        public int 金币 = 3;
+        public int 铜币 = 30000;   // 钱包（最小单位：铜币；1金=100银=10000铜）初始 3 金
+        public int 精力 = 112;     // 当前精力（探索/行动/物理技能 消耗；100+等级×2+体力×2 上限）初始匹配 等级1/体力5
         public float 游戏分钟数 = 420f;           // 6:00 开始；1 现实秒 = 2 游戏分钟
-        public string 武器标识 = "生锈短剑";         // 初始装备
-        public string 防具标识 = "";                // 初始无防具
         public string 当前节点 = "";               // 剧情进度（用于存档恢复）
         public List<物品堆叠> 背包 = new List<物品堆叠>();
         public List<技能掌握> 已学技能 = new List<技能掌握>();
         public List<任务进度> 任务 = new List<任务进度>();
+
+        // —— 探索：已通关区域（可再刷，Boss 层普通化）——
+        public List<string> 已通关区域 = new List<string>();
+
+        // —— 装备：槽位列表（8 槽），物品 槽位 声明归属，饰品自动分配 饰品1/饰品2 ——
+        public List<装备记录> 装备 = new List<装备记录>();
 
         // —— 4 大基础属性 + 自由属性点 ——
         public int 体力 = 5;
@@ -57,19 +73,80 @@ using System.Collections.Generic;
         // 技能熟练度等级上限
         public const int 熟练等级上限 = 5;
 
-        // —— 派生数值（总属性 = 基础 + 属性 + 装备）——
-        public int 物理伤害 => 力量 * 2 + (武器攻击解析?.Invoke(武器标识) ?? 0);
+        // —— 派生数值（总属性 = 基础 + 属性 + 装备，装备加成遍历求和）——
+        public int 物理伤害 => 力量 * 2 + 装备数值(攻击加成解析);
         public int 魔法伤害 => 智力 * 2;
         public int 总攻击 => 物理伤害;             // 兼容现有战斗（普攻走物理）
-        public int 总防御 => 防御 + (防具防御解析?.Invoke(防具标识) ?? 0);
-        public int 最大生命 => 20 + 体力 * 5 + 等级 * 5;
+        public int 总防御 => 防御 + 装备数值(防御加成解析);
+        public int 最大生命 => 20 + 体力 * 5 + 等级 * 5 + 装备数值(生命加成解析);
         public int 最大魔力 => 20 + 智力 * 3 + 等级 * 3;
+        public int 最大精力 => 100 + 等级 * 2 + 体力 * 2;   // 探索/行动/物理技能 资源
         public float 暴击概率 => 敏捷 * 0.01f;
         public float 闪避概率 => 敏捷 * 0.01f;
 
         // 防御基础值（旧字段保留，等级不再直接加，靠 防具/属性）
         public int 防御 = 2;
         public int 攻击 = 5;
+
+        // 已装备物品数值总和（标识 -> 加成 由解析器提供；未接线返回 0）
+        private int 装备数值(Func<string, int> 加成)
+        {
+            if (加成 == null) return 0;
+            int 总 = 0;
+            foreach (var e in 装备)
+                if (!string.IsNullOrEmpty(e.标识)) 总 += 加成(e.标识);
+            return 总;
+        }
+
+        // ---------- 装备 ----------
+
+        // 取某槽已装备的物品标识（空 = 未装备）
+        public string 装备标识(string 槽位)
+        {
+            foreach (var e in 装备) if (e.槽位 == 槽位) return e.标识;
+            return "";
+        }
+
+        // 装备到指定槽：覆盖同槽旧件并返回旧标识（空 = 原本空槽）
+        public string 装备到槽(string 槽位, string 标识)
+        {
+            foreach (var e in 装备)
+                if (e.槽位 == 槽位) { string 旧 = e.标识; e.标识 = 标识; return 旧; }
+            装备.Add(new 装备记录(槽位, 标识));
+            return "";
+        }
+
+        // 卸下：清空槽位并返回物品标识（空 = 未装备）
+        public string 卸下装备(string 槽位)
+        {
+            for (int i = 装备.Count - 1; i >= 0; i--)
+                if (装备[i].槽位 == 槽位) { var 标识 = 装备[i].标识; 装备.RemoveAt(i); return 标识; }
+            return "";
+        }
+
+        // 饰品槽自动分配：优先空槽（饰品1 → 饰品2），都满则覆盖饰品1
+        public string 饰品目标槽()
+        {
+            if (string.IsNullOrEmpty(装备标识("饰品1"))) return "饰品1";
+            if (string.IsNullOrEmpty(装备标识("饰品2"))) return "饰品2";
+            return "饰品1";
+        }
+
+        // 某物品是否已装备（任意槽）
+        public bool 已装备(string 标识)
+        {
+            foreach (var e in 装备) if (e.标识 == 标识) return true;
+            return false;
+        }
+
+        // ---------- 探索（已通关区域） ----------
+
+        public bool 已通关(string 区域标识) => 已通关区域.Contains(区域标识);
+
+        public void 标记通关(string 区域标识)
+        {
+            if (!已通关区域.Contains(区域标识)) 已通关区域.Add(区域标识);
+        }
 
         // 升级所需经验（每级递增）
         public int 升级所需经验 => 等级 * 25;
@@ -124,6 +201,15 @@ using System.Collections.Generic;
         {
             if (魔力 < 数值) return false;
             魔力 -= 数值;
+            return true;
+        }
+
+        public void 恢复精力(int 数值) => 精力 = 夹(精力 + 数值, 0, 最大精力);
+
+        public bool 消耗精力(int 数值)
+        {
+            if (精力 < 数值) return false;
+            精力 -= 数值;
             return true;
         }
 

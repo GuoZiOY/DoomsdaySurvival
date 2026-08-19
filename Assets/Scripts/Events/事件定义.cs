@@ -1,5 +1,5 @@
-    // 日志类型：决定前缀与颜色
-    public enum 日志类型 { 系统, 剧情, 操作, 反馈, 反馈坏, 内心 }
+    // 日志类型：决定前缀与颜色（系统/剧情/操作/反馈/反馈坏/内心 + 战斗/探索/任务）
+    public enum 日志类型 { 系统, 剧情, 操作, 反馈, 反馈坏, 内心, 战斗, 探索, 任务 }
 
     // 背包变化原因
     public enum 变化原因 { 获得, 失去, 消耗, 出售, 购买 }
@@ -17,6 +17,13 @@
     {
         public readonly int 当前; public readonly int 最大; public readonly int 变化量;
         public 魔力变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
+    }
+
+    // 精力变化：探索/行动/物理技能 消耗，休息/睡觉 恢复
+    public readonly struct 精力变化事件
+    {
+        public readonly int 当前; public readonly int 最大; public readonly int 变化量;
+        public 精力变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
     }
 
     public readonly struct 金币变化事件

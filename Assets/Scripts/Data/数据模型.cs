@@ -10,9 +10,11 @@ using System;
     {
         public int 生命;
         public int 魔力;
+        public int 精力;       // 正=恢复 / 负=消耗（休息事件等）
         public int 金币;
         public int 经验;
         public string 获得物品;
+        public int 获得数量;   // 获得物品的数量（缺省按 1；JsonUtility 缺失=0，结算时兜底 1）
         public string 失去物品;
     }
 
@@ -75,12 +77,14 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 类型;       // "恢复" 消耗品 / "任务" 任务物品 / "武器" / "防具" / "技能书"
+        public string 类型;       // "恢复" 消耗品 / "任务" 任务物品 / "武器" / "防具" / "饰品" / "技能书"
         public int 恢复量;        // 类型=恢复 时的恢复值（受品质倍率影响）
         public int 攻击加成;      // 类型=武器（受品质倍率影响）
-        public int 防御加成;      // 类型=防具（受品质倍率影响）
+        public int 防御加成;      // 类型=防具/饰品（受品质倍率影响）
+        public int 生命加成;      // 类型=防具/饰品：生命上限加成（词缀差异化后续）
+        public string 槽位;       // 装备类：放入的槽位（"主手"/"副手"/"头盔"/"盔甲"/"靴子"/"手套"/"饰品"）
         public string 技能;       // 类型=技能书 时授予的技能标识
-        public int 价格;          // 商店买卖价格（0=不可买卖）
+        public int 价格;          // 商店买卖价格（单位：铜币，1金=10000铜；0=不可买卖）
         public string 品质;       // "普通"/"优秀"/"稀有"...（JsonUtility 不认枚举名，字符串+转换）
         public 品质 品质档 => 数据解析.枚举<品质>(品质);
         // —— 战斗内使用 ——
@@ -268,21 +272,70 @@ using System;
     [Serializable]
     public class 地图根 { public 地图地点[] 地点; }
 
-    // ================= 区域 =================
+    // ================= 区域（探索系统：深度分层） =================
 
-    // 区域遭遇项：敌人 + 出现权重
+    // 区域遭遇项：敌人组 + 出现权重 + 遭遇形态（空=遇见 [战斗][逃跑]；"被偷袭"=敌方先手强制战；"偷袭"=我方先手可选）
     [Serializable]
-    public class 遭遇项 { public string 敌人; public int 权重; }
+    public class 遭遇项 { public string 敌人; public int 权重; public string 形态; }
 
     // 区域发现项：地点剧情节点 + 权重
     [Serializable]
     public class 发现项 { public string 节点; public int 权重; }
 
-    // 区域资源项：效果 + 描述 + 权重
+    // 区域资源项：效果 + 描述 + 权重 + 获取消耗精力（[是]=扣精力+获得 / [否]=略过）
     [Serializable]
-    public class 资源项 { public 剧情效果 效果; public string 文本; public int 权重; }
+    public class 资源项 { public 剧情效果 效果; public string 文本; public int 权重; public int 消耗精力 = 1; }
 
-    // 区域：探索的舞台，含遭遇/发现/资源事件表
+    // 选择选项：选择类事件的一个选项（战斗 / 效果 / 进剧情节点 三选一或组合）
+    [Serializable]
+    public class 选择选项
+    {
+        public string 文本;
+        public string 战斗;        // 可选：敌人组标识（遭遇）
+        public 剧情效果 效果;      // 可选：获得/损失（资源）
+        public string 节点;        // 可选：剧情节点（发现）
+    }
+
+    // 选择事件：宝箱陷阱等多分支事件（选项走 战斗/效果/节点）
+    [Serializable]
+    public class 选择事件 { public string 文本; public 选择选项[] 选项; }
+
+    // 探索事件表：一层（或岔路一侧）的随机事件池
+    [Serializable]
+    public class 探索事件表
+    {
+        public 遭遇项[] 遭遇;
+        public 资源项[] 资源;
+        public 发现项[] 发现;
+        public string[] 无事文本;
+        public 选择事件[] 选择;
+    }
+
+    // 岔路数据：进入层先选路，锁定一侧事件表
+    [Serializable]
+    public class 岔路数据
+    {
+        public string 文本;
+        public 探索事件表 安全;
+        public 探索事件表 危险;
+    }
+
+    // 探索层：事件表 或 岔路 或 Boss 层（Boss 通关后普通化，用 通关后 事件表）
+    [Serializable]
+    public class 探索层数据
+    {
+        public int 编号;
+        public string 描述;
+        public int 搜索阈值 = 3;       // 搜索满后通路进入候选
+        public float 通路概率 = 0.5f;  // 之后每次搜索发现通路的概率
+        public string 通路文本;        // 可选：发现通路时的事件文本（缺省通用文案）
+        public 探索事件表 事件表;      // 普通层
+        public 岔路数据 岔路;          // 岔路层（优先于 事件表）
+        public string Boss;            // Boss 层：敌人组标识（优先于 事件表）
+        public 探索事件表 通关后;      // Boss 层通关后的事件表（缺省=无事）
+    }
+
+    // 区域：探索的舞台，层[] 数据驱动（数组长度 = 层数，底层 Boss）
     [Serializable]
     public class 区域数据
     {
@@ -290,10 +343,8 @@ using System;
         public string 名称;
         public string 描述;
         public int 危险度;        // 1 低 / 2 中 / 3 高
-        public 遭遇项[] 遭遇;
-        public 发现项[] 发现;
-        public 资源项[] 资源;
-        public string[] 无事文本;
+        public string 通关文案;
+        public 探索层数据[] 层;
     }
 
     [Serializable]

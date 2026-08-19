@@ -91,3 +91,10 @@ public readonly struct 地图位置事件
     public readonly string 小节点;
     public 地图位置事件(地图模式 所在模式, string 大节点, string 小节点) { this.所在模式 = 所在模式; this.大节点 = 大节点; this.小节点 = 小节点; }
 }
+
+// 面板切换：面板管理器 显示面板后发布（侧边栏等常驻 UI 据此刷新按钮显隐/状态）
+public readonly struct 面板切换事件
+{
+    public readonly 面板基类 目标;
+    public 面板切换事件(面板基类 目标) { this.目标 = 目标; }
+}

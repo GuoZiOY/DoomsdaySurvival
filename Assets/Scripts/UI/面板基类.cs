@@ -24,9 +24,13 @@ public abstract class 面板基类 : MonoBehaviour
 
     public virtual void 隐藏面板() => gameObject.SetActive(false);
 
-    // 全局右键"取消/回退"的统一入口：子类按各自语义覆盖（如 战斗面板=取消选目标 / 功能面板=返回设施内部）。
-    // 由 玩家输入系统 在鼠标右键时调用当前显示面板的 回退()。
-    public virtual void 回退() { }
+    // 全局"取消/回退"的统一入口：子类按各自语义覆盖（如 战斗面板=取消选目标 / 功能面板=返回设施内部）。
+    // 由 玩家输入系统（右键）与 侧边栏取消按钮 调用当前显示面板的 回退()。
+    // 返回 true = 本次取消被消费（有动作）；false = 无可取消（调用方决定是否播错误音效）。
+    public virtual bool 回退() => false;
+
+    // 取消按钮的文案：随当前面板动态显示（默认"取消"；各面板覆写为 返回/离开城镇/关闭/回主菜单 等）
+    public virtual string 取消文本 => "取消";
 
     // 子类：进入面板时填充内容（上下文 可由打开者传入，如设施返回节点）
     protected abstract void 刷新(object 上下文);
@@ -35,7 +39,8 @@ public abstract class 面板基类 : MonoBehaviour
 
     // 在父级创建一行按钮（克隆共享按钮预制体 + 设文字 + 接点击）
     // 移除布局=true 去掉克隆体 LayoutElement（对话选项不需要固定高度）；文字居中=true 覆盖对齐为居中（对话选项）
-    protected void 创建行(RectTransform 父, string 文字, Action 点击, bool 移除布局 = false, bool 文字居中 = false)
+    // static：子面板组件（非 面板基类 子类）也能调用
+    public static void 创建行(RectTransform 父, string 文字, Action 点击, bool 移除布局 = false, bool 文字居中 = false)
     {
         if (按钮预制体 == null) { Debug.LogError("[面板基类] 未设置按钮预制体（请在 面板管理器 的 Inspector 拖入）"); return; }
         if (父 == null) { Debug.LogWarning("[面板基类] 创建行：内容区未接线"); return; }
@@ -59,14 +64,24 @@ public abstract class 面板基类 : MonoBehaviour
         }
     }
 
-    protected void 清空(RectTransform 列表)
+    // 克隆一个「行模板」到父容器并激活；返回指定组件（专用行组件用，如 背包行）。
+    // static：子面板组件（非 面板基类 子类）也能调用
+    public static T 创建模板<T>(RectTransform 父, GameObject 模板) where T : Component
+    {
+        if (父 == null || 模板 == null) return null;
+        var 物体 = Instantiate(模板, 父, false);
+        物体.SetActive(true);
+        return 物体.GetComponent<T>();
+    }
+
+    public static void 清空(RectTransform 列表)
     {
         if (列表 == null) return;
         for (int i = 列表.childCount - 1; i >= 0; i--) Destroy(列表.GetChild(i).gameObject);
     }
 
     // 创建一行标签（非按钮，纯文字；分区标题等），用 TMP 默认字体
-    protected void 创建标签(RectTransform 父, string 文字)
+    public static void 创建标签(RectTransform 父, string 文字)
     {
         if (父 == null) return;
         var 物体 = new GameObject("标签", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -79,9 +94,21 @@ public abstract class 面板基类 : MonoBehaviour
     }
 
     // 设文本（空引用安全）
-    protected void 设文本(TMP_Text 文本, string 内容)
+    public static void 设文本(TMP_Text 文本, string 内容)
     {
         if (文本 != null) 文本.text = 内容;
+    }
+
+    // 选中缩放：Tab/排序 等切换按钮的选中态——固定放大一点（替代颜色高亮），悬停反馈叠在其上
+    public const float 选中缩放 = 1.08f;
+
+    public static void 设选中缩放(Button 按钮, bool 选中)
+    {
+        if (按钮 == null) return;
+        float 目标 = 选中 ? 选中缩放 : 1f;
+        var 反馈 = 按钮.GetComponent<悬停反馈>();
+        if (反馈 != null) 反馈.设基座(目标);
+        else 按钮.transform.localScale = Vector3.one * 目标;
     }
 
     // 设施返回：从城镇地图进入的设施回城镇地图；从剧情进入的回剧情节点

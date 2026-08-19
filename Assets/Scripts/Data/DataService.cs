@@ -108,17 +108,57 @@ using UnityEngine;
                         if (!地图.ContainsKey(相邻)) 校验错误.Add($"地图[{标识}] → 连接[{相邻}] 不存在");
             }
 
-            // —— 区域：遭遇敌人 / 发现节点 ——
+            // —— 物品：装备类必须有 槽位 ——
+            foreach (var (标识, 物品) in 物品)
+            {
+                if ((物品.类型 == "武器" || 物品.类型 == "防具" || 物品.类型 == "饰品") && string.IsNullOrEmpty(物品.槽位))
+                    校验错误.Add($"物品[{标识}] 装备类缺少 槽位（主手/副手/头盔/盔甲/靴子/手套/饰品）");
+            }
+
+            // —— 区域（层结构）：事件表遭遇敌人 / 发现节点 / Boss 组 / 选择事件 ——
+            // 区域事件表校验：遭遇敌人组 / 发现节点 / 选择选项
+            void 校验事件表(string 层名, 探索事件表 表)
+            {
+                if (表 == null) return;
+                if (表.遭遇 != null)
+                    foreach (var 遭遇 in 表.遭遇)
+                        if (!string.IsNullOrEmpty(遭遇.敌人) && !敌人组.ContainsKey(遭遇.敌人))
+                            校验错误.Add($"{层名} → 敌人组[{遭遇.敌人}] 不存在");
+                if (表.发现 != null)
+                    foreach (var 发现 in 表.发现)
+                        if (!string.IsNullOrEmpty(发现.节点) && !剧情.ContainsKey(发现.节点))
+                            校验错误.Add($"{层名} → 节点[{发现.节点}] 不存在");
+                if (表.选择 != null)
+                    foreach (var 选择 in 表.选择)
+                    {
+                        if (选择.选项 == null) continue;
+                        foreach (var 选项 in 选择.选项)
+                        {
+                            if (!string.IsNullOrEmpty(选项.战斗) && !敌人组.ContainsKey(选项.战斗))
+                                校验错误.Add($"{层名} 选择[{选择.文本}] → 敌人组[{选项.战斗}] 不存在");
+                            if (!string.IsNullOrEmpty(选项.节点) && !剧情.ContainsKey(选项.节点))
+                                校验错误.Add($"{层名} 选择[{选择.文本}] → 节点[{选项.节点}] 不存在");
+                        }
+                    }
+            }
+
             foreach (var (标识, 区) in 区域)
             {
-                if (区.遭遇 != null)
-                    foreach (var 遭遇 in 区.遭遇)
-                        if (!string.IsNullOrEmpty(遭遇.敌人) && !敌人.ContainsKey(遭遇.敌人))
-                            校验错误.Add($"区域[{标识}] → 敌人[{遭遇.敌人}] 不存在");
-                if (区.发现 != null)
-                    foreach (var 发现 in 区.发现)
-                        if (!string.IsNullOrEmpty(发现.节点) && !剧情.ContainsKey(发现.节点))
-                            校验错误.Add($"区域[{标识}] → 节点[{发现.节点}] 不存在");
+                if (区.层 == null) { 校验错误.Add($"区域[{标识}] 缺少 层 定义"); continue; }
+                for (int i = 0; i < 区.层.Length; i++)
+                {
+                    var 层 = 区.层[i];
+                    string 层名 = $"区域[{标识}]·层{i + 1}";
+                    校验事件表(层名, 层.事件表);
+                    校验事件表(层名, 层.通关后);
+                    if (层.岔路 != null)
+                    {
+                        校验事件表($"{层名}·安全", 层.岔路.安全);
+                        校验事件表($"{层名}·危险", 层.岔路.危险);
+                    }
+                    if (!string.IsNullOrEmpty(层.Boss) && !敌人组.ContainsKey(层.Boss))
+                        校验错误.Add($"{层名} Boss组[{层.Boss}] 不存在");
+                }
             }
         }
     }

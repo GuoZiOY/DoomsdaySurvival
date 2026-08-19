@@ -1,0 +1,136 @@
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+// 对话面板：剧情/对话/结局渲染（从主视窗剥离，职责分离）。NPC 交谈触发剧情也在此显示。
+// 打字机效果：正文逐字显示（TMP maxVisibleCharacters，兼容富文本）；打字期间无选项，点击面板任意处立即完成；
+// 完成后才生成选项。返回统一走 侧边栏取消按钮：NPC 交谈→返回设施内部；结局→回主菜单；主剧情线性强制不可取消。
+public sealed class 对话面板 : 面板基类, IPointerClickHandler
+{
+    [SerializeField] private TMP_Text 正文;
+    [SerializeField] private RectTransform 选项区;
+    [SerializeField] private float 打字间隔 = 0.03f;  // 每字间隔（秒）
+
+    private 地图节点 返回节点数据;   // 空=主剧情；非空=从某节点内部进来（NPC 交谈）
+    private string 返回节点;         // 上级返回节点（回小地图用）
+    private bool 显示结局;           // 结局模式：取消 = 回主菜单
+    private 显示剧情事件? 打字节点;   // 正在打字的剧情节点（完成后生成选项；struct 用可空标记"无"）
+    private Coroutine 打字协程;
+
+    void Awake()
+    {
+        // 剧情显示由 面板管理器 订阅 显示剧情事件 路由到这里；返回统一走侧边栏取消按钮
+    }
+
+    protected override void 刷新(object 上下文)
+    {
+        if (上下文 is 打开对话事件 对话)
+        {
+            // NPC 交谈：记住来源节点，进入剧情节点（触发 显示剧情事件 再次渲染）
+            返回节点数据 = 对话.节点;
+            返回节点 = 对话.返回节点;
+            ServiceRegistry.Get<DialogueService>().进入节点(对话.剧情节点);
+            return;
+        }
+        if (上下文 is 显示剧情事件 e) { 渲染剧情(e); return; }
+        if (上下文 is 打开结局事件) 渲染结局();
+    }
+
+    // 渲染剧情：打字机逐字显示，打完后才生成选项
+    private void 渲染剧情(显示剧情事件 e)
+    {
+        显示结局 = false;
+        打字节点 = e;
+        停打字();
+        清空(选项区);
+        if (正文 != null)
+        {
+            正文.text = e.文本 ?? "";
+            正文.ForceMeshUpdate();
+            正文.maxVisibleCharacters = 0;
+            打字协程 = StartCoroutine(打字机(正文.textInfo.characterCount));
+        }
+        else 生成选项();
+    }
+
+    private IEnumerator 打字机(int 总字符)
+    {
+        while (正文.maxVisibleCharacters < 总字符)
+        {
+            正文.maxVisibleCharacters++;
+            yield return new WaitForSeconds(打字间隔);
+        }
+        停打字();
+        生成选项();
+    }
+
+    // 点击面板任意处：立即完成打字并生成选项（仅打字期间有效）
+    public void OnPointerClick(PointerEventData 事件)
+    {
+        if (打字协程 == null || 正文 == null) return;
+        停打字();
+        正文.maxVisibleCharacters = 正文.textInfo.characterCount;
+        生成选项();
+    }
+
+    private void 停打字()
+    {
+        if (打字协程 != null) { StopCoroutine(打字协程); 打字协程 = null; }
+    }
+
+    // 打字完成后生成选项（选项只服务剧情分支）
+    private void 生成选项()
+    {
+        if (打字节点 == null) return;
+        var 节点 = 打字节点.Value;
+        打字节点 = null;
+        if (节点.选项 == null) return;
+        foreach (var 选项 in 节点.选项)
+        {
+            var 目标 = 选项.目标;
+            创建行(选项区, 选项.文本, () => ServiceRegistry.Get<DialogueService>().处理选项(目标), true, true);   // 选项：去LayoutElement + 文字居中
+        }
+    }
+
+    // 渲染结局：序章收尾（属剧情内容，故归对话面板）
+    private void 渲染结局()
+    {
+        显示结局 = true;
+        停打字();
+        设文本(正文, "灰烬镇的余烬还在燃烧。龙在山的深处沉睡。\n\n你的故事，才刚刚开始。");
+        清空(选项区);
+        创建行(选项区, "踏入灰烬镇（开放大地图）", () => ServiceRegistry.Get<地图服务>().打开大地图("灰烬镇"), true, true);
+    }
+
+    // 全局取消：结局→回主菜单；NPC 交谈→返回设施内部；主剧情不响应（线性强制，不可取消）
+    public override bool 回退()
+    {
+        if (显示结局) { 面板管理器.实例?.回主菜单(); return true; }
+        if (打字协程 != null) { 停打字(); if (正文 != null) 正文.maxVisibleCharacters = 正文.textInfo.characterCount; 生成选项(); return true; }   // 打字中 = 取消 = 立即完成
+        if (返回节点数据 == null) return false;
+        返回设施内部();
+        return true;
+    }
+
+    public override string 取消文本
+    {
+        get
+        {
+            if (显示结局) return "结束";
+            if (打字协程 != null) return "跳过";
+            if (返回节点数据 != null) return "返回";
+            return "取消";
+        }
+    }
+
+    // 返回节点内部（NPC 交谈进来时）
+    private void 返回设施内部()
+    {
+        if (返回节点数据 == null) return;
+        var 节点 = 返回节点数据;
+        返回节点数据 = null;
+        ServiceRegistry.Get<EventBus>().发布(new 打开节点内部事件(节点, 返回节点));
+    }
+}

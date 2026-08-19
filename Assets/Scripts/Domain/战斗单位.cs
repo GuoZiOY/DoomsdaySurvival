@@ -13,6 +13,7 @@ public sealed class 战斗单位
     // —— 当前数值（战斗过程） ——
     public int 生命, 最大生命;
     public int 魔力, 最大魔力;
+    public int 精力, 最大精力;   // 物理技能消耗（敌人充足）
     public int 基础物攻, 基础魔攻, 基础物防, 基础魔防, 基础速度;
     public float 暴击率, 闪避率;
     public float 命中率 = 0.95f;
@@ -92,6 +93,14 @@ public sealed class 战斗单位
         return true;
     }
 
+    public void 恢复精力(int 数值) => 精力 = Min(最大精力, 精力 + 数值);
+    public bool 消耗精力(int 数值)
+    {
+        if (精力 < 数值) return false;
+        精力 -= 数值;
+        return true;
+    }
+
     // —— Buff ——
 
     public void 添加Buff(Buff定义 定义, int 层 = 1)
@@ -157,6 +166,8 @@ public sealed class 战斗单位
             生命 = 玩家.生命,
             最大魔力 = 玩家.最大魔力,
             魔力 = 玩家.魔力,
+            最大精力 = 玩家.最大精力,
+            精力 = 玩家.精力,
             基础物攻 = 玩家.物理伤害,
             基础魔攻 = 玩家.魔法伤害,
             基础物防 = 玩家.总防御,
@@ -183,6 +194,10 @@ public sealed class 战斗单位
             源数据 = 敌人,
             最大生命 = 敌人.生命,
             生命 = 敌人.生命,
+            最大魔力 = Max(50, 敌人.生命),   // 敌人魔力充足，保证魔法技能可放
+            魔力 = Max(50, 敌人.生命),
+            最大精力 = 100,                        // 敌人精力充足，物理技能可放
+            精力 = 100,
             基础物攻 = 敌人.攻击,
             基础魔攻 = 敌人.攻击,            // 敌人暂物魔同攻，后期细分
             基础物防 = 敌人.防御,
