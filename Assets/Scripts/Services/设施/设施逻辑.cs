@@ -16,7 +16,7 @@ public interface 训练功能
     bool 尝试熟练训练(string 技能标识);
 }
 // 任务：接取任务（任务栏）
-public interface 任务功能 { 任务数据[] 可接任务(); bool 尝试接取(string 标识); }
+// （原 任务功能 已废弃：悬赏板改为 日常任务服务 按天生成随机日常；主线/支线接取迁至 系统任务面板/剧情）
 // 恢复：教堂
 public interface 恢复功能 { string 恢复描述(); bool 尝试恢复(); }
 // 睡觉：家

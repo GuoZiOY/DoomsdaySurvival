@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 // 战斗单位：战斗中的统一实体（玩家/敌人都用它）。纯 C# 领域模型（零 UnityEngine 依赖）。
@@ -14,9 +15,30 @@ public sealed class 战斗单位
     public int 生命, 最大生命;
     public int 魔力, 最大魔力;
     public int 精力, 最大精力;   // 物理技能消耗（敌人充足）
-    public int 基础物攻, 基础魔攻, 基础物防, 基础魔防, 基础速度;
+    public int 基础物攻, 基础魔攻, 基础物防, 基础魔防, 基础速度, 基础敏捷;
     public float 暴击率, 闪避率;
     public float 命中率 = 0.95f;
+
+    // —— 防御/血条 ——
+    public int 护盾, 护盾上限;
+    public bool 破防;
+    public bool 有护盾 => 护盾上限 > 0;
+
+    // —— 增幅点 BP（八方旅人式：蓄力增幅攻击；仅我方玩家用） ——
+    public int BP;
+    public const int BP上限 = 3;
+
+    // —— 弱点（我方命中敌方弱点用） ——
+    public 五行 五行属性;                        // 敌方五行（魔法弱点判定）
+    public readonly List<武器种类> 物理弱点 = new List<武器种类>();   // 敌方物理弱点武器种类
+
+    // —— 抗性（受伤害衰减，装备来源，主力玩家用） ——
+    public int 抗性百分比;                       // 0~50，血量的非线性减伤比例
+
+    // —— 玩家武器（物理弱点 + 切武器用） ——
+    public string 主手武器, 副手武器;    // 玩家装备的主/副手物品标识（敌我通用，敌方恒空）
+    public string 当前武器标识 = "";     // 当前持用的武器标识（物理弱点判定）
+    public 武器种类 当前武器 = 武器种类.无;   // 当前武器种类
 
     // —— 抗性表：伤害类型 → 倍率（缺省1.0） ——
     public readonly Dictionary<伤害类型, float> 抗性 = new Dictionary<伤害类型, float>();
@@ -41,14 +63,33 @@ public sealed class 战斗单位
     public int 当前魔攻 => 修正(基础魔攻, 属性修正("魔攻"));
     public int 当前物防 => 修正(基础物防, 属性修正("防御"));
     public int 当前魔防 => 修正(基础魔防, 属性修正("魔防"));
+    // 敏捷 buff（猎人直觉）→ 速度/暴击/闪避 同步提升（速度=敏捷×2，等比修正）
+    public int 当前速度 => 修正(基础速度, 属性修正("敏捷"));
+    // 暴击/闪避硬上限 80%：防大量词缀堆叠逼近/超 100%（Random.value < 1 恒真）导致必暴/必闪，并保证随机波动空间
+    public float 当前暴击率 => Math.Clamp(暴击率 * (1f + 属性修正("敏捷") / 100f), 0f, 0.8f);
+    public float 当前闪避率 => Math.Clamp(闪避率 * (1f + 属性修正("敏捷") / 100f), 0f, 0.8f);
 
-    // 持续伤害量（异常且非控制 buff 的每回合伤害总和）
-    public int 持续伤害量()
+    // 持续伤害量（异常且非控制 buff 的每回合伤害总和）；时机："开始"=回合开始扣血（缺省）/ "结束"=回合结束扣血
+    public int 持续伤害量(string 时机 = "开始")
     {
         int 总 = 0;
         foreach (var b in Buffs)
-            if (b.定义.类型枚举 == Buff类型.异常 && !b.定义.控制) 总 += b.定义.数值 * b.层数;
+            if (b.定义.类型枚举 == Buff类型.异常 && !b.定义.控制)
+            {
+                string 结算 = string.IsNullOrEmpty(b.定义.结算时机) ? "开始" : b.定义.结算时机;
+                if (结算 == 时机) 总 += b.定义.数值 * b.层数;
+            }
         return 总;
+    }
+
+    // 移除一个随机的减益 buff（小净化用）；无减益返回 false
+    public bool 移除随机减益()
+    {
+        var 减益 = Buffs.FindAll(b => b.定义.类型枚举 == Buff类型.减益);
+        if (减益.Count == 0) return false;
+        var 选中 = 减益[Random(减益.Count)];
+        Buffs.Remove(选中);
+        return true;
     }
 
     // 控制类异常（麻痹/眩晕）：轮到该单位时跳过行动
@@ -172,15 +213,23 @@ public sealed class 战斗单位
             基础魔攻 = 玩家.魔法伤害,
             基础物防 = 玩家.总防御,
             基础魔防 = 玩家.总防御,          // 暂共用总防御，后期拆
-            基础速度 = 玩家.敏捷 * 2,        // 速度 = 敏捷×2
+            基础速度 = 玩家.敏捷 * 2 + 玩家.速度加成,   // 速度 = 敏捷×2 + 装备速度词缀
+            基础敏捷 = 玩家.敏捷,            // 敏捷 buff（猎人直觉）作用于速度/暴击/闪避
             暴击率 = 玩家.暴击概率,
-            闪避率 = 玩家.闪避概率
+            闪避率 = 玩家.闪避概率,
+            命中率 = 0.95f + 玩家.命中加成
         };
         foreach (var s in 玩家.已学技能)
         {
             单位.已学技能.Add(s.标识);
             单位.技能熟练[s.标识] = s.熟练等级;
         }
+        // 玩家武器：主/副手武器类型（物理弱点判定 + 切武器）
+        单位.主手武器 = 玩家.装备标识("主手");
+        单位.副手武器 = 玩家.装备标识("副手");
+        单位.当前武器标识 = string.IsNullOrEmpty(单位.主手武器) ? 单位.副手武器 : 单位.主手武器;
+        单位.当前武器 = 玩家.武器种类解析?.Invoke(单位.当前武器标识) ?? 武器种类.无;
+        单位.抗性百分比 = 玩家.抗性百分比;   // 装备抗性（非线性封顶 50）
         return 单位;
     }
 
@@ -211,12 +260,29 @@ public sealed class 战斗单位
         if (敌人.行动表 != null)
             foreach (var a in 敌人.行动表)
                 if (a.行动 != "普攻" && !string.IsNullOrEmpty(a.行动)) 单位.已学技能.Add(a.行动);
+        // 敌人护盾（= 防御 × 系数，系数缺省 2）与 弱点（物理武器种类 + 五行）
+        float 系数 = 敌人.护盾系数 > 0 ? 敌人.护盾系数 : 2f;
+        单位.护盾上限 = (int)(敌人.防御 * 系数);
+        单位.护盾 = 单位.护盾上限;
+        单位.五行属性 = 敌人.五行枚举;
+        if (敌人.物理弱点 != null)
+            foreach (var w in 敌人.物理弱点)
+                if (!string.IsNullOrEmpty(w)) 单位.物理弱点.Add(数据解析.枚举<武器种类>(w));
+        return 单位;
+    }
+
+    // 助战 → 战斗单位（轻量助战：复用敌人数据形态，但归属我方；AI 行动表自动出手）
+    public static 战斗单位 从助战生成(敌人数据 助战)
+    {
+        var 单位 = 从敌人生成(助战);
+        单位.是否我方 = true;   // 归我方：敌人 AI 会攻击它，玩家不可手动操控，倒下无碍
         return 单位;
     }
 
     // —— 纯 C# 数值工具（零 UnityEngine 依赖） ——
     private static int Min(int a, int b) => a < b ? a : b;
     private static int Max(int a, int b) => a > b ? a : b;
+    private static int Random(int 上限) => 上限 <= 0 ? 0 : new System.Random().Next(上限);
     private static int Round(float v) => (int)(v + 0.5f);
     private static int 修正(int 基础, int 百分比) => Max(0, Round(基础 * (1f + 百分比 / 100f)));
 }

@@ -8,8 +8,9 @@ public sealed class 主视窗面板 : 面板基类
     // 恒为容器：面板管理器 据此接管框架显隐（主菜单收起 / 内容显示保持）
     public bool 容器模式 => true;
 
-    // 容器本身不随内容切换而隐藏（子面板各自显隐）
-    public override void 隐藏面板() { }
+    // 容器本身不随内容切换而显示/隐藏（由 面板管理器 统一 SetActive，子面板各自显隐）
+    public override void 显示面板(object 上下文 = null, bool 上下互切 = false, bool 返回方向 = false) { }
+    public override void 隐藏面板(bool 上下互切 = false, bool 返回方向 = false) { }
 
     protected override void 刷新(object 上下文) { }
 }

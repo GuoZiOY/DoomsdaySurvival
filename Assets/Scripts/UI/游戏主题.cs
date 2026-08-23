@@ -15,6 +15,10 @@ public static class 游戏主题
     public static readonly Color 内心 = new Color(0.62f, 0.55f, 0.72f);      // 暮紫
     public static readonly Color 选中色 = new Color(0.42f, 0.66f, 0.82f);    // 钢蓝（地图节点选中高亮，区别于当前节点金色）
 
+    // —— 战斗演出 ——
+    public static readonly Color 魔法 = new Color(0.45f, 0.62f, 1f);     // 魔法伤害飘字（冰川蓝）
+    public static readonly Color 治疗 = new Color(0.35f, 0.85f, 0.45f);   // 治疗飘字苔绿（提亮）
+
     // —— 富文本十六进制 ——
     public static readonly string 金色色值 = "#d9a441";
     public static readonly string 危险色值 = "#c7473d";
@@ -22,6 +26,12 @@ public static class 游戏主题
     public static readonly string 暗淡色值 = "#73706a";
     public static readonly string 内心色值 = "#9e8fb8";
     public static readonly string 时间戳色值 = "#8a8f96";   // 提亮灰蓝（灰半透明底上可读，仍次级于正文）
+    public static readonly string 高亮色值 = "#f5d88a";     // 数值/变量强调（亮米金，正文内始终可见）
+    public static readonly string 物攻色值 = "#e0826a";     // 物理伤害（战斗面板技能数值）
+    public static readonly string 魔攻色值 = "#7fb2d9";     // 魔法伤害（战斗面板技能数值）
+    public static readonly string 出手青值 = "#6be0a0";     // 信息条：下一个出手的我方
+    public static readonly string 排队灰值 = "#9aa0a6";     // 信息条：排队中的敌方/其余
+    public static readonly string 已行动灰值 = "#46433f";   // 信息条：已行动（淡删除线）
 
     // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色）
     public static string 日志色(日志类型 类型)
@@ -37,6 +47,24 @@ public static class 游戏主题
             case 日志类型.探索: return "#7fc0a8";    // 提亮青绿（探索事件）
             case 日志类型.任务: return "#d9b36a";    // 提亮土金（任务接取/完成）
             default: return "#f0ead9";               // 剧情 = 近白暖色（主叙事最亮）
+        }
+    }
+
+    // 日志类型 → 简短标签（顶在正文前，形成可扫读的彩色徽章）
+    public static string 日志标签(日志类型 类型)
+    {
+        switch (类型)
+        {
+            case 日志类型.系统: return "系统";
+            case 日志类型.剧情: return "剧情";
+            case 日志类型.操作: return "操作";
+            case 日志类型.反馈: return "获得";
+            case 日志类型.反馈坏: return "警告";
+            case 日志类型.内心: return "心声";
+            case 日志类型.战斗: return "战斗";
+            case 日志类型.探索: return "探索";
+            case 日志类型.任务: return "任务";
+            default: return "信息";
         }
     }
 }

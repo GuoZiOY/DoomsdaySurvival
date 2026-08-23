@@ -1,19 +1,20 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using DG.Tweening;
 
 // 悬停反馈：给按钮挂悬停放大 / 按下收缩的平滑反馈（挂在按钮根节点上，与 Button 共存）。
-// 纯 uGUI 实现（协程），零第三方依赖；让余烬风按钮"活"起来。
+// DOTween 实现：悬停/离开平滑缩放，按下向内"萌"一下（Punch）。
+// tween 全部 SetUpdate(true) 不受暂停(timeScale=0)影响；SetLink(gameObject) 物体销毁自动 kill，防悬挂动画。
 // 自动注册：像音效管理器一样——场景按钮 Start 时全量扫描、动态按钮在创建点调用 注册按钮；
 // 已有 悬停反馈 组件的按钮自动跳过（幂等，不重复挂）。
 public sealed class 悬停反馈 : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
     [SerializeField] private float 悬停缩放 = 1.05f;   // 鼠标悬停放大比例
-    [SerializeField] private float 按下缩放 = 0.95f;   // 按下收缩比例
+    [SerializeField] private float 按下缩放 = 0.92f;   // 按下收缩比例
     [SerializeField] private float 动画时长 = 0.1f;   // 缩放动画时长（秒）
 
-    private Coroutine 当前协程;
+    private Tween 缩放补间;
 
     // 注册单个按钮：已有 悬停反馈 则跳过（幂等）；否则添加组件
     public static void 注册按钮(Button 按钮)
@@ -33,38 +34,36 @@ public sealed class 悬停反馈 : MonoBehaviour, IPointerEnterHandler, IPointer
         }
     }
 
-    public void OnPointerEnter(PointerEventData 事件) => 播放缩放(悬停缩放);
-    public void OnPointerExit(PointerEventData 事件) => 播放缩放(1f);
-    public void OnPointerDown(PointerEventData 事件) => 播放缩放(按下缩放);
-    public void OnPointerUp(PointerEventData 事件) => 播放缩放(悬停缩放);
+    public void OnPointerEnter(PointerEventData 事件) => 播放缩放(基座 * 悬停缩放);
+    public void OnPointerExit(PointerEventData 事件) => 播放缩放(基座);
+    public void OnPointerDown(PointerEventData 事件)
+    {
+        // 按下：向内"萌"一下（负向 Punch，从基座先内缩再弹回），比纯缩放更"活"
+        if (缩放补间 != null && 缩放补间.IsActive()) 缩放补间.Kill();
+        缩放补间 = transform.DOPunchScale(-Vector3.one * (1f - 按下缩放), 动画时长 * 1.6f, 6, 0.4f)
+            .SetUpdate(true)      // 不受暂停/时间缩放影响
+            .SetLink(gameObject); // 物体销毁自动 kill
+    }
+    public void OnPointerUp(PointerEventData 事件) => 播放缩放(基座 * 悬停缩放);
 
     // 基座缩放：Tab/排序 等选中态固定放大（如 1.08），悬停/按下在其基础上再叠倍率，退出回到基座
     private float 基座 = 1f;
 
     public void 设基座(float 缩放)
     {
+        // 打断进行中的动画，直接落到新基座（选中态切换）
+        if (缩放补间 != null && 缩放补间.IsActive()) 缩放补间.Kill();
         基座 = 缩放;
         transform.localScale = Vector3.one * 基座;
     }
 
     // 平滑补间到目标缩放（打断上一次动画）；目标 = 基座 × 倍率
-    private void 播放缩放(float 倍率)
+    private void 播放缩放(float 目标)
     {
-        if (当前协程 != null) StopCoroutine(当前协程);
-        当前协程 = StartCoroutine(缩放动画(基座 * 倍率));
-    }
-
-    private IEnumerator 缩放动画(float 目标)
-    {
-        var 起点 = transform.localScale;
-        var 终点 = Vector3.one * 目标;
-        float 流逝 = 0f;
-        while (流逝 < 动画时长)
-        {
-            流逝 += Time.unscaledDeltaTime;                 // 不受暂停影响
-            transform.localScale = Vector3.Lerp(起点, 终点, 流逝 / 动画时长);
-            yield return null;
-        }
-        transform.localScale = 终点;
+        if (缩放补间 != null && 缩放补间.IsActive()) 缩放补间.Kill();
+        缩放补间 = transform.DOScale(目标, 动画时长)
+            .SetEase(Ease.OutCubic)
+            .SetUpdate(true)      // 不受暂停/时间缩放影响
+            .SetLink(gameObject); // 物体销毁自动 kill
     }
 }

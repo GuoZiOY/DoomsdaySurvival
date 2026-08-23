@@ -9,10 +9,11 @@ using UnityEngine.UI;
 // 存档：SaveService 立即保存一次
 // 暂停：Time.timeScale 0↔1（游戏世界冻结；Button 仍可点）（图标：暂停/继续 换图）
 // 角色：发布 打开角色面板事件（原 打开角色按钮 迁入）
-// 显隐：主菜单时隐藏 取消/暂停/角色（设置/音量/存档 常驻可用）
+// 任务：发布 打开任务面板事件（调出 系统任务面板：主线/支线/日常）
+// 显隐：主菜单时隐藏 取消/暂停/角色/任务（设置/音量/存档 常驻可用）
 public sealed class 侧边栏面板 : MonoBehaviour
 {
-    [SerializeField] private Button 取消按钮, 设置按钮, 音量按钮, 存档按钮, 暂停按钮, 角色按钮;
+    [SerializeField] private Button 取消按钮, 设置按钮, 音量按钮, 存档按钮, 暂停按钮, 角色按钮, 任务按钮;
     [SerializeField] private TMP_Text 取消文字;   // 取消按钮文案（随当前面板动态显示：取消/返回/离开城镇/关闭/回主菜单）
     [SerializeField] private GameObject 设置面板;  // 设置弹窗（音量滑条）
 
@@ -36,6 +37,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
         存档按钮?.onClick.AddListener(存档);
         暂停按钮?.onClick.AddListener(暂停切换);
         角色按钮?.onClick.AddListener(() => 事件?.发布(new 打开角色面板事件()));
+        任务按钮?.onClick.AddListener(() => 事件?.发布(new 打开任务面板事件()));
         刷新显隐();
         刷新音量();
         刷新取消文字();
@@ -92,6 +94,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
         if (取消按钮 != null) 取消按钮.gameObject.SetActive(!主菜单);
         if (暂停按钮 != null) 暂停按钮.gameObject.SetActive(!主菜单);
         if (角色按钮 != null) 角色按钮.gameObject.SetActive(!主菜单 && !战斗中);
+        if (任务按钮 != null) 任务按钮.gameObject.SetActive(!主菜单 && !战斗中);
         if (主菜单 && Time.timeScale == 0f)
         {
             Time.timeScale = 1f;

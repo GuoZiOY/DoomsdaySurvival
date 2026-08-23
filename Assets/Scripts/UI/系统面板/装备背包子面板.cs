@@ -187,7 +187,9 @@ public sealed class 装备背包子面板 : MonoBehaviour
         }
         面板基类.设文本(详情名称, 物品工具.品质名称(物品.品质档, 物品.名称));   // 品质+名称 合并一个文本
         面板基类.设文本(详情描述, 物品.描述);
-        面板基类.设文本(详情数值, 物品工具.数值文本(数据, 物品));
+        // 详情数值 = 基础加成 + 实例词缀（在背包取该堆叠词缀，已装备取装备记录词缀）
+        var 实例词缀 = 已装备 ? 玩家.装备词缀(选中标识) : 玩家.背包词缀(选中标识);
+        面板基类.设文本(详情数值, 物品工具.数值文本(数据, 物品, 实例词缀));
         面板基类.设文本(详情价格, 物品.价格 > 0 ? $"价格 {货币工具.文本(物品.价格)}" : "");
         string 操作 = 已装备 ? "卸下" : 操作文本(物品);
         if (详情操作按钮 != null)
@@ -234,8 +236,8 @@ public sealed class 装备背包子面板 : MonoBehaviour
             if (!string.IsNullOrEmpty(槽)) 面板操作.卸下(玩家, 槽);
         }
         else if (物品.类型 == "武器" || 物品.类型 == "防具" || 物品.类型 == "饰品") 面板操作.换装(玩家, 物品);
-        else if (物品.类型 == "恢复") 面板操作.使用恢复(玩家, 数据, 选中标识);
         else if (物品.类型 == "技能书") 面板操作.学习技能书(玩家, 物品);
+        else if (物品.恢复量 > 0) 面板操作.使用恢复(玩家, 数据, 选中标识);   // 恢复/食物/药剂/战斗（带恢复量才可战斗外使用）
         选中标识 = null;
         刷新();
     }
@@ -261,7 +263,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
         {
             case 分类.全部: return true;
             case 分类.装备: return 类型 == "武器" || 类型 == "防具" || 类型 == "饰品";
-            case 分类.消耗: return 类型 == "恢复" || 类型 == "技能书";
+            case 分类.消耗: return 类型 == "恢复" || 类型 == "食物" || 类型 == "药剂" || 类型 == "战斗" || 类型 == "技能书" || 类型 == "图纸";
             case 分类.材料: return 类型 == "材料";
             case 分类.任务: return 类型 == "任务";
             default: return true;
@@ -276,7 +278,11 @@ public sealed class 装备背包子面板 : MonoBehaviour
             case "防具": return 1;
             case "饰品": return 2;
             case "恢复": return 3;
+            case "食物": return 3;
+            case "药剂": return 3;
+            case "战斗": return 4;
             case "技能书": return 4;
+            case "图纸": return 4;
             case "材料": return 5;
             case "任务": return 6;
             default: return 9;

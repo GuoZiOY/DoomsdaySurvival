@@ -7,6 +7,8 @@ using System.Collections.Generic;
     {
         public string 标识;
         public int 数量;
+        public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
+        public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
 
         public 物品堆叠() { }
         public 物品堆叠(string 标识, int 数量) { this.标识 = 标识; this.数量 = 数量; }
@@ -30,6 +32,9 @@ using System.Collections.Generic;
     {
         public string 槽位;
         public string 标识;
+        public List<词缀条> 词缀;   // 装备实例的随机词缀（随档存档）
+        public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
+
         public 装备记录() { }
         public 装备记录(string 槽位, string 标识) { this.槽位 = 槽位; this.标识 = 标识; }
     }
@@ -43,16 +48,20 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 攻击加成解析;
         [NonSerialized] public Func<string, int> 防御加成解析;
         [NonSerialized] public Func<string, int> 生命加成解析;
+        [NonSerialized] public Func<string, 武器种类> 武器种类解析;   // 标识 -> 武器种类（物理弱点判定）
+        [NonSerialized] public Func<string, int> 抗性加成解析;        // 标识 -> 抗性百分数贡献点（非线性封顶）
+        [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板（词缀求和用）
 
         // —— 属性 ——
         public int 等级 = 1;
         public int 经验 = 0;
-        public int 生命 = 20;
+        public int 生命 = 50;
         public int 魔力 = 20;
-        public int 铜币 = 30000;   // 钱包（最小单位：铜币；1金=100银=10000铜）初始 3 金
+        public int 铜币 = 800;     // 钱包（最小单位：铜币；1金=100银=10000铜）初始 8 银，前期以小面值为主
         public int 精力 = 112;     // 当前精力（探索/行动/物理技能 消耗；100+等级×2+体力×2 上限）初始匹配 等级1/体力5
         public float 游戏分钟数 = 420f;           // 6:00 开始；1 现实秒 = 2 游戏分钟
         public string 当前节点 = "";               // 剧情进度（用于存档恢复）
+        public string 主线阶段 = "第一章_序章";   // 主线进度（剧情自动触发/解锁判定/主线任务）
         public List<物品堆叠> 背包 = new List<物品堆叠>();
         public List<技能掌握> 已学技能 = new List<技能掌握>();
         public List<任务进度> 任务 = new List<任务进度>();
@@ -73,20 +82,61 @@ using System.Collections.Generic;
         // 技能熟练度等级上限
         public const int 熟练等级上限 = 5;
 
-        // —— 派生数值（总属性 = 基础 + 属性 + 装备，装备加成遍历求和）——
-        public int 物理伤害 => 力量 * 2 + 装备数值(攻击加成解析);
-        public int 魔法伤害 => 智力 * 2;
+        // —— 日常任务 ——按游戏内天数刷新：跨天重生成一批
+        public List<日常任务> 日常 = new List<日常任务>();
+        public int 日常生成日 = -1;   // 生成当日的游戏天数（0=第1天）；跨天重生成
+
+        // 游戏内天数（0 起；1 现实秒=2 游戏分钟，一日=1440 分钟）
+        public int 游戏天数 => (int)(游戏分钟数 / 1440f);
+
+        // 按标识查日常任务（空 = 无）
+        public 日常任务 查找日常(string 标识)
+        {
+            foreach (var 条 in 日常) if (条.标识 == 标识) return 条;
+            return null;
+        }
+
+        // 替换当天日常批次并记录生成日（跨天刷新用）
+        public void 覆写日常(List<日常任务> 新日常)
+        {
+            日常 = 新日常 ?? new List<日常任务>();
+            日常生成日 = 游戏天数;
+        }
+
+        // —— 派生数值（属性驱动伤害/生命；无基础伤害值）——
+        // 力量每点提供 1 点物理伤害；智力每点提供 1 点魔法伤害；装备加成额外叠加。
+        public int 物理伤害 => 力量 + 装备数值(攻击加成解析) + 词缀总值(词缀属性.攻击);
+        public int 魔法伤害 => 智力 + 词缀总值(词缀属性.魔攻);
         public int 总攻击 => 物理伤害;             // 兼容现有战斗（普攻走物理）
-        public int 总防御 => 防御 + 装备数值(防御加成解析);
-        public int 最大生命 => 20 + 体力 * 5 + 等级 * 5 + 装备数值(生命加成解析);
+        public int 总防御 => 防御 + 装备数值(防御加成解析) + 词缀总值(词缀属性.防御);
+        // 初始 50 血；每点体力 +5 生命，每升一级 +5 生命。
+        public int 最大生命 => 50 + (体力 - 5) * 5 + (等级 - 1) * 5 + 装备数值(生命加成解析) + 词缀总值(词缀属性.生命);
         public int 最大魔力 => 20 + 智力 * 3 + 等级 * 3;
         public int 最大精力 => 100 + 等级 * 2 + 体力 * 2;   // 探索/行动/物理技能 资源
-        public float 暴击概率 => 敏捷 * 0.01f;
-        public float 闪避概率 => 敏捷 * 0.01f;
+        public float 暴击概率 => 敏捷 * 0.01f + 词缀总值(词缀属性.暴击) / 100f;
+        public float 闪避概率 => 敏捷 * 0.01f + 词缀总值(词缀属性.闪避) / 100f;
+        public float 命中加成 => 词缀总值(词缀属性.命中) / 100f;   // 命中率百分比加成
+        public int 速度加成 => 词缀总值(词缀属性.速度);            // 固定速度加点（行动序）
+
+        // 抗性百分数（装备来源）：非线性收益递减 + 硬上限 50%，防无脑堆叠免伤。
+        // Σ ≤30 全额；Σ>30 超出部分减半再累计；最终封顶 50。
+        public int 抗性百分比
+        {
+            get
+            {
+                if (抗性加成解析 == null) return 0;
+                int 总和 = 0;
+                foreach (var e in 装备)
+                    if (!string.IsNullOrEmpty(e.标识)) 总和 += 抗性加成解析(e.标识);
+                总和 += 词缀总值(词缀属性.抗性);   // 抗性词缀并入装备抗性（同非线性封顶）
+                if (总和 <= 30) return 总和;
+                return Math.Min(50, 30 + (总和 - 30) / 2);
+            }
+        }
 
         // 防御基础值（旧字段保留，等级不再直接加，靠 防具/属性）
         public int 防御 = 2;
-        public int 攻击 = 5;
+        public int 攻击 = 0;   // 已移除基础伤害值：物伤由 力量 提供，此字段仅作兼容保留
 
         // 已装备物品数值总和（标识 -> 加成 由解析器提供；未接线返回 0）
         private int 装备数值(Func<string, int> 加成)
@@ -95,6 +145,19 @@ using System.Collections.Generic;
             int 总 = 0;
             foreach (var e in 装备)
                 if (!string.IsNullOrEmpty(e.标识)) 总 += 加成(e.标识);
+            return 总;
+        }
+
+        private int 词缀总值(词缀属性 属性)
+        {
+            if (词缀定义表 == null) return 0;
+            int 总 = 0;
+            foreach (var e in 装备)
+            {
+                if (e.词缀 == null) continue;
+                foreach (var c in e.词缀)
+                    if (词缀定义表.TryGetValue(c.标识, out var def) && def.属性枚举 == 属性) 总 += c.数值;
+            }
             return 总;
         }
 
@@ -107,21 +170,26 @@ using System.Collections.Generic;
             return "";
         }
 
-        // 装备到指定槽：覆盖同槽旧件并返回旧标识（空 = 原本空槽）
-        public string 装备到槽(string 槽位, string 标识)
+        // 装备到指定槽：覆盖同槽旧件并返回旧记录（含旧词缀）；原本空槽返回 null。新件词缀随实例入槽。
+        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null)
         {
             foreach (var e in 装备)
-                if (e.槽位 == 槽位) { string 旧 = e.标识; e.标识 = 标识; return 旧; }
-            装备.Add(new 装备记录(槽位, 标识));
-            return "";
+                if (e.槽位 == 槽位)
+                {
+                    var 旧 = new 装备记录(槽位, e.标识) { 词缀 = e.词缀 };
+                    e.标识 = 标识; e.词缀 = 词缀;
+                    return 旧;
+                }
+            装备.Add(new 装备记录(槽位, 标识) { 词缀 = 词缀 });
+            return null;
         }
 
-        // 卸下：清空槽位并返回物品标识（空 = 未装备）
-        public string 卸下装备(string 槽位)
+        // 卸下：清空槽位并返回该槽的装备记录（含词缀）；空槽返回 null
+        public 装备记录 卸下装备(string 槽位)
         {
             for (int i = 装备.Count - 1; i >= 0; i--)
-                if (装备[i].槽位 == 槽位) { var 标识 = 装备[i].标识; 装备.RemoveAt(i); return 标识; }
-            return "";
+                if (装备[i].槽位 == 槽位) { var 记录 = 装备[i]; 装备.RemoveAt(i); return 记录; }
+            return null;
         }
 
         // 饰品槽自动分配：优先空槽（饰品1 → 饰品2），都满则覆盖饰品1
@@ -162,6 +230,28 @@ using System.Collections.Generic;
             foreach (var 堆叠 in 背包)
                 if (堆叠.标识 == 标识) { 堆叠.数量 += 数量; return; }
             背包.Add(new 物品堆叠(标识, 数量));
+        }
+
+        // 添加一个携带词缀的装备实例堆叠（不与同标识普通堆叠合并，保留独立词缀）
+        public void 添加堆叠(物品堆叠 堆叠)
+        {
+            if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return;
+            背包.Add(堆叠);
+        }
+
+        // 取里背包中该标识首个可用堆叠的词缀（换装用；无则 null）
+        public List<词缀条> 背包词缀(string 标识)
+        {
+            foreach (var 堆叠 in 背包)
+                if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.词缀;
+            return null;
+        }
+
+        // 已装备某物品的词缀（详情显示用）
+        public List<词缀条> 装备词缀(string 标识)
+        {
+            foreach (var e in 装备) if (e.标识 == 标识) return e.词缀;
+            return null;
         }
 
         public bool 移除物品(string 标识, int 数量 = 1)

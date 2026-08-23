@@ -21,8 +21,8 @@ public sealed class 地图设计器窗口 : EditorWindow
 
     private const float 节点宽 = 110f, 节点高 = 46f;
 
-    // 入口放独立顶级菜单「工具」，不占用引擎原有「窗口」菜单
-    [MenuItem("工具/地图设计器")]
+    // 入口放「Window」引擎原生窗口菜单下的 工具 子项，不再占用顶级「工具」菜单（避免与系统/插件原有菜单冲突）
+    [MenuItem("Window/工具/地图设计器")]
     public static void 打开() => GetWindow<地图设计器窗口>("地图设计器");
 
     void OnEnable()

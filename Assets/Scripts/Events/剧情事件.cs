@@ -11,5 +11,7 @@
     {
         public readonly string 文本;
         public readonly 剧情选项数据[] 选项;
-        public 显示剧情事件(string 文本, 剧情选项数据[] 选项) { this.文本 = 文本; this.选项 = 选项; }
+        public readonly string 自动目标;   // 非空且选项为空：文本显示完后自动进入（剧情链连续播放）
+        public 显示剧情事件(string 文本, 剧情选项数据[] 选项, string 自动目标 = "")
+        { this.文本 = 文本; this.选项 = 选项; this.自动目标 = 自动目标; }
     }

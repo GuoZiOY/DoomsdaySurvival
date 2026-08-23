@@ -16,7 +16,17 @@ using System;
         public string 获得物品;
         public int 获得数量;   // 获得物品的数量（缺省按 1；JsonUtility 缺失=0，结算时兜底 1）
         public string 失去物品;
+        public string 学习技能;   // 剧情传授技能（特训）
+        public string 接取任务;   // 剧情接取任务（主线/支线）
+        public 物品获得项[] 获得物品表;   // 一次获得多种物品（决战地下室等）
+        public 物品失去项[] 失去物品表;   // 一次失去多种物品（修桥交付等）
     }
+
+    // 剧情效果的多物品项
+    [Serializable]
+    public class 物品获得项 { public string 标识; public int 数量 = 1; }
+    [Serializable]
+    public class 物品失去项 { public string 标识; public int 数量 = 1; }
 
     // 剧情选项：分支；目标可为节点 / "战斗:敌:胜节点" / "设施:标识" / "探索:区域:返回" / "区域:区域" / "__结束" 等
     [Serializable]
@@ -37,11 +47,24 @@ using System;
         public 剧情效果 效果;
         public string 战斗;       // 非空则进入即开战：战斗:敌人标识:胜利节点标识
         public string 面板;       // 非空则进入构建结构化面板（M4 起废弃，改用设施）
+        public string 主线阶段;   // 非空则进入该节点时更新玩家主线阶段（剧情推进标记）
+        public string 下一节点;   // 选项为空时自动进入的节点（剧情链连续播放）
         public 剧情选项[] 选项;
     }
 
     [Serializable]
-    public class 剧情根 { public 剧情节点[] 节点; }
+    public class 剧情根 { public 剧情节点[] 节点; public 区域剧情路由[] 区域剧情; }
+
+    // 区域剧情路由：进入某地点（城镇/荒野）时按当前主线阶段自动触发剧情（防重复靠阶段前进）
+    [Serializable]
+    public class 区域剧情路由
+    {
+        public string 区域;       // 地图地点标识（城镇/荒野）
+        public string 阶段;       // 命中所需的 玩家档案.主线阶段
+        public string 节点;       // 命中后进入的剧情节点
+        public string 需要物品;   // 可选：需持有该物品才命中
+        public string 需要任务;   // 可选：需该任务已完成才命中
+    }
 
     // ================= 敌人 =================
 
@@ -53,17 +76,22 @@ using System;
         public string 描述;
         public int 生命;
         public int 攻击;
-        public int 防御;          // 物防
+        public int 防御;          // 物防（敌人护盾 = 防御 × 护盾系数）
         public int 魔防;          // 魔防
         public int 速度;          // 行动顺序（速度队列）
         public int 等级 = 1;      // 敌人等级
         public 抗性配置[] 抗性;   // 抗性表：伤害类型→倍率
         public AI行动项[] 行动表; // AI行动表
         public string 目标策略;   // 攻击目标策略：随机 / 残血 / 低防
-        public int 金币奖励;
+        public int 货币奖励;
         public int 经验奖励;
         public string 掉落物品;   // 可选掉落物品标识
         public float 掉落概率;    // 0~1
+        // —— 弱点/护盾（破防机制） ——
+        public string 五行属性;    // "金"/"木"/"水"/"火"/"土"/"无"；魔法弱点 = 技能五行克制敌人五行
+        public 五行 五行枚举 => 数据解析.枚举<五行>(五行属性);
+        public string[] 物理弱点;  // 武器种类数组（"剑"/"匕首"…）；命中该类武器 = 物理弱点
+        public float 护盾系数 = 2f; // 护盾 = 防御 × 系数（默认 2）
     }
 
     [Serializable]
@@ -77,12 +105,15 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 类型;       // "恢复" 消耗品 / "任务" 任务物品 / "武器" / "防具" / "饰品" / "技能书"
+        public string 类型;       // "恢复" 消耗品 / "食物" 食物（战斗内同恢复品用）/ "任务" 任务物品 / "武器" / "防具" / "饰品" / "技能书"
         public int 恢复量;        // 类型=恢复 时的恢复值（受品质倍率影响）
         public int 攻击加成;      // 类型=武器（受品质倍率影响）
         public int 防御加成;      // 类型=防具/饰品（受品质倍率影响）
         public int 生命加成;      // 类型=防具/饰品：生命上限加成（词缀差异化后续）
+        public int 抗性;          // 类型=防具/饰品：抗性百分数贡献点（装备凑合，非线性+封顶 50%，防无脑堆叠免伤）
         public string 槽位;       // 装备类：放入的槽位（"主手"/"副手"/"头盔"/"盔甲"/"靴子"/"手套"/"饰品"）
+        public string 武器种类;    // 类型=武器 时的武器种类（"剑"/"匕首"/"斧"…；物理弱点判定）
+        public 武器种类 武器种类枚举 => 数据解析.枚举<武器种类>(武器种类);
         public string 技能;       // 类型=技能书 时授予的技能标识
         public int 价格;          // 商店买卖价格（单位：铜币，1金=10000铜；0=不可买卖）
         public string 品质;       // "普通"/"优秀"/"稀有"...（JsonUtility 不认枚举名，字符串+转换）
@@ -94,19 +125,60 @@ using System;
         public string 使用效果;         // "恢复"/"增益"/"减益"
         public 效果类型 使用效果枚举 => 数据解析.枚举<效果类型>(使用效果);
         public string 挂载Buff;         // 增益/减益挂载的buff标识（0=纯数值）
+        // —— 宝石（类型="宝石"）：镶缀专用，指定该宝石能赋予的词缀属性 ——
+        public string 指定词缀属性;    // "攻击"/"防御"/"生命"/"抗性"/"暴击"/"命中"/"闪避"/"速度"/"魔攻"
+        public 词缀属性 指定词缀属性枚举 => 数据解析.枚举<词缀属性>(指定词缀属性);
     }
 
     [Serializable]
     public class 物品根 { public 物品数据[] 物品; }
 
+    // ================= 词缀（暗黑式随机装备词条） =================
+
+    // 词缀可作用的属性派系（攻击=物攻、魔攻=独立、暴击/命中/闪避/速度 为战斗副属性）
+    public enum 词缀属性 { 攻击, 防御, 生命, 抗性, 暴击, 命中, 闪避, 速度, 魔攻 }
+
+    // 词缀定义（affixes.json）：一条随机词条的模板（品质 + 属性 + 数值区间 + 生成权重）。
+    // 品质档 = 词缀自带的 6 档（普通~传奇，复用 品质 枚举）：数值强度/出现概率/装备限档/显示色 均由此驱动。
+    [Serializable]
+    public class 词缀定义
+    {
+        public string 标识;
+        public string 名称;
+        public string 品质;        // "普通"/"优秀"/"稀有"/"史诗"/"英雄"/"传奇"
+        public 品质 品质档 => 数据解析.枚举<品质>(品质);
+        public string 文本;        // 展示语（如 "攻击 +N"，N 为实际值），可为空则自动拼
+        public string 属性;        // "攻击"/"防御"/"生命"/"抗性"/"暴击"/"命中"/"闪避"/"速度"/"魔攻"
+        public 词缀属性 属性枚举 => 数据解析.枚举<词缀属性>(属性);
+        public int 最小;           // 数值区间（含）
+        public int 最大;
+        public float 权重 = 1f;    // 池内抽取权重（高品质词缀权重低 → 更难出现）
+    }
+    [Serializable]
+    public class 词缀根 { public 词缀定义[] 词缀; }
+
+    // 词缀实例：装备随机生成的词条（标识 + 已掷定的数值），随 物品堆叠/装备记录 存档
+    [Serializable]
+    public class 词缀条
+    {
+        public string 标识;
+        public int 数值;
+        public 词缀条() { }
+        public 词缀条(string 标识, int 数值) { this.标识 = 标识; this.数值 = 数值; }
+    }
+
     // ================= 战斗系统 =================
 
     // 伤害类型：物理/魔法/真实。可扩展（八方旅人式：火焰/寒冰/圣光…）
     public enum 伤害类型 { 物理, 魔法, 真实 }
+    // 武器种类：物理弱点判定 + 技能武器规则判定用（剑/刀/匕首/斧/弓/锤/法杖）
+    public enum 武器种类 { 无, 剑, 刀, 匕首, 斧, 弓, 锤, 法杖 }
+    // 武器规则：通用（所有武器可用）/ 专向（仅指定武器可用）/ 弱向（指定武器伤害↑，其余武器可用但伤害↓）
+    public enum 武器规则 { 通用, 专向, 弱向 }
     // 行动目标类型：决定目标选择集合
-    public enum 目标类型 { 敌方单体, 敌方全体, 我方单体, 我方全体, 自己 }
+    public enum 目标类型 { 敌方单体, 敌方全体, 敌方两名, 我方单体, 我方全体, 自己 }
     // 技能类别
-    public enum 技能类别 { 攻击, 治疗, 增益, 减益, 控制 }
+    public enum 技能类别 { 攻击, 治疗, 增益, 减益, 控制, 净化 }
     // Buff 类型
     public enum Buff类型 { 增益, 减益, 异常, 护盾 }
     // 物品使用效果
@@ -125,6 +197,7 @@ using System;
         public int 持续回合 = 1;   // 增益/减益/异常 持续回合（护盾=耗尽即消，不看回合）
         public int 最大层数 = 1;   // 可叠层上限（>1 允许叠层）
         public bool 控制;         // 异常=控制类(麻痹/眩晕，跳过行动)；持续伤害=异常且非控制
+        public string 结算时机;   // 异常持续伤害："开始"=回合开始扣血（缺省）/ "结束"=回合结束扣血
         public string 描述;
     }
 
@@ -155,9 +228,21 @@ using System;
     [Serializable]
     public class 敌人组数据 { public string 标识; public string 名称; public 敌人组项[] 敌人; }
     [Serializable]
-    public class 敌人组根 { public 敌人组数据[] 敌人组; }
+    public class 敌人组根 { public 敌人组数据[] 敌人组; public 助战组数据[] 助战组; }
+
+    // 助战组（encounters.json）：剧情战斗的我方伙伴组合（与敌方「敌人组」语义分离，用「成员」而非「敌人」）
+    [Serializable]
+    public class 助战组项 { public string 标识; public int 数量 = 1; }
+    [Serializable]
+    public class 助战组数据 { public string 标识; public string 名称; public 助战组项[] 成员; }
 
     // ================= 技能 =================
+
+    // 技能伤害方式：攻击技能的计算方式
+    // 倍率 = 攻 × 数值（现有公式，受品质/熟练/防御/暴击/抗性影响）
+    // 固定 = 直接打出 数值 点伤害（不受任何因素影响）
+    // 附加 = 普攻伤害 + 数值（在角色伤害值上追加固定量）
+    public enum 技能伤害方式 { 倍率, 固定, 附加 }
 
     [Serializable]
     public class 技能数据
@@ -172,7 +257,11 @@ using System;
         public 目标类型 目标枚举 => 数据解析.枚举<目标类型>(目标);
         public string 伤害类型;   // "物理"/"魔法"/"真实"
         public 伤害类型 伤害类型枚举 => 数据解析.枚举<伤害类型>(伤害类型);
-        public int 数值;          // 攻击=倍率；治疗=恢复量；增益/减益/控制=效果值
+        public string 伤害方式;   // "倍率" / "固定" / "附加"（缺省=倍率）
+        public string 派系;       // 物理 / 魔法（缺省：攻击+物理伤害=物理，其余=魔法）；决定消耗 精力/魔力
+        public bool 物理派系 => 派系 == "物理" || (string.IsNullOrEmpty(派系) && 类别枚举 == 技能类别.攻击 && 伤害类型 == "物理");
+        public 技能伤害方式 伤害方式枚举 => 数据解析.枚举<技能伤害方式>(伤害方式);
+        public float 数值;        // 倍率=倍率系数（重击=1.5 / 横扫斩=0.8）；固定=固定伤害值；附加=追加伤害量；治疗=恢复量
         public string 挂载Buff;   // 增益/减益/控制 挂载的buff标识
         public int 冷却;          // 使用后冷却回合（0=无）
         public int 价格;          // 训练场学习费用
@@ -182,6 +271,13 @@ using System;
         public int 熟练伤害加成 = 10;   // 每级 +% 伤害
         public int 熟练消耗减少 = 5;    // 每级 -% 消耗
         public int 熟练度每级 = 100;    // 每级熟练度阈值（累积满升级熟练等级）
+        // —— 武器规则 / 五行（弱点/破防机制） ——
+        public string 武器种类;   // 物理技能的所需武器种类（专向/弱向 判定用）
+        public 武器种类 武器种类枚举 => 数据解析.枚举<武器种类>(武器种类);
+        public string 武器规则;   // "通用" / "专向" / "弱向"（缺省=通用）
+        public 武器规则 武器规则枚举 => 数据解析.枚举<武器规则>(武器规则);
+        public string 五行属性;   // 魔法技能的五行（"金"/"木"/"水"/"火"/"土"；魔法弱点判定）
+        public 五行 五行枚举 => 数据解析.枚举<五行>(五行属性);
     }
 
     // 技能掌握：玩家已学技能 + 熟练度（使用/训练累积，满阈值升级熟练等级）
@@ -223,7 +319,8 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 目标类型;   // "击败" / "获得物品"
+        public string 章节;       // 主线归属章节标题（如 "第一章 · 黑石山的阴影"）；空=非主线（支线/杂项，不按章分组）
+        public string 目标类型;   // "击败" / "获得物品" / "主线阶段"
         public string 目标标识;
         public int 目标数量;
         public int 奖励金币;
@@ -233,6 +330,28 @@ using System;
 
     [Serializable]
     public class 任务根 { public 任务数据[] 任务; }
+
+    // ================= 日常任务（悬赏） =================
+
+    // 日常任务：各行各业的告示板/委托栏按游戏内天数随机生成的一批（与系统任务面板「日常」同批共用）。
+    // 范围：装备（铁匠铺） / 食物（厨房） / 药剂（药房） / 通用（任务板、镇长府；可击杀或收集）。
+    // 目标类型：击杀 / 收集 —— 均需回对应设施委托栏互动「提交」结算发奖（收集扣道具）。
+    [Serializable]
+    public class 日常任务
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public string 范围;       // "装备" / "食物" / "药剂" / "通用"
+        public string 目标类型;   // "击杀" / "收集"
+        public string 目标标识;   // 敌人标识（击杀） / 物品标识（收集）
+        public int 目标数量;
+        public int 进度;          // 击杀=已击杀数；收集=展示用（提交校验读背包实际持有数）
+        public int 奖励金币;
+        public int 奖励经验;
+        public bool 已接取;       // 已在悬赏板认领（接取后才在系统任务面板「日常」栏可见）
+        public bool 已领取;       // 已结算
+    }
 
     // ================= 地图 =================
 
@@ -265,6 +384,8 @@ using System;
         public string 入口节点;   // 类型=城镇 时进入小地图的起始节点
         public string 目标;       // 剧情节点标识；或 "探索:区域标识"
         public string 解锁物品;   // 需要持有才能前往
+        public string 解锁阶段;   // 需要主线阶段达到才能前往（空=无限制）
+        public string 解锁提示;   // 可选：未解锁时的提示文本
         public string[] 连接;     // 相邻大地图节点标识
         public 地图节点[] 小地图; // 类型=城镇 时的内部节点图（设施网络）
     }
@@ -381,3 +502,26 @@ using System;
 
     [Serializable]
     public class 设施根 { public 设施定义[] 设施; }
+
+    // ================= 制作（recipes.json） =================
+
+    // 配方材料项：物品 + 数量
+    [Serializable]
+    public class 配方材料 { public string 物品; public int 数量 = 1; }
+
+    // 配方：根据材料制作新物品（铁匠铺=装备 / 厨房=食物 / 药房=药剂）；图纸物品解锁
+    [Serializable]
+    public class 配方数据
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public string 产物;          // 成品物品标识
+        public int 产物数量 = 1;
+        public 配方材料[] 材料;      // 所需材料（全部凑齐才能制作）
+        public string 类型;          // "装备" / "食物" / "药剂"（对应设施筛选）
+        public string 图纸;          // 所需图纸物品标识（持有才解锁显示/制作；空=无需图纸）
+    }
+
+    [Serializable]
+    public class 配方根 { public 配方数据[] 配方; }

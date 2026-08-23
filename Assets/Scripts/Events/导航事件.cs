@@ -31,6 +31,9 @@ public readonly struct 打开主菜单事件 { }
 // 打开角色面板（全局，HUD 按钮触发；返回回到上个面板）
 public readonly struct 打开角色面板事件 { }
 
+// 打开任务面板（全局）——侧边栏「任务」按钮调出 系统任务面板（主线/支线/日常）
+public readonly struct 打开任务面板事件 { }
+
 // 打开节点内部图：任意节点（有 内部 数组）进入内部，携带节点 + 返回节点（回小地图用）
 public readonly struct 打开节点内部事件
 {

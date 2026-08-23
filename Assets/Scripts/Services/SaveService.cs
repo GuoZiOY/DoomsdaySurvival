@@ -6,10 +6,14 @@ using UnityEngine;
     {
         private const string 存档键 = "fantasy_text_rpg_save_v2";
 
-        // 存档快照：玩家档案 + 保存时间
+        // 存档结构版本：结构变动时递增；读取时据 版本 做兼容/迁移
+        public const int 当前版本 = 1;
+
+        // 存档快照：玩家档案 + 版本 + 保存时间
         [Serializable]
         public class 存档数据
         {
+            public int 版本 = 当前版本;
             public 玩家档案 玩家;
             public long 保存时间;
         }
@@ -19,6 +23,7 @@ using UnityEngine;
         {
             var 数据 = new 存档数据
             {
+                版本 = 当前版本,
                 玩家 = 玩家,
                 保存时间 = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };

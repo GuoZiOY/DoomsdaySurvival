@@ -45,11 +45,20 @@ using UnityEngine;
 
             ServiceRegistry.Register(new InventoryService(事件, 玩家));
             ServiceRegistry.Register(new QuestService(事件, 数据, 玩家));
+            ServiceRegistry.Register(new 日常任务服务(事件, 数据, 玩家));   // 日常任务（悬赏）服务
             var 战斗服务 = new BattleService(事件, 数据, 玩家);
             ServiceRegistry.Register(战斗服务);
             ServiceRegistry.Register(new 探索服务(事件, 数据, 玩家, 战斗服务));
             ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
+            var 词缀 = new 词缀服务(数据);   // 装备随机词条生成
+            ServiceRegistry.Register(词缀);
+            ServiceRegistry.Register(new 合成服务(数据, 玩家, 事件, 词缀));   // 装备合成（品质提升+词缀）
+            ServiceRegistry.Register(new 附魔服务(数据, 玩家, 事件, 词缀));   // 附魔（材料→随机词条，可能损坏装备）
+            ServiceRegistry.Register(new 镶缀服务(数据, 玩家, 事件, 词缀));   // 镶缀（宝石→指定属性词条，可能碎宝石）
             ServiceRegistry.Register(new 地图服务(事件, 数据, 玩家, ServiceRegistry.Get<探索服务>(), 对话));
+
+            // 自动存档器：订阅跨天/主线/战斗结束/返回主菜单 自动保存（须在业务服务之后注册）
+            ServiceRegistry.Register(new 自动存档器(事件, ServiceRegistry.Get<SaveService>(), 玩家));
 
             Debug.Log($"[GameBootstrap] 核心服务装配完成：剧情 {数据.剧情.Count} / 敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 区域 {数据.区域.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 地点 {数据.地图.Count}");
             // UI 由场景「UI管理器」组件装配与驱动（主菜单/剧情/设施面板均由它切换显示）

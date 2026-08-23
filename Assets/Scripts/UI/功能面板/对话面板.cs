@@ -12,6 +12,7 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
     [SerializeField] private TMP_Text 正文;
     [SerializeField] private RectTransform 选项区;
     [SerializeField] private float 打字间隔 = 0.03f;  // 每字间隔（秒）
+    [SerializeField] private float 自动间隔 = 0.8f;   // 剧情链自动进入下一节点的停顿（秒）
 
     private 地图节点 返回节点数据;   // 空=主剧情；非空=从某节点内部进来（NPC 交谈）
     private string 返回节点;         // 上级返回节点（回小地图用）
@@ -80,7 +81,7 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
         if (打字协程 != null) { StopCoroutine(打字协程); 打字协程 = null; }
     }
 
-    // 打字完成后生成选项（选项只服务剧情分支）
+    // 打字完成后生成选项（选项只服务剧情分支）；无选项且有自动目标 → 剧情链自动进入下一节点
     private void 生成选项()
     {
         if (打字节点 == null) return;
@@ -92,6 +93,18 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
             var 目标 = 选项.目标;
             创建行(选项区, 选项.文本, () => ServiceRegistry.Get<DialogueService>().处理选项(目标), true, true);   // 选项：去LayoutElement + 文字居中
         }
+        if (节点.选项.Length == 0 && !string.IsNullOrEmpty(节点.自动目标))
+        {
+            var 目标 = 节点.自动目标;
+            StartCoroutine(自动进入下一节点(目标));
+        }
+    }
+
+    // 剧情链连续播放：文本停顿后自动进入下一节点
+    private IEnumerator 自动进入下一节点(string 目标)
+    {
+        yield return new WaitForSeconds(自动间隔);
+        ServiceRegistry.Get<DialogueService>().处理选项(目标);
     }
 
     // 渲染结局：序章收尾（属剧情内容，故归对话面板）

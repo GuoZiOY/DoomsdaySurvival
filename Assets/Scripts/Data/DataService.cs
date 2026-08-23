@@ -20,6 +20,10 @@ using UnityEngine;
         public Dictionary<string, 训练项目> 训练项目 { get; private set; } = new Dictionary<string, 训练项目>();
         public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
         public Dictionary<string, 敌人组数据> 敌人组 { get; private set; } = new Dictionary<string, 敌人组数据>();
+        public Dictionary<string, 助战组数据> 助战组 { get; private set; } = new Dictionary<string, 助战组数据>();
+        public List<区域剧情路由> 区域剧情 { get; private set; } = new List<区域剧情路由>();
+        public Dictionary<string, 配方数据> 配方 { get; private set; } = new Dictionary<string, 配方数据>();
+        public Dictionary<string, 词缀定义> 词缀 { get; private set; } = new Dictionary<string, 词缀定义>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -44,6 +48,28 @@ using UnityEngine;
             加载("training", 训练项目, (训练项目根 根) => 根.训练项目);
             加载("buffs", Buffs, (Buff根 根) => 根.Buffs);
             加载("encounters", 敌人组, (敌人组根 根) => 根.敌人组);
+            加载("recipes", 配方, (配方根 根) => 根.配方);   // 允许缺失（制作系统）
+            加载("affixes", 词缀, (词缀根 根) => 根.词缀);   // 允许缺失（词缀系统）
+            加载助战组与区域剧情();
+        }
+
+        // 附加表：encounters 助战组 + story 区域剧情（同一文件内的第二数组）
+        private void 加载助战组与区域剧情()
+        {
+            var 敌人组资产 = Resources.Load<TextAsset>("Data/encounters");
+            if (敌人组资产 != null)
+            {
+                var 根 = JsonUtility.FromJson<敌人组根>(敌人组资产.text);
+                if (根?.助战组 != null)
+                    foreach (var 项 in 根.助战组)
+                        if (!string.IsNullOrEmpty(项.标识)) 助战组[项.标识] = 项;
+            }
+            var 剧情资产 = Resources.Load<TextAsset>("Data/story");
+            if (剧情资产 != null)
+            {
+                var 根 = JsonUtility.FromJson<剧情根>(剧情资产.text);
+                if (根?.区域剧情 != null) 区域剧情.AddRange(根.区域剧情);
+            }
         }
 
         private void 加载<T, TRoot>(string 文件, Dictionary<string, T> 目标, Func<TRoot, T[]> 提取) where T : class
@@ -71,7 +97,7 @@ using UnityEngine;
         {
             校验错误.Clear();
 
-            // —— 剧情：选项目标 / 强制战斗敌人 ——
+            // —— 剧情：选项目标 / 强制战斗敌人 / 下一节点 ——
             foreach (var (标识, 节点) in 剧情)
             {
                 if (节点.选项 != null)
@@ -88,6 +114,15 @@ using UnityEngine;
                         {
                             校验错误.Add($"剧情[{标识}] → 节点[{选项.目标}] 不存在");
                         }
+                        // 战斗:敌人组:胜利节点[:助战组] —— 敌人组/助战组 存在性
+                        if (选项.目标.StartsWith("战斗:"))
+                        {
+                            var 部分 = 选项.目标.Split(':');
+                            if (部分.Length >= 2 && !敌人组.ContainsKey(部分[1]))
+                                校验错误.Add($"剧情[{标识}] → 战斗敌人组[{部分[1]}] 不存在");
+                            if (部分.Length >= 4 && !string.IsNullOrEmpty(部分[3]) && !助战组.ContainsKey(部分[3]))
+                                校验错误.Add($"剧情[{标识}] → 助战组[{部分[3]}] 不存在");
+                        }
                     }
                 // 强制战斗
                 if (!string.IsNullOrEmpty(节点.战斗))
@@ -96,6 +131,32 @@ using UnityEngine;
                     if (部分.Length >= 2 && !敌人.ContainsKey(部分[1]))
                         校验错误.Add($"剧情[{标识}] 战斗敌人[{部分[1]}] 不存在");
                 }
+                // 下一节点（剧情链自动播放）
+                if (!string.IsNullOrEmpty(节点.下一节点) && !剧情.ContainsKey(节点.下一节点))
+                    校验错误.Add($"剧情[{标识}] → 下一节点[{节点.下一节点}] 不存在");
+            }
+
+            // —— 区域剧情路由：区域/节点/需要物品/需要任务 ——
+            foreach (var 路由 in 区域剧情)
+            {
+                string 路由名 = $"区域剧情[{路由.区域}/{路由.阶段}]";
+                if (!地图.ContainsKey(路由.区域))
+                    校验错误.Add($"{路由名} → 地点[{路由.区域}] 不存在");
+                if (!string.IsNullOrEmpty(路由.节点) && !剧情.ContainsKey(路由.节点))
+                    校验错误.Add($"{路由名} → 节点[{路由.节点}] 不存在");
+                if (!string.IsNullOrEmpty(路由.需要物品) && !物品.ContainsKey(路由.需要物品))
+                    校验错误.Add($"{路由名} → 需要物品[{路由.需要物品}] 不存在");
+                if (!string.IsNullOrEmpty(路由.需要任务) && !任务.ContainsKey(路由.需要任务))
+                    校验错误.Add($"{路由名} → 需要任务[{路由.需要任务}] 不存在");
+            }
+
+            // —— 助战组：引用的伙伴单位存在 ——
+            foreach (var (标识, 组) in 助战组)
+            {
+                if (组.成员 == null) continue;
+                foreach (var 项 in 组.成员)
+                    if (!敌人.ContainsKey(项.标识))
+                        校验错误.Add($"助战组[{标识}] → 伙伴[{项.标识}] 不存在");
             }
 
             // —— 地图：目标节点 / 连接 ——
@@ -159,6 +220,21 @@ using UnityEngine;
                     if (!string.IsNullOrEmpty(层.Boss) && !敌人组.ContainsKey(层.Boss))
                         校验错误.Add($"{层名} Boss组[{层.Boss}] 不存在");
                 }
+            }
+
+            // —— 配方：产物/材料/图纸 物品存在 + 类型合法 ——
+            foreach (var (标识, 配方) in 配方)
+            {
+                if (!物品.ContainsKey(配方.产物))
+                    校验错误.Add($"配方[{标识}] → 产物[{配方.产物}] 不存在");
+                if (配方.材料 != null)
+                    foreach (var 材 in 配方.材料)
+                        if (!物品.ContainsKey(材.物品))
+                            校验错误.Add($"配方[{标识}] → 材料[{材.物品}] 不存在");
+                if (!string.IsNullOrEmpty(配方.图纸) && !物品.ContainsKey(配方.图纸))
+                    校验错误.Add($"配方[{标识}] → 图纸[{配方.图纸}] 不存在");
+                if (配方.类型 != "装备" && 配方.类型 != "食物" && 配方.类型 != "药剂")
+                    校验错误.Add($"配方[{标识}] → 类型[{配方.类型}] 非法（装备/食物/药剂）");
             }
         }
     }
