@@ -132,6 +132,20 @@ using System.Collections.Generic;
         public List<日常任务> 日常 = new List<日常任务>();
         public int 日常生成日 = -1;
 
+        // 按标识查日常任务（空 = 无）
+        public 日常任务 查找日常(string 标识)
+        {
+            foreach (var 条 in 日常) if (条.标识 == 标识) return 条;
+            return null;
+        }
+
+        // 替换当天日常批次并记录生成日（跨天刷新用）
+        public void 覆写日常(List<日常任务> 新日常)
+        {
+            日常 = 新日常 ?? new List<日常任务>();
+            日常生成日 = 游戏天数;
+        }
+
         // —— 安全屋 ——
         public int 安全屋等级 = 1;
         public List<家具实例> 家具 = new List<家具实例>();
@@ -149,12 +163,19 @@ using System.Collections.Generic;
 
         // —— 剧情进度（存档恢复用） ——
         public string 当前节点 = "";
+        public string 主线阶段 = "";   // 兼容旧剧情系统（末日不使用，保留字段防断）
 
         // 末日地图位置（存档恢复用：当前所在大节点）
         public string 当前大节点 = "营地";
 
         // —— 探索 ——
         public List<string> 已清空地点 = new List<string>();
+
+        public bool 已清空(string 地点标识) => 已清空地点.Contains(地点标识);
+        public void 标记清空(string 地点标识)
+        {
+            if (!已清空地点.Contains(地点标识)) 已清空地点.Add(地点标识);
+        }
 
         // 技能熟练度等级上限
         public const int 熟练等级上限 = 5;
@@ -529,6 +550,13 @@ using System.Collections.Generic;
         {
             foreach (var 堆叠 in 背包)
                 if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.词缀;
+            return null;
+        }
+
+        // 已装备某物品的词缀（详情显示用）
+        public List<词缀条> 装备词缀(string 标识)
+        {
+            foreach (var e in 装备) if (e.标识 == 标识) return e.词缀;
             return null;
         }
 
