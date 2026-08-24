@@ -1,13 +1,13 @@
 using System;
 using UnityEngine;
 
-    // 极简存档：PlayerPrefs 存 JSON 快照（v2 键，与旧框架 v1 隔离，互不覆盖）。
+    // 极简存档（末日版）：PlayerPrefs 存 JSON 快照（v3 键，与奇幻版 v2 隔离）。
     public sealed class SaveService
     {
-        private const string 存档键 = "fantasy_text_rpg_save_v2";
+        private const string 存档键 = "last87days_save_v3";
 
         // 存档结构版本：结构变动时递增；读取时据 版本 做兼容/迁移
-        public const int 当前版本 = 1;
+        public const int 当前版本 = 3;
 
         // 存档快照：玩家档案 + 版本 + 保存时间
         [Serializable]

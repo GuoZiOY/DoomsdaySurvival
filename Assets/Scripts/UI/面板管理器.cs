@@ -30,6 +30,11 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private GameObject 地图节点预制体; // 地图节点按钮（节点图专用，可选；不设则用 按钮预制体）
     [SerializeField] private GameObject[] 常驻UI;       // 第二级常驻 UI（HUD条/日志面板/底部状态栏/游戏时钟）：开始流程后常驻，主菜单时收起
 
+    // 开局构筑面板（末日开局流程；场景需拖入或由主菜单动态挂载）
+    [SerializeField] private 开局构筑面板 开局构筑;
+
+    public 开局构筑面板 开局构筑面板引用() => 开局构筑;
+
     private readonly List<面板基类> 可切换面板 = new List<面板基类>();
 
     // 面板切换追踪：角色面板等全局面板返回用
@@ -48,6 +53,7 @@ public sealed class 面板管理器 : MonoBehaviour
         GameBootstrap.装配();
 
         可切换面板.AddRange(new 面板基类[] { 主菜单, 主视窗, 对话, 战斗, 大地图, 小地图, 节点内部, 买卖, 训练, 日常任务, 任务系统, 教学, 恢复, 睡觉, 制作, 角色, 探索 });
+        if (开局构筑 != null) 可切换面板.Add(开局构筑);
     }
 
     void Start()
