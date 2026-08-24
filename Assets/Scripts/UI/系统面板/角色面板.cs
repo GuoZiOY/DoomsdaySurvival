@@ -16,9 +16,6 @@ public sealed class 角色面板 : 面板基类
 
     private bool 显示属性页 = true;
 
-    // 角色面板 = 侧边式：从屏右滑入（向左到位），退出向右滑出
-    protected override 面板过渡样式 过渡样式 => 面板过渡样式.右侧滑入右滑出;
-
     void Awake()
     {
         var 事件 = ServiceRegistry.Get<EventBus>();

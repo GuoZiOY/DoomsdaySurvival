@@ -13,6 +13,7 @@ using UnityEngine;
 
         // 开局构筑参数（主菜单选职业/分配自由点/选天赋后传入）
         public string 待选职业 = "";
+        public string 角色名 = "无名幸存者";
         public int 待分配自由点 = 10;   // 开局额外自由分配 10 点
         public List<string> 待选天赋 = new List<string>();
 
@@ -54,32 +55,34 @@ using UnityEngine;
         public void 新游戏()
         {
             初始化();
-            // ① 应用职业（属性加成 + 初始技能 + 初始装备 + 职业天赋）
+            // ① 应用职业（属性分布 + 初始技能 + 初始装备 + 职业天赋）
             应用职业(待选职业);
             // ② 应用自由点（开局额外 10 点，按 开局分配 落五维）
             foreach (var (类型, 点数) in 开局分配)
                 if (点数 > 0) 档案.训练属性(类型, 点数);
             // ③ 应用正负天赋
             应用天赋(待选天赋);
-            // ④ 初始物资与进入
+            // ④ 角色名 + 初始物资与进入
+            档案.角色名 = string.IsNullOrEmpty(角色名) ? "无名幸存者" : 角色名;
             档案.添加物品("面包", 2);
             档案.添加物品("水", 1);
             档案.添加物品("绷带", 1);
             档案.应用背包装备();
             档案.当前节点 = "开局_醒来";
-            事件.发布(new 日志事件(日志类型.系统, "末日第 1 天。你还活着。"));
+            事件.发布(new 日志事件(日志类型.系统, $"末日第 1 天。{档案.角色名}还活着。"));
             发布初始状态();
         }
 
-        // 应用职业：属性加成 + 初始技能 + 初始装备 + 职业天赋
+        // 应用职业：属性分布（直接给定五维，覆盖初始 5）+ 初始技能 + 初始装备 + 职业天赋
         private void 应用职业(string 职业标识)
         {
             if (string.IsNullOrEmpty(职业标识)) return;
             if (!数据.职业.TryGetValue(职业标识, out var 职业)) return;
             档案.职业 = 职业标识;
-            if (职业.属性加成 != null)
-                foreach (var 项 in 职业.属性加成)
-                    档案.训练属性(解析属性(项.属性), 项.点数);
+            // 属性分布：职业直接给定五维（总和 25，区分职业），覆盖 初始 5
+            if (职业.属性分布 != null)
+                foreach (var 项 in 职业.属性分布)
+                    档案.设置属性(解析属性(项.属性), 项.点数);
             if (!string.IsNullOrEmpty(职业.初始技能) && 数据.技能.TryGetValue(职业.初始技能, out var 技能))
                 档案.学习技能(技能);
             if (职业.初始装备 != null)
@@ -182,6 +185,7 @@ using UnityEngine;
             档案.幸存者 ??= new List<string>();
             档案.抉择记录 ??= new List<string>();
             档案.天赋 ??= new List<string>();
+            档案.天赋冷却 ??= new Dictionary<string, float>();
             档案.家具 ??= new List<家具实例>();
             for (int i = 档案.背包.Count - 1; i >= 0; i--)
                 if (档案.背包[i] == null || 档案.背包[i].数量 <= 0 || string.IsNullOrEmpty(档案.背包[i].标识)) 档案.背包.RemoveAt(i);

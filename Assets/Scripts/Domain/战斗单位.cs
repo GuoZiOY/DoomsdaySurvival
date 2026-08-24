@@ -24,6 +24,10 @@ public sealed class 战斗单位
     public bool 破防;
     public bool 有护盾 => 护盾上限 > 0;
 
+    // —— 无敌（钢铁意志触发后：免疫伤害 1 回合） ——
+    public int 无敌回合;   // >0 = 本回合免疫伤害；回合结束递减
+    public bool 无敌 => 无敌回合 > 0;
+
     // —— 增幅点 BP（八方旅人式：蓄力增幅攻击；仅我方玩家用） ——
     public int BP;
     public const int BP上限 = 3;
@@ -165,7 +169,7 @@ public sealed class 战斗单位
 
     public void 移除Buff(string 标识) => Buffs.RemoveAll(b => b.定义.标识 == 标识);
 
-    // 回合结束：非护盾 buff 计时递减移除；技能冷却递减
+    // 回合结束：非护盾 buff 计时递减移除；技能冷却递减；无敌回合递减
     public void 回合结束()
     {
         for (int i = Buffs.Count - 1; i >= 0; i--)
@@ -175,6 +179,7 @@ public sealed class 战斗单位
             b.剩余回合--;
             if (b.剩余回合 <= 0) Buffs.RemoveAt(i);
         }
+        if (无敌回合 > 0) 无敌回合--;
         var 到期 = new List<string>();
         foreach (var kv in 技能冷却)
         {

@@ -15,7 +15,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
 {
     [SerializeField] private Button 取消按钮, 设置按钮, 音量按钮, 存档按钮, 暂停按钮, 角色按钮, 任务按钮;
     [SerializeField] private TMP_Text 取消文字;   // 取消按钮文案（随当前面板动态显示：取消/返回/离开城镇/关闭/回主菜单）
-    [SerializeField] private GameObject 设置面板;  // 设置弹窗（音量滑条）
+    [SerializeField] private 设置面板 设置面板;   // 全局设置覆盖层（音量滑条；主菜单与游戏中共用）
 
     // 暂停图标（暂停符号 / 继续符号）
     [SerializeField] private Image 暂停图;
@@ -32,7 +32,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
         事件?.订阅<战斗开始事件>(_ => 刷新显隐());
         事件?.订阅<战斗结束事件>(_ => 刷新显隐());
         取消按钮?.onClick.AddListener(取消);
-        设置按钮?.onClick.AddListener(() => { if (设置面板 != null) 设置面板.SetActive(!设置面板.activeSelf); });
+        设置按钮?.onClick.AddListener(() => 设置面板?.切换());
         音量按钮?.onClick.AddListener(() => { 音效管理器.实例?.切换静音(); 刷新音量(); });
         存档按钮?.onClick.AddListener(存档);
         暂停按钮?.onClick.AddListener(暂停切换);

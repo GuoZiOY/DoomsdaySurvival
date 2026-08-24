@@ -561,7 +561,7 @@ using System;
 
     // ================= 职业（开局选择） =================
 
-    // 职业属性加成项（五维其一 + 点数）
+    // 职业属性分布项（五维其一 + 值）——职业直接给定五维分布（总和 25），非加成
     [Serializable]
     public class 属性加成项 { public string 属性; public int 点数; }
 
@@ -575,7 +575,7 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public 属性加成项[] 属性加成;   // 职业固定加成（合计约 10 点）
+        public 属性加成项[] 属性分布;   // 职业五维分布（直接给值，总和 25，区分职业）
         public string 初始技能;          // 初始学会的生存技能（可空）
         public string 天赋;             // 职业固有天赋特效（可空，字符串标识）
         public 初始装备项[] 初始装备;    // 开局装备/物资

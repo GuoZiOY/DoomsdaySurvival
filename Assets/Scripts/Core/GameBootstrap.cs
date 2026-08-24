@@ -50,6 +50,7 @@ using UnityEngine;
             ServiceRegistry.Register(战斗服务);
             ServiceRegistry.Register(new 探索服务(事件, 数据, 玩家, 战斗服务));
             ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
+            ServiceRegistry.Register(new 天赋服务(事件, 玩家));   // 机制型天赋（致命伤害/制作完成 事件响应）
             var 词缀 = new 词缀服务(数据);   // 装备随机词条生成
             ServiceRegistry.Register(词缀);
             ServiceRegistry.Register(new 合成服务(数据, 玩家, 事件, 词缀));   // 装备合成（品质提升+词缀）

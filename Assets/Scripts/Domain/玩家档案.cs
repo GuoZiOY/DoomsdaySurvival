@@ -90,7 +90,9 @@ using System.Collections.Generic;
 
         // —— 身份：职业与天赋 ——
         public string 职业 = "";                        // 职业标识（开局选择）
+        public string 角色名 = "无名幸存者";            // 角色名（开局输入，默认无名）
         public List<string> 天赋 = new List<string>();  // 正负天赋选中的标识列表
+        public Dictionary<string, float> 天赋冷却 = new Dictionary<string, float>();   // 天赋标识 → 上次触发游戏分钟（机制冷却）
 
         // —— 核心五维属性（基础 5 + 职业加成 + 自由点 + 天赋） ——
         public int 体质 = 5;
@@ -586,6 +588,19 @@ using System.Collections.Generic;
                 case 属性类型.智慧: 智慧 += 点数; break;
                 case 属性类型.敏捷: 敏捷 += 点数; break;
                 case 属性类型.意志: 意志 += 点数; break;
+            }
+        }
+
+        // 直接设置某属性为指定值（职业分布用：开局职业直接给定五维分布）
+        public void 设置属性(属性类型 类型, int 值)
+        {
+            switch (类型)
+            {
+                case 属性类型.体质: 体质 = 值; break;
+                case 属性类型.力量: 力量 = 值; break;
+                case 属性类型.智慧: 智慧 = 值; break;
+                case 属性类型.敏捷: 敏捷 = 值; break;
+                case 属性类型.意志: 意志 = 值; break;
             }
         }
 

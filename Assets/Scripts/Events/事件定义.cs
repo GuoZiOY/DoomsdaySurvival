@@ -127,3 +127,21 @@
         public readonly string 文本;
         public 战斗消息事件(string 文本) { this.文本 = 文本; }
     }
+
+    // —— 天赋（机制型天赋的事件钩子） ——
+
+    // 致命伤害事件：玩家生命即将归零时发（天赋服务 检查 钢铁意志/医者仁心）
+    public readonly struct 致命伤害事件
+    {
+        public readonly 战斗单位 玩家;
+        public 致命伤害事件(战斗单位 玩家) { this.玩家 = 玩家; }
+    }
+
+    // 制作完成事件：制作设施产出后发（天赋服务 检查 美食家）
+    public readonly struct 制作完成事件
+    {
+        public readonly string 产物;   // 产物物品标识
+        public readonly int 数量;      // 本次产出数量
+        public readonly string 类型;   // "装备"/"食物"/"药剂"
+        public 制作完成事件(string 产物, int 数量, string 类型) { this.产物 = 产物; this.数量 = 数量; this.类型 = 类型; }
+    }

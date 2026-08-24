@@ -18,12 +18,13 @@ public sealed class 日志折叠 : MonoBehaviour
 
     private bool 已折叠;
     private Coroutine 当前协程;
-    private Button 上次按钮;   // 幂等：重复绑定前先移除旧监听
+    private Button 上次按钮;   // 幂等：重复绑定前先移除旧按钮上的 切换 监听
 
     // 由搭建工具调用：绑定折叠按钮点击（重复调用安全）
     public void 绑定折叠按钮(Button 按钮)
     {
-        if (上次按钮 != null) 上次按钮.onClick.RemoveAllListeners();
+        // 只移除上次按钮上的 切换 监听（不动其它系统如音效挂的监听）
+        if (上次按钮 != null) 上次按钮.onClick.RemoveListener(切换);
         上次按钮 = 按钮;
         if (按钮 != null) 按钮.onClick.AddListener(切换);
     }

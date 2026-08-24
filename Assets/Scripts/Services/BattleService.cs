@@ -496,6 +496,13 @@ public sealed class BattleService
     private void 造成伤害(战斗单位 攻击者, 战斗单位 目标, 伤害类型 类型, int 倍率100, int 附加 = 0, 武器种类 攻方武器 = 武器种类.无, 五行 攻方五行 = 五行.无)
     {
         if (目标 == null || !目标.存活) return;
+        // 无敌判定（钢铁意志触发后：免疫伤害 1 回合）
+        if (目标.无敌)
+        {
+            事件.发布(new 伤害事件(目标, 0, 类型, false, false));
+            发消息($"{名(目标)} 处于无敌状态，攻击被弹开！");
+            return;
+        }
         // 命中判定：基础命中率 vs 目标当前闪避（敏捷 buff 生效）
         if (Random.value >= 攻击者.命中率 - 目标.当前闪避率)
         {
@@ -589,6 +596,17 @@ public sealed class BattleService
     private void 检查单位死亡(战斗单位 单位)
     {
         if (单位.存活) return;
+        // 玩家倒下：先发 致命伤害事件（天赋服务 检查 钢铁意志/医者仁心——免疫则保命继续）
+        if (单位 == 玩家 && ServiceRegistry.已注册<天赋服务>())
+        {
+            ServiceRegistry.Get<天赋服务>().处理致命伤害(new 致命伤害事件(单位));
+            if (单位.存活)   // 天赋免疫成功（生命已保底）
+            {
+                事件.发布(new 目标变化事件(单位));
+                事件.发布(new 战斗消息事件("你挺过了致命一击！"));
+                return;
+            }
+        }
         if (单位.是否我方) 我方.Remove(单位);
         else { 敌方.Remove(单位); 结算单个敌人(单位); }
         事件.发布(new 目标变化事件(单位));

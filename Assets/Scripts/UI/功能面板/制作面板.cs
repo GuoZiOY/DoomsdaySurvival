@@ -4,10 +4,11 @@ using UnityEngine.UI;
 
 // 制作面板：根据配方用材料制作新物品（铁匠铺=装备 / 厨房=食物 / 药房=药剂）。
 // 布局：配方列表（配方行：成品名/材料/状态）+ 详情区（选中配方的材料明细 + [制作] 按钮）。
-// 配方由 图纸 物品解锁（制作设施.可用配方 已过滤）；返回统一走侧边栏取消。
+// 绑定一次：制作按钮 onClick 在 Awake 绑定（点击时读 选中配方标识）；刷新只更新文本/可用状态。
 public sealed class 制作面板 : 设施功能面板基类
 {
-    // 内容区 继承自 面板基类（配方列表容器）
+    // 内容区：配方列表容器（本面板自行声明，非基类字段）
+    [SerializeField] private RectTransform 内容区;
     [SerializeField] private GameObject 配方行模板;      // 配方行模板（挂 配方行）
     [SerializeField] private RectTransform 详情区;       // 选中配方详情（初始隐藏）
     [SerializeField] private TMP_Text 详情文本;
@@ -21,6 +22,13 @@ public sealed class 制作面板 : 设施功能面板基类
         base.Awake();
         // 背包变化（扣材料/得产物）→ 整面板刷新（材料数量/可制作状态更新）
         ServiceRegistry.Get<EventBus>()?.订阅<背包变化事件>(_ => 刷新(null));
+        // 制作按钮：绑定一次（点击时读取当前选中配方；不再每次刷新重绑）
+        if (制作按钮 != null)
+            制作按钮.onClick.AddListener(() =>
+            {
+                if (string.IsNullOrEmpty(选中配方标识)) return;
+                if (制作.尝试制作(选中配方标识)) 刷新(null);
+            });
     }
 
     protected override string 标题文字() => $"{逻辑.名称} · {(逻辑 is 制作设施 设施 ? 设施.类型提示() : "制作")}";
@@ -52,7 +60,7 @@ public sealed class 制作面板 : 设施功能面板基类
     {
         var 数据 = ServiceRegistry.Get<DataService>();
         if (详情区 != null) 详情区.gameObject.SetActive(!string.IsNullOrEmpty(选中配方标识));
-        if (制作按钮 != null) { 制作按钮.onClick.RemoveAllListeners(); 制作按钮.gameObject.SetActive(false); }
+        if (制作按钮 != null) 制作按钮.gameObject.SetActive(false);
         if (string.IsNullOrEmpty(选中配方标识) || !数据.配方.TryGetValue(选中配方标识, out var 配方))
         {
             设文本(详情文本, "");
@@ -66,7 +74,6 @@ public sealed class 制作面板 : 设施功能面板基类
         {
             制作按钮.gameObject.SetActive(true);
             制作按钮.interactable = 制作.材料足够(配方);
-            制作按钮.onClick.AddListener(() => { if (制作.尝试制作(配方.标识)) 刷新(null); });
         }
     }
 }
