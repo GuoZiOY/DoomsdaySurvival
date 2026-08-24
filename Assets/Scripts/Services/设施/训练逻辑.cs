@@ -75,10 +75,11 @@ public sealed class 训练逻辑
     {
         switch (名)
         {
-            case "体力": return 属性类型.体力;
+            case "体质": return 属性类型.体质;
             case "力量": return 属性类型.力量;
-            case "智力": return 属性类型.智力;
+            case "智慧": return 属性类型.智慧;
             case "敏捷": return 属性类型.敏捷;
+            case "意志": return 属性类型.意志;
             default: return 属性类型.力量;
         }
     }

@@ -46,12 +46,22 @@
         { this.等级 = 等级; this.当前经验 = 当前经验; this.升级所需 = 升级所需; this.升级了 = 升级了; }
     }
 
-    // 属性变化：角色面板刷新 4 大基础属性与自由点
+    // 属性变化：角色面板刷新 5 大核心属性与自由点
     public readonly struct 属性变化事件
     {
-        public readonly int 体力; public readonly int 力量; public readonly int 智力; public readonly int 敏捷; public readonly int 自由属性点;
+        public readonly int 体质; public readonly int 力量; public readonly int 智慧; public readonly int 敏捷; public readonly int 意志; public readonly int 自由属性点;
+        public 属性变化事件(int 体质, int 力量, int 智慧, int 敏捷, int 意志, int 自由属性点)
+        { this.体质 = 体质; this.力量 = 力量; this.智慧 = 智慧; this.敏捷 = 敏捷; this.意志 = 意志; this.自由属性点 = 自由属性点; }
+        // 兼容旧签名（体力=体质，智力=智慧，意志缺省 5）
         public 属性变化事件(int 体力, int 力量, int 智力, int 敏捷, int 自由属性点)
-        { this.体力 = 体力; this.力量 = 力量; this.智力 = 智力; this.敏捷 = 敏捷; this.自由属性点 = 自由属性点; }
+            : this(体力, 力量, 智力, 敏捷, 5, 自由属性点) { }
+    }
+
+    // 生存状态变化：饥饿/口渴/疲劳/感染度/士气/噪音（HUD 与状态栏刷新）
+    public readonly struct 生存状态变化事件
+    {
+        public readonly 生存状态类型 类型; public readonly int 当前; public readonly int 变化量;
+        public 生存状态变化事件(生存状态类型 类型, int 当前, int 变化量) { this.类型 = 类型; this.当前 = 当前; this.变化量 = 变化量; }
     }
 
     // —— 背包 ——

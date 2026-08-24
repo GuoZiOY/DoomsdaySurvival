@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-    // 背包中的一种物品及数量
+    // 背包中的一种物品及数量（末日物资：食物/水/药品/弹药/零件 统一承载）
     [Serializable]
     public class 物品堆叠
     {
@@ -23,8 +23,11 @@ using System.Collections.Generic;
         public bool 已完成;
     }
 
-    // 4 大基础属性类型（加点用）
-    public enum 属性类型 { 体力, 力量, 智力, 敏捷 }
+    // 5 大核心属性类型（加点用）：体质/力量/智慧/敏捷/意志
+    public enum 属性类型 { 体质, 力量, 智慧, 敏捷, 意志 }
+
+    // 生存状态类型（0~100 的连续状态）
+    public enum 生存状态类型 { 饥饿, 口渴, 疲劳, 感染度, 士气, 噪音 }
 
     // 装备记录：已装备物品（槽位 + 标识）。存档结构（8 槽：主手/副手/头盔/盔甲/靴子/手套/饰品1/饰品2）
     [Serializable]
@@ -40,7 +43,7 @@ using System.Collections.Generic;
     }
 
     // 玩家档案：纯 C# 领域模型（零 UnityEngine 依赖），可整体序列化存档。
-    // 字段名与旧 玩家状态 一致，保证旧档字段兼容。
+    // 末日求生版：五维属性 + 生存状态（饥饿/口渴/疲劳/感染/士气）+ 物资背包（以物易物经济）
     [Serializable]
     public class 玩家档案
     {
@@ -48,78 +51,114 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 攻击加成解析;
         [NonSerialized] public Func<string, int> 防御加成解析;
         [NonSerialized] public Func<string, int> 生命加成解析;
+        [NonSerialized] public Func<string, int> 负重加成解析;
         [NonSerialized] public Func<string, 武器种类> 武器种类解析;   // 标识 -> 武器种类（物理弱点判定）
         [NonSerialized] public Func<string, int> 抗性加成解析;        // 标识 -> 抗性百分数贡献点（非线性封顶）
         [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板（词缀求和用）
 
-        // —— 属性 ——
+        // —— 核心五维属性（末日求生：每次升级 +3 自由点自行分配） ——
+        public int 体质 = 5;   // 生命/负重/感染抗性/疲劳恢复/饥饿耐受
+        public int 力量 = 5;   // 近战伤害/负重/破门撬锁
+        public int 智慧 = 5;   // 制作/急救/陷阱识别/经验获取
+        public int 敏捷 = 5;   // 速度/闪避/潜行/暴击/逃跑
+        public int 意志 = 5;   // 恐惧抗性/感染抵抗力/士气恢复/夜晚行动
+        public int 自由属性点 = 0;   // 升级获得，自行分配到 5 大属性
+
+        // —— 等级与经验 ——
         public int 等级 = 1;
         public int 经验 = 0;
-        public int 生命 = 50;
-        public int 魔力 = 20;
-        public int 铜币 = 800;     // 钱包（最小单位：铜币；1金=100银=10000铜）初始 8 银，前期以小面值为主
-        public int 精力 = 112;     // 当前精力（探索/行动/物理技能 消耗；100+等级×2+体力×2 上限）初始匹配 等级1/体力5
-        public float 游戏分钟数 = 420f;           // 6:00 开始；1 现实秒 = 2 游戏分钟
-        public string 当前节点 = "";               // 剧情进度（用于存档恢复）
-        public string 主线阶段 = "第一章_序章";   // 主线进度（剧情自动触发/解锁判定/主线任务）
-        public List<物品堆叠> 背包 = new List<物品堆叠>();
-        public List<技能掌握> 已学技能 = new List<技能掌握>();
-        public List<任务进度> 任务 = new List<任务进度>();
 
-        // —— 探索：已通关区域（可再刷，Boss 层普通化）——
-        public List<string> 已通关区域 = new List<string>();
+        // —— 生存状态（0~100；除疲劳/噪音外，越高越健康） ——
+        public int 生命 = 40;         // 当前生命（健康）
+        public int 行动点 = 100;      // 当前行动点（探索/战斗消耗；原"精力"）
+        public int 饥饿 = 30;         // 0=饱 100=饿死
+        public int 口渴 = 20;         // 0=不渴 100=渴死
+        public int 疲劳 = 0;          // 0=精神 100=精疲力竭（行动累积，休息恢复）
+        public int 感染度 = 0;        // 0=干净 100=变异（被咬累积，抗生素/消毒治疗）
+        public int 士气 = 80;         // 0=崩溃 100=高昂（事件/意志恢复）
+        public int 噪音值 = 0;        // 当前地点累积（枪械/战斗产生，引来尸潮；回安全处清零）
+
+        // —— 物资背包（以物易物经济：不再有统一货币） ——
+        public List<物品堆叠> 背包 = new List<物品堆叠>();
+        public int 负重占用 => 背包计数总量();   // 动态计算
+
+        // —— 时间 ——
+        public float 游戏分钟数 = 420f;           // 6:00 开始；1 现实秒 = 2 游戏分钟
+        public int 游戏天数 => (int)(游戏分钟数 / 1440f);
+
+        // —— 剧情进度 ——
+        public string 当前节点 = "";               // 存档恢复用
+        public string 主线阶段 = "第1天_醒来";     // 生存天数推进/解锁判定（保留字段语义）
+
+        // —— 探索 ——
+        public List<string> 已清空地点 = new List<string>();   // 原"已通关区域"：搜空的地点（可再刷，只剩丧尸）
 
         // —— 装备：槽位列表（8 槽），物品 槽位 声明归属，饰品自动分配 饰品1/饰品2 ——
         public List<装备记录> 装备 = new List<装备记录>();
 
-        // —— 4 大基础属性 + 自由属性点 ——
-        public int 体力 = 5;
-        public int 力量 = 5;
-        public int 智力 = 5;
-        public int 敏捷 = 5;
-        public int 自由属性点 = 0;                 // 升级获得，自行分配到 4 大属性
+        // —— 技能与任务 ——
+        public List<技能掌握> 已学技能 = new List<技能掌握>();
+        public List<任务进度> 任务 = new List<任务进度>();
+        public List<日常任务> 日常 = new List<日常任务>();
+        public int 日常生成日 = -1;
+
+        // —— 幸存者（第二版：营地人口，预留字段） ——
+        public List<string> 幸存者 = new List<string>();   // 第二版扩展为对象列表
+
+        // —— 抉择记录（世界记忆：道德抉择留痕，事件引用） ——
+        public List<string> 抉择记录 = new List<string>();
 
         // 技能熟练度等级上限
         public const int 熟练等级上限 = 5;
 
-        // —— 日常任务 ——按游戏内天数刷新：跨天重生成一批
-        public List<日常任务> 日常 = new List<日常任务>();
-        public int 日常生成日 = -1;   // 生成当日的游戏天数（0=第1天）；跨天重生成
+        // —— 派生数值（五维 → 战斗/生存） ——
 
-        // 游戏内天数（0 起；1 现实秒=2 游戏分钟，一日=1440 分钟）
-        public int 游戏天数 => (int)(游戏分钟数 / 1440f);
+        // 生命上限：50 + 每点体质 +8（超出基础5） + 每级 +5 + 装备/词缀
+        public int 最大生命 => 50 + (体质 - 5) * 8 + (等级 - 1) * 5 + 装备数值(生命加成解析) + 词缀总值(词缀属性.生命);
 
-        // 按标识查日常任务（空 = 无）
-        public 日常任务 查找日常(string 标识)
-        {
-            foreach (var 条 in 日常) if (条.标识 == 标识) return 条;
-            return null;
-        }
+        // 行动点上限：100 + 体质×2 + 等级×2（探索/行动资源；原"精力"）
+        public int 最大行动点 => 100 + 体质 * 2 + 等级 * 2;
 
-        // 替换当天日常批次并记录生成日（跨天刷新用）
-        public void 覆写日常(List<日常任务> 新日常)
-        {
-            日常 = 新日常 ?? new List<日常任务>();
-            日常生成日 = 游戏天数;
-        }
+        // 速度：敏捷×2 + 装备/词缀速度（行动序 + 逃跑概率）
+        public int 速度 => 敏捷 * 2 + 词缀总值(词缀属性.速度);
 
-        // —— 派生数值（属性驱动伤害/生命；无基础伤害值）——
-        // 力量每点提供 1 点物理伤害；智力每点提供 1 点魔法伤害；装备加成额外叠加。
-        public int 物理伤害 => 力量 + 装备数值(攻击加成解析) + 词缀总值(词缀属性.攻击);
-        public int 魔法伤害 => 智力 + 词缀总值(词缀属性.魔攻);
-        public int 总攻击 => 物理伤害;             // 兼容现有战斗（普攻走物理）
-        public int 总防御 => 防御 + 装备数值(防御加成解析) + 词缀总值(词缀属性.防御);
-        // 初始 50 血；每点体力 +5 生命，每升一级 +5 生命。
-        public int 最大生命 => 50 + (体力 - 5) * 5 + (等级 - 1) * 5 + 装备数值(生命加成解析) + 词缀总值(词缀属性.生命);
-        public int 最大魔力 => 20 + 智力 * 3 + 等级 * 3;
-        public int 最大精力 => 100 + 等级 * 2 + 体力 * 2;   // 探索/行动/物理技能 资源
-        public float 暴击概率 => 敏捷 * 0.01f + 词缀总值(词缀属性.暴击) / 100f;
-        public float 闪避概率 => 敏捷 * 0.01f + 词缀总值(词缀属性.闪避) / 100f;
-        public float 命中加成 => 词缀总值(词缀属性.命中) / 100f;   // 命中率百分比加成
-        public int 速度加成 => 词缀总值(词缀属性.速度);            // 固定速度加点（行动序）
+        // 负重上限：50 + 力量×5 + 体质×2 + 装备/词缀（末日核心：物资搬运限制）
+        public int 负重上限 => 50 + 力量 * 5 + 体质 * 2 + 装备数值(负重加成解析) + 词缀总值(词缀属性.负重);
+
+        // 近战伤害：力量 + 武器/词缀攻击（物理系）
+        public int 近战伤害 => 力量 + 装备数值(攻击加成解析) + 词缀总值(词缀属性.攻击);
+
+        // 枪械伤害：敏捷×0.5 + 武器/词缀攻击（远程系）
+        public int 枪械伤害 => 敏捷 / 2 + 装备数值(攻击加成解析) + 词缀总值(词缀属性.攻击);
+
+        // 总防御：体质×0.5 + 防具/词缀（皮糙肉厚 + 装备）
+        public int 总防御 => 体质 / 2 + 防御加成解析合计 + 词缀总值(词缀属性.防御);
+
+        // 暴击率%：敏捷×1 + 意志×0.5（封顶 80）
+        public float 暴击概率 => Math.Min(0.8f, (敏捷 * 1f + 意志 * 0.5f) / 100f + 词缀总值(词缀属性.暴击) / 100f);
+
+        // 闪避率%：敏捷×1 + 意志×0.3（封顶 60）
+        public float 闪避概率 => Math.Min(0.6f, (敏捷 * 1f + 意志 * 0.3f) / 100f + 词缀总值(词缀属性.闪避) / 100f);
+
+        // 潜行值：敏捷×2 + 意志×1 + 词缀（探索躲避/偷袭判定）
+        public int 潜行值 => 敏捷 * 2 + 意志 + 词缀总值(词缀属性.潜行);
+
+        // 感知：智慧×1 + 意志×1（发现资源/陷阱/先手判定）
+        public int 感知 => 智慧 + 意志;
+
+        // 恐惧抗性%：意志×1.5（夜晚/尸群/恐怖事件判定）
+        public float 恐惧抗性 => Math.Min(0.8f, 意志 * 1.5f / 100f);
+
+        // 感染抗性%：体质×1 + 意志×0.5（封顶 50，对感染累积的减免）
+        public int 感染抗性 => Math.Min(50, 体质 + 意志 / 2);
+
+        // 疲劳恢复速度（每小时恢复点数）：体质×0.5 + 2（睡觉加倍）
+        public int 疲劳恢复率 => 2 + 体质 / 2;
+
+        // 士气恢复速度（每小时）：意志×0.3 + 1
+        public int 士气恢复率 => 1 + 意志 * 3 / 10;
 
         // 抗性百分数（装备来源）：非线性收益递减 + 硬上限 50%，防无脑堆叠免伤。
-        // Σ ≤30 全额；Σ>30 超出部分减半再累计；最终封顶 50。
         public int 抗性百分比
         {
             get
@@ -128,15 +167,26 @@ using System.Collections.Generic;
                 int 总和 = 0;
                 foreach (var e in 装备)
                     if (!string.IsNullOrEmpty(e.标识)) 总和 += 抗性加成解析(e.标识);
-                总和 += 词缀总值(词缀属性.抗性);   // 抗性词缀并入装备抗性（同非线性封顶）
+                总和 += 词缀总值(词缀属性.抗性);
                 if (总和 <= 30) return 总和;
                 return Math.Min(50, 30 + (总和 - 30) / 2);
             }
         }
 
-        // 防御基础值（旧字段保留，等级不再直接加，靠 防具/属性）
-        public int 防御 = 2;
-        public int 攻击 = 0;   // 已移除基础伤害值：物伤由 力量 提供，此字段仅作兼容保留
+        // 兼容旧字段（读档迁移用）：旧"体力/智力/魔力/精力/物理/魔法"映射
+        public int 体力 { get => 体质; set => 体质 = value; }
+        public int 智力 { get => 智慧; set => 智慧 = value; }
+        public int 魔力 { get => 疲劳; set => 疲劳 = value; }
+        public int 精力 { get => 行动点; set => 行动点 = value; }
+        public int 物理伤害 => 近战伤害;   // 旧战斗投影兼容：物理=近战
+        public int 魔法伤害 => 枪械伤害;   // 旧战斗投影兼容：魔法槽位=枪械
+        public int 最大魔力 => Math.Max(1, 最大行动点);   // 兼容占位（疲劳无上限池）
+        public int 最大精力 => 最大行动点;
+        public int 速度加成 => 词缀总值(词缀属性.速度);   // 旧字段兼容（速度已含词缀）
+        public float 命中加成 => 0f;   // 旧字段兼容（命中系统改造后接感知）
+
+        // 末日通用交易品（过渡货币，第二阶段迁移纯以物易物；初始 8 银）
+        public int 铜币 = 800;
 
         // 已装备物品数值总和（标识 -> 加成 由解析器提供；未接线返回 0）
         private int 装备数值(Func<string, int> 加成)
@@ -148,6 +198,10 @@ using System.Collections.Generic;
             return 总;
         }
 
+        // 防御加成合计（总防御用）
+        private int 防御加成合计 => 装备数值(防御加成解析);
+
+        // 词缀总值：遍历已装备的词缀求和
         private int 词缀总值(词缀属性 属性)
         {
             if (词缀定义表 == null) return 0;
@@ -161,16 +215,85 @@ using System.Collections.Generic;
             return 总;
         }
 
+        // 背包物资总数（负重占用）
+        private int 背包计数总量()
+        {
+            int 总 = 0;
+            foreach (var 堆叠 in 背包) if (堆叠 != null) 总 += 堆叠.数量;
+            return 总;
+        }
+
+        // 是否超重（末日核心限制：带太多跑不动）
+        public bool 超重 => 负重占用 > 负重上限;
+
+        // 超重惩罚比例（0~0.5：超重越多速度越慢）
+        public float 超重惩罚
+        {
+            get
+            {
+                if (!超重) return 0f;
+                int 超出 = 负重占用 - 负重上限;
+                return Math.Min(0.5f, 超出 / 100f);
+            }
+        }
+
+        // ---------- 生存状态操作 ----------
+
+        public void 恢复生命(int 数值) => 生命 = 夹(生命 + 数值, 0, 最大生命);
+        public void 受到伤害(int 数值) => 生命 = Math.Max(0, 生命 - 数值);
+        public bool 消耗行动点(int 数值)
+        {
+            if (行动点 < 数值) return false;
+            行动点 -= 数值;
+            return true;
+        }
+        public void 恢复行动点(int 数值) => 行动点 = 夹(行动点 + 数值, 0, 最大行动点);
+
+        // 生存状态增减（0~100 夹取）
+        public void 调整生存状态(生存状态类型 类型, int 数值)
+        {
+            switch (类型)
+            {
+                case 生存状态类型.饥饿: 饥饿 = 夹(饥饿 + 数值, 0, 100); break;
+                case 生存状态类型.口渴: 口渴 = 夹(口渴 + 数值, 0, 100); break;
+                case 生存状态类型.疲劳: 疲劳 = 夹(疲劳 + 数值, 0, 100); break;
+                case 生存状态类型.感染度: 感染度 = 夹(感染度 + 数值, 0, 100); break;
+                case 生存状态类型.士气: 士气 = 夹(士气 + 数值, 0, 100); break;
+                case 生存状态类型.噪音: 噪音值 = 夹(噪音值 + 数值, 0, 100); break;
+            }
+        }
+
+        // 每小时生存结算（游戏时钟调用）：饥饿/口渴上升、疲劳与士气自动调节
+        public void 每小时结算()
+        {
+            // 饥饿/口渴随时间上升（体质/意志减缓）
+            int 饿速 = 1 + (饥饿 >= 50 ? 1 : 0);
+            饥饿 = 夹(饥饿 + 饿速, 0, 100);
+            口渴 = 夹(口渴 + 2, 0, 100);
+            // 疲劳自动下降（休息），疲劳恢复率
+            疲劳 = 夹(疲劳 - 疲劳恢复率, 0, 100);
+            // 士气缓慢恢复
+            士气 = 夹(士气 + 士气恢复率, 0, 100);
+            // 极端饥饿/口渴掉血
+            if (饥饿 >= 100) 受到伤害(2);
+            if (口渴 >= 100) 受到伤害(3);
+        }
+
+        // 被丧尸咬到：累积感染度（受感染抗性减免）
+        public void 被感染(int 基础值)
+        {
+            int 实际 = Math.Max(1, 基础值 * (100 - 感染抗性) / 100);
+            感染度 = 夹(感染度 + 实际, 0, 100);
+        }
+
         // ---------- 装备 ----------
 
-        // 取某槽已装备的物品标识（空 = 未装备）
         public string 装备标识(string 槽位)
         {
             foreach (var e in 装备) if (e.槽位 == 槽位) return e.标识;
             return "";
         }
 
-        // 装备到指定槽：覆盖同槽旧件并返回旧记录（含旧词缀）；原本空槽返回 null。新件词缀随实例入槽。
         public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null)
         {
             foreach (var e in 装备)
@@ -184,7 +307,6 @@ using System.Collections.Generic;
             return null;
         }
 
-        // 卸下：清空槽位并返回该槽的装备记录（含词缀）；空槽返回 null
         public 装备记录 卸下装备(string 槽位)
         {
             for (int i = 装备.Count - 1; i >= 0; i--)
@@ -192,7 +314,6 @@ using System.Collections.Generic;
             return null;
         }
 
-        // 饰品槽自动分配：优先空槽（饰品1 → 饰品2），都满则覆盖饰品1
         public string 饰品目标槽()
         {
             if (string.IsNullOrEmpty(装备标识("饰品1"))) return "饰品1";
@@ -200,20 +321,18 @@ using System.Collections.Generic;
             return "饰品1";
         }
 
-        // 某物品是否已装备（任意槽）
         public bool 已装备(string 标识)
         {
             foreach (var e in 装备) if (e.标识 == 标识) return true;
             return false;
         }
 
-        // ---------- 探索（已通关区域） ----------
+        // ---------- 探索（已清空地点） ----------
 
-        public bool 已通关(string 区域标识) => 已通关区域.Contains(区域标识);
-
-        public void 标记通关(string 区域标识)
+        public bool 已清空(string 地点标识) => 已清空地点.Contains(地点标识);
+        public void 标记清空(string 地点标识)
         {
-            if (!已通关区域.Contains(区域标识)) 已通关区域.Add(区域标识);
+            if (!已清空地点.Contains(地点标识)) 已清空地点.Add(地点标识);
         }
 
         // 升级所需经验（每级递增）
@@ -222,7 +341,7 @@ using System.Collections.Generic;
         // 数值夹取（替代 UnityEngine.Mathf，保证零 Unity 依赖）
         private static int 夹(int 值, int 最小, int 最大) => 值 < 最小 ? 最小 : (值 > 最大 ? 最大 : 值);
 
-        // ---------- 背包 ----------
+        // ---------- 背包（以物易物） ----------
 
         public void 添加物品(string 标识, int 数量 = 1)
         {
@@ -232,14 +351,12 @@ using System.Collections.Generic;
             背包.Add(new 物品堆叠(标识, 数量));
         }
 
-        // 添加一个携带词缀的装备实例堆叠（不与同标识普通堆叠合并，保留独立词缀）
         public void 添加堆叠(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return;
             背包.Add(堆叠);
         }
 
-        // 取里背包中该标识首个可用堆叠的词缀（换装用；无则 null）
         public List<词缀条> 背包词缀(string 标识)
         {
             foreach (var 堆叠 in 背包)
@@ -247,7 +364,6 @@ using System.Collections.Generic;
             return null;
         }
 
-        // 已装备某物品的词缀（详情显示用）
         public List<词缀条> 装备词缀(string 标识)
         {
             foreach (var e in 装备) if (e.标识 == 标识) return e.词缀;
@@ -279,68 +395,44 @@ using System.Collections.Generic;
 
         public bool 持有物品(string 标识) => 物品数量(标识) > 0;
 
-        // ---------- 数值 ----------
-
-        public void 恢复生命(int 数值) => 生命 = 夹(生命 + 数值, 0, 最大生命);
-
-        public void 受到伤害(int 数值) => 生命 = Math.Max(0, 生命 - 数值);
-
-        public void 恢复魔力(int 数值) => 魔力 = 夹(魔力 + 数值, 0, 最大魔力);
-
-        public bool 消耗魔力(int 数值)
-        {
-            if (魔力 < 数值) return false;
-            魔力 -= 数值;
-            return true;
-        }
-
-        public void 恢复精力(int 数值) => 精力 = 夹(精力 + 数值, 0, 最大精力);
-
-        public bool 消耗精力(int 数值)
-        {
-            if (精力 < 数值) return false;
-            精力 -= 数值;
-            return true;
-        }
-
         // ---------- 加点 ----------
 
-        // 消耗自由属性点加到 4 大属性；返回是否成功
         public bool 加点(属性类型 类型, int 点数 = 1)
         {
             if (点数 <= 0 || 自由属性点 < 点数) return false;
             自由属性点 -= 点数;
             switch (类型)
             {
-                case 属性类型.体力: 体力 += 点数; break;
+                case 属性类型.体质: 体质 += 点数; break;
                 case 属性类型.力量: 力量 += 点数; break;
-                case 属性类型.智力: 智力 += 点数; break;
+                case 属性类型.智慧: 智慧 += 点数; break;
                 case 属性类型.敏捷: 敏捷 += 点数; break;
+                case 属性类型.意志: 意志 += 点数; break;
             }
             return true;
         }
 
-        // 训练场直接增强属性（不消耗自由属性点）
         public void 训练属性(属性类型 类型, int 点数 = 1)
         {
             switch (类型)
             {
-                case 属性类型.体力: 体力 += 点数; break;
+                case 属性类型.体质: 体质 += 点数; break;
                 case 属性类型.力量: 力量 += 点数; break;
-                case 属性类型.智力: 智力 += 点数; break;
+                case 属性类型.智慧: 智慧 += 点数; break;
                 case 属性类型.敏捷: 敏捷 += 点数; break;
+                case 属性类型.意志: 意志 += 点数; break;
             }
         }
 
-        // 按属性名取当前值（面板显示用）
         public int 属性值(string 名)
         {
             switch (名)
             {
-                case "体力": return 体力;
+                case "体质": return 体质;
                 case "力量": return 力量;
-                case "智力": return 智力;
+                case "智慧": return 智慧;
                 case "敏捷": return 敏捷;
+                case "意志": return 意志;
                 default: return 0;
             }
         }
@@ -348,33 +440,29 @@ using System.Collections.Generic;
         // ---------- 技能 ----------
 
         public bool 掌握技能(string 标识) => 已学技能.Exists(s => s.标识 == 标识);
-
-        // 技能熟练等级（未学=0）
         public int 技能熟练等级(string 标识)
         {
             foreach (var s in 已学技能) if (s.标识 == 标识) return s.熟练等级;
             return 0;
         }
 
-        // 当前级内熟练度进度（未学=0）
         public int 技能熟练度(string 标识)
         {
             foreach (var s in 已学技能) if (s.标识 == 标识) return s.熟练度;
             return 0;
         }
 
-        // 校验技能属性前提，返回失败原因（空=通过）
         public string 技能前提失败原因(技能数据 技能)
         {
             if (技能 == null) return "技能不存在。";
-            if (体力 < 技能.需要体力) return $"体力不足（需要 {技能.需要体力}）。";
+            if (体质 < 技能.需要体力) return $"体质不足（需要 {技能.需要体力}）。";
             if (力量 < 技能.需要力量) return $"力量不足（需要 {技能.需要力量}）。";
-            if (智力 < 技能.需要智力) return $"智力不足（需要 {技能.需要智力}）。";
+            if (智慧 < 技能.需要智力) return $"智慧不足（需要 {技能.需要智力}）。";
             if (敏捷 < 技能.需要敏捷) return $"敏捷不足（需要 {技能.需要敏捷}）。";
+            if (意志 < 技能.需要意志) return $"意志不足（需要 {技能.需要意志}）。";
             return "";
         }
 
-        // 学习技能：属性前提不达标或已学会则失败（统一的唯一入口）
         public bool 学习技能(技能数据 技能)
         {
             if (技能 == null || 掌握技能(技能.标识)) return false;
@@ -383,7 +471,6 @@ using System.Collections.Generic;
             return true;
         }
 
-        // 记录技能熟练度：使用/训练累积，满阈值升级熟练等级；返回新等级（0=未学）
         public int 记录熟练度(string 标识, int 点数, int 每级阈值)
         {
             foreach (var s in 已学技能)
@@ -410,7 +497,6 @@ using System.Collections.Generic;
             return true;
         }
 
-        // 推进「击败」类任务计数；目标匹配由服务层在调用前判定，领域只做计数
         public List<任务进度> 记录击败(string 敌人标识, int 目标数量 = 1)
         {
             var 完成 = new List<任务进度>();
@@ -426,7 +512,6 @@ using System.Collections.Generic;
             return 完成;
         }
 
-        // 推进「获得物品」类任务计数
         public List<任务进度> 记录获得(string 物品标识, int 目标数量 = 1)
         {
             var 完成 = new List<任务进度>();
@@ -444,7 +529,7 @@ using System.Collections.Generic;
 
         // ---------- 经验 ----------
 
-        // 获得经验并处理升级链（给自由属性点 + 满状态）；返回是否升级
+        // 获得经验并处理升级链（给自由属性点 + 回 50% 状态——末日后不再满血复活）
         public bool 获得经验(int 数值)
         {
             经验 += 数值;
@@ -453,9 +538,10 @@ using System.Collections.Generic;
             {
                 经验 -= 升级所需经验;
                 等级++;
-                自由属性点 += 3;          // 升级给 3 点自由属性点
-                生命 = 最大生命;
-                魔力 = 最大魔力;
+                自由属性点 += 3;
+                // 末日规则：升级只回 50% 生命与行动点（保留血线张力）
+                生命 = Math.Max(1, 最大生命 / 2);
+                行动点 = Math.Max(1, 最大行动点 / 2);
                 升级了 = true;
             }
             return 升级了;
