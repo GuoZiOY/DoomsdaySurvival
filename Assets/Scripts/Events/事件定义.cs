@@ -57,11 +57,25 @@
             : this(体力, 力量, 智力, 敏捷, 5, 自由属性点) { }
     }
 
-    // 生存状态变化：饥饿/口渴/疲劳/感染度/士气/噪音（HUD 与状态栏刷新）
+    // 生存状态变化：饱食度/水分度（HUD 与状态栏刷新）
     public readonly struct 生存状态变化事件
     {
         public readonly 生存状态类型 类型; public readonly int 当前; public readonly int 变化量;
         public 生存状态变化事件(生存状态类型 类型, int 当前, int 变化量) { this.类型 = 类型; this.当前 = 当前; this.变化量 = 变化量; }
+    }
+
+    // 伤病变化：疲劳/中毒/感冒/流血/骨折/发烧（严重度 0~100，0=无）
+    public readonly struct 伤病变化事件
+    {
+        public readonly 伤病类型 类型; public readonly int 当前; public readonly int 变化量;
+        public 伤病变化事件(伤病类型 类型, int 当前, int 变化量) { this.类型 = 类型; this.当前 = 当前; this.变化量 = 变化量; }
+    }
+
+    // 天气变化：每日随机生成后发布（HUD/探索面板刷新）
+    public readonly struct 天气变化事件
+    {
+        public readonly 天气类型 天气;
+        public 天气变化事件(天气类型 天气) { this.天气 = 天气; }
     }
 
     // —— 背包 ——

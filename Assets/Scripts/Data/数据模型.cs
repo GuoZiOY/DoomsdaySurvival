@@ -11,20 +11,38 @@ using System;
         public int 生命;
         public int 魔力;
         public int 精力;       // 正=恢复 / 负=消耗（休息事件等）
-        public int 饥饿;       // 末日：负=进食（降低饥饿）；正=恶心/腐食（升高）
-        public int 口渴;       // 末日：负=饮水（降低口渴）
-        public int 疲劳;       // 末日：正=增加疲劳；负=恢复
-        public int 感染;       // 末日：正=感染度上升（被咬）；负=治疗
-        public int 士气;       // 末日：正=鼓舞；负=打击
+        public int 饱食;       // 正=进食（饱食上升）；负=饥饿（下降）
+        public int 水分;       // 正=饮水（水分上升）；负=脱水（下降）
+        public int 疲劳;       // 正=增加疲劳；负=恢复
+        public int 中毒;       // 正=中毒加深；负=解毒
+        public int 感冒;       // 正=受寒加重；负=治疗
+        public int 流血;       // 正=流血加重；负=包扎
+        public int 骨折;       // 正=骨折；负=固定恢复
+        public int 发烧;       // 正=发烧；负=退烧
         public int 金币;
         public int 经验;
         public string 获得物品;
         public int 获得数量;   // 获得物品的数量（缺省按 1；JsonUtility 缺失=0，结算时兜底 1）
         public string 失去物品;
-        public string 学习技能;   // 剧情传授技能（特训）
-        public string 接取任务;   // 剧情接取任务（主线/支线）
-        public 物品获得项[] 获得物品表;   // 一次获得多种物品（决战地下室等）
-        public 物品失去项[] 失去物品表;   // 一次失去多种物品（修桥交付等）
+        public string 学习技能;   // 剧情传授技能
+        public string 接取任务;   // 剧情接取任务
+        public 物品获得项[] 获得物品表;
+        public 物品失去项[] 失去物品表;
+
+        // 按伤病类型取变化值（效果结算用）
+        public int 伤病变化(伤病类型 类型)
+        {
+            switch (类型)
+            {
+                case 伤病类型.疲劳: return 疲劳;
+                case 伤病类型.中毒: return 中毒;
+                case 伤病类型.感冒: return 感冒;
+                case 伤病类型.流血: return 流血;
+                case 伤病类型.骨折: return 骨折;
+                case 伤病类型.发烧: return 发烧;
+                default: return 0;
+            }
+        }
     }
 
     // 剧情效果的多物品项
@@ -110,29 +128,37 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 类型;       // "恢复" 消耗品 / "食物" 食物（战斗内同恢复品用）/ "任务" 任务物品 / "武器" / "防具" / "饰品" / "技能书"
-        public int 恢复量;        // 类型=恢复 时的恢复值（受品质倍率影响）
-        public int 攻击加成;      // 类型=武器（受品质倍率影响）
-        public int 防御加成;      // 类型=防具/饰品（受品质倍率影响）
-        public int 生命加成;      // 类型=防具/饰品：生命上限加成（词缀差异化后续）
-        public int 负重加成;      // 类型=防具/背包：负重上限加成（末日背包/战术背心）
-        public int 抗性;          // 类型=防具/饰品：抗性百分数贡献点（装备凑合，非线性+封顶 50%，防无脑堆叠免伤）
-        public string 槽位;       // 装备类：放入的槽位（"主手"/"副手"/"头盔"/"盔甲"/"靴子"/"手套"/"饰品"）
-        public string 武器种类;    // 类型=武器 时的武器种类（"剑"/"匕首"/"斧"…；物理弱点判定）
+        public string 类型;       // 末日：武器/防具/食物/水/医疗品/弹药/材料/技能书/任务品
+        public int 恢复量;        // 食物/水/医疗品 的恢复值（食物→饱食、水→水分、医疗→生命）
+        public string 恢复目标;   // "饱食"/"水分"/"生命"/"疲劳"/"中毒"/"感冒"/"流血"/"骨折"/"发烧"
+        public int 攻击加成;      // 类型=武器（近战吃力量；远程固定伤害即此值）
+        public int 防御加成;      // 类型=防具
+        public int 生命加成;      // 类型=防具：生命上限加成
+        public int 负重加成;      // 类型=防具/背包：负重上限加成
+        public int 抗性;          // 类型=防具：抗性百分数贡献点
+        public string 槽位;       // 装备类槽位（"主手"/"副手"/"头部"/"胸部"/"腿部"/"脚部"/"手部"/"背包"）
+        public string 武器种类;    // 类型=武器（"刀"/"斧"/"棍棒"/"匕首"/"弓"/"弩"/"手枪"/"步枪"/"霰弹枪"）
         public 武器种类 武器种类枚举 => 数据解析.枚举<武器种类>(武器种类);
+        public string 近程远程;   // "近战"/"远程"（战斗伤害来源区分）
         public string 技能;       // 类型=技能书 时授予的技能标识
-        public int 价格;          // 商店买卖价格（单位：铜币，1金=10000铜；0=不可买卖）
+        // —— 网格背包 ——
+        public int 形状宽 = 1;    // 网格占用宽
+        public int 形状高 = 1;    // 网格占用高
+        public int 重量 = 1;      // 负重占用
+        // —— 以物易物 ——
+        public int 价值 = 1;      // 1~100 价值点数
+        public int 价格 => 价值;  // 兼容旧引用（原"价格"字段语义）
+        // —— 品质与战斗内使用 ——
         public string 品质;       // "普通"/"优秀"/"稀有"...（JsonUtility 不认枚举名，字符串+转换）
         public 品质 品质档 => 数据解析.枚举<品质>(品质);
-        // —— 战斗内使用 ——
-        public bool 战斗内使用;         // 是否可在战斗中使用（恢复/增益/减益道具）
+        public bool 战斗内使用;         // 是否可在战斗中使用（医疗品/弹药）
         public string 使用目标;         // "我方单体"/"敌方单体"…
         public 目标类型 使用目标枚举 => 数据解析.枚举<目标类型>(使用目标);
         public string 使用效果;         // "恢复"/"增益"/"减益"
         public 效果类型 使用效果枚举 => 数据解析.枚举<效果类型>(使用效果);
-        public string 挂载Buff;         // 增益/减益挂载的buff标识（0=纯数值）
-        // —— 宝石（类型="宝石"）：镶缀专用，指定该宝石能赋予的词缀属性 ——
-        public string 指定词缀属性;    // "攻击"/"防御"/"生命"/"抗性"/"暴击"/"命中"/"闪避"/"速度"/"魔攻"
+        public string 挂载Buff;         // 增益/减益挂载的buff标识
+        // —— 宝石（保留，末日可作稀有材料） ——
+        public string 指定词缀属性;
         public 词缀属性 指定词缀属性枚举 => 数据解析.枚举<词缀属性>(指定词缀属性);
     }
 
@@ -175,10 +201,11 @@ using System;
 
     // ================= 战斗系统 =================
 
-    // 伤害类型：物理/魔法/真实。可扩展（八方旅人式：火焰/寒冰/圣光…）
-    public enum 伤害类型 { 物理, 魔法, 真实 }
-    // 武器种类：物理弱点判定 + 技能武器规则判定用（剑/刀/匕首/斧/弓/锤/法杖）
-    public enum 武器种类 { 无, 剑, 刀, 匕首, 斧, 弓, 锤, 法杖 }
+    // 伤害类型：近战/远程/真实（末日：物理→近战，魔法→远程）
+    // 注："魔法" 成员仅作旧代码编译兼容（映射远程），战斗系统改造后移除
+    public enum 伤害类型 { 物理, 远程, 魔法 = 远程, 真实 }
+    // 武器种类：末日武器（近战：刀/斧/棍棒/匕首；远程：弓/弩/手枪/步枪/霰弹枪）
+    public enum 武器种类 { 无, 刀, 斧, 棍棒, 匕首, 弓, 弩, 手枪, 步枪, 霰弹枪 }
     // 武器规则：通用（所有武器可用）/ 专向（仅指定武器可用）/ 弱向（指定武器伤害↑，其余武器可用但伤害↓）
     public enum 武器规则 { 通用, 专向, 弱向 }
     // 行动目标类型：决定目标选择集合
@@ -531,3 +558,84 @@ using System;
 
     [Serializable]
     public class 配方根 { public 配方数据[] 配方; }
+
+    // ================= 职业（开局选择） =================
+
+    // 职业属性加成项（五维其一 + 点数）
+    [Serializable]
+    public class 属性加成项 { public string 属性; public int 点数; }
+
+    // 职业初始装备项
+    [Serializable]
+    public class 初始装备项 { public string 标识; public int 数量 = 1; }
+
+    [Serializable]
+    public class 职业数据
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public 属性加成项[] 属性加成;   // 职业固定加成（合计约 10 点）
+        public string 初始技能;          // 初始学会的生存技能（可空）
+        public string 天赋;             // 职业固有天赋特效（可空，字符串标识）
+        public 初始装备项[] 初始装备;    // 开局装备/物资
+        public string 开局文本;          // 开局叙事（第一段文字）
+    }
+
+    [Serializable]
+    public class 职业根 { public 职业数据[] 职业; }
+
+    // ================= 天赋（正负特质，PZ 式） =================
+
+    // 天赋效果项：作用于属性/状态（点数字段 + 数值）
+    [Serializable]
+    public class 天赋效果项
+    {
+        public string 目标;    // "体质"/"力量"/"智慧"/"敏捷"/"意志"/"饱食"/"水分"/"经验"/"医疗"/"制作"/"夜晚"
+        public float 数值;     // 属性=加减点数；状态=百分比修正
+    }
+
+    [Serializable]
+    public class 天赋数据
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public int 点数;       // 正面=花费（正数）；负面=返还（负数）
+        public 天赋效果项[] 效果;
+    }
+
+    [Serializable]
+    public class 天赋根 { public 天赋数据[] 天赋; }
+
+    // ================= 天气（每日随机） =================
+
+    [Serializable]
+    public class 天气数据
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public int 权重;       // 随机权重（季节可调）
+        public string 效果文本; // 探索/战斗时的效果描述
+    }
+
+    [Serializable]
+    public class 天气根 { public 天气数据[] 天气; }
+
+    // ================= 安全屋家具 =================
+
+    [Serializable]
+    public class 家具数据
+    {
+        public string 标识;
+        public string 名称;
+        public string 描述;
+        public int 解锁等级;   // 安全屋达到该等级才可建造
+        public int 价格;       // 建造所需价值点数（以物易物材料）
+        public 配方材料[] 材料; // 建造所需材料
+        public int 最大等级;   // 家具可升级到的等级
+    }
+
+    [Serializable]
+    public class 家具根 { public 家具数据[] 家具; }

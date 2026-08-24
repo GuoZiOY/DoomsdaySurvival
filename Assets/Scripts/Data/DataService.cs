@@ -24,6 +24,10 @@ using UnityEngine;
         public List<区域剧情路由> 区域剧情 { get; private set; } = new List<区域剧情路由>();
         public Dictionary<string, 配方数据> 配方 { get; private set; } = new Dictionary<string, 配方数据>();
         public Dictionary<string, 词缀定义> 词缀 { get; private set; } = new Dictionary<string, 词缀定义>();
+        public Dictionary<string, 职业数据> 职业 { get; private set; } = new Dictionary<string, 职业数据>();
+        public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
+        public Dictionary<string, 天气数据> 天气 { get; private set; } = new Dictionary<string, 天气数据>();
+        public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -50,6 +54,10 @@ using UnityEngine;
             加载("encounters", 敌人组, (敌人组根 根) => 根.敌人组);
             加载("recipes", 配方, (配方根 根) => 根.配方);   // 允许缺失（制作系统）
             加载("affixes", 词缀, (词缀根 根) => 根.词缀);   // 允许缺失（词缀系统）
+            加载("职业", 职业, (职业根 根) => 根.职业);       // 允许缺失（职业系统）
+            加载("天赋", 天赋, (天赋根 根) => 根.天赋);       // 允许缺失（天赋系统）
+            加载("天气", 天气, (天气根 根) => 根.天气);       // 允许缺失（天气系统）
+            加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
             加载助战组与区域剧情();
         }
 
@@ -172,8 +180,8 @@ using UnityEngine;
             // —— 物品：装备类必须有 槽位 ——
             foreach (var (标识, 物品) in 物品)
             {
-                if ((物品.类型 == "武器" || 物品.类型 == "防具" || 物品.类型 == "饰品") && string.IsNullOrEmpty(物品.槽位))
-                    校验错误.Add($"物品[{标识}] 装备类缺少 槽位（主手/副手/头盔/盔甲/靴子/手套/饰品）");
+                if ((物品.类型 == "武器" || 物品.类型 == "防具") && string.IsNullOrEmpty(物品.槽位))
+                    校验错误.Add($"物品[{标识}] 装备类缺少 槽位（主手/副手/头部/胸部/腿部/脚部/手部/背包）");
             }
 
             // —— 区域（层结构）：事件表遭遇敌人 / 发现节点 / Boss 组 / 选择事件 ——

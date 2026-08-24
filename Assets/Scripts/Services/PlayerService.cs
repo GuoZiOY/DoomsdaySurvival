@@ -2,7 +2,7 @@
     using System.Collections.Generic;
 using UnityEngine;
 
-    // 玩家服务：持有玩家档案，处理新游戏/读档，注入装备解析，发布初始状态事件
+    // 玩家服务：持有玩家档案，处理新游戏/读档/开局构筑，注入装备/形状/重量解析，发布初始状态事件
     public sealed class PlayerService
     {
         private readonly EventBus 事件;
@@ -11,6 +11,11 @@ using UnityEngine;
 
         public 玩家档案 档案 { get; private set; }
 
+        // 开局构筑参数（主菜单选职业/分配自由点/选天赋后传入）
+        public string 待选职业 = "";
+        public int 待分配自由点 = 10;   // 开局额外自由分配 10 点
+        public List<string> 待选天赋 = new List<string>();
+
         public PlayerService(EventBus 事件, DataService 数据, SaveService 存档)
         {
             this.事件 = 事件;
@@ -18,19 +23,18 @@ using UnityEngine;
             this.存档 = 存档;
         }
 
-        // 创建并装配玩家档案（装备加成解析器接 DataService）；满状态开始
+        // 创建并装配玩家档案（解析器接 DataService）；满状态开始
         public void 初始化()
         {
             档案 = new 玩家档案();
-            接线装备解析(档案);
-            档案.装备到槽("主手", "生锈短剑");   // 初始装备：主手短剑
+            接线解析器(档案);
             档案.生命 = 档案.最大生命;
             档案.行动点 = 档案.最大行动点;
             发布初始状态();
         }
 
-        // 装备数值解析器：标识 -> 加成（派生数值遍历已装备求和用）
-        private void 接线装备解析(玩家档案 档案)
+        // 装备/形状/重量 解析器：标识 -> 数值（派生数值遍历已装备求和用）
+        private void 接线解析器(玩家档案 档案)
         {
             档案.攻击加成解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.攻击加成 : 0;
             档案.防御加成解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.防御加成 : 0;
@@ -38,36 +42,90 @@ using UnityEngine;
             档案.负重加成解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? (物品.负重加成 > 0 ? 物品.负重加成 : 0) : 0;
             档案.武器种类解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.武器种类枚举 : 武器种类.无;
             档案.抗性加成解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.抗性 : 0;
-            档案.词缀定义表 = 数据.词缀;   // 词缀实例->模板 查表（词缀求和/显示用）
+            档案.形状解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? new 物品形状(物品.形状宽, 物品.形状高) : new 物品形状(1, 1);
+            档案.重量解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.重量 : 1;
+            档案.词缀定义表 = 数据.词缀;
         }
 
-        // 新游戏：重置档案 + 初始物品
+        // 新游戏：先做开局构筑（职业/自由点/天赋），再进入游戏
         public void 新游戏()
         {
             初始化();
-            档案.添加物品("面包", 1);
-            档案.当前节点 = "序章_醒来";
-            事件.发布(new 日志事件(日志类型.系统, "新的旅程开始了。"));
+            // ① 应用职业（属性加成 + 初始技能 + 初始装备 + 职业天赋）
+            应用职业(待选职业);
+            // ② 应用自由点（开局额外 10 点，主菜单已分配好写进 自由属性点/五维）
+            // ③ 应用正负天赋
+            应用天赋(待选天赋);
+            // ④ 初始物资与进入
+            档案.添加物品("面包", 2);
+            档案.添加物品("水", 1);
+            档案.添加物品("绷带", 1);
+            档案.应用背包装备();
+            档案.当前节点 = "开局_醒来";
+            事件.发布(new 日志事件(日志类型.系统, "末日第 1 天。你还活着。"));
             发布初始状态();
         }
 
-        // 读档：成功则用存档档案，否则新游戏。
-        // 开发初期不留旧档：存档无 装备 列表（旧结构）或为空 → 视为无存档（新游戏）。
+        // 应用职业：属性加成 + 初始技能 + 初始装备 + 职业天赋
+        private void 应用职业(string 职业标识)
+        {
+            if (string.IsNullOrEmpty(职业标识)) return;
+            if (!数据.职业.TryGetValue(职业标识, out var 职业)) return;
+            档案.职业 = 职业标识;
+            if (职业.属性加成 != null)
+                foreach (var 项 in 职业.属性加成)
+                    档案.训练属性(解析属性(项.属性), 项.点数);
+            if (!string.IsNullOrEmpty(职业.初始技能) && 数据.技能.TryGetValue(职业.初始技能, out var 技能))
+                档案.学习技能(技能);
+            if (职业.初始装备 != null)
+                foreach (var 项 in 职业.初始装备)
+                {
+                    if (string.IsNullOrEmpty(项.标识)) continue;
+                    var 物品 = 数据.物品.TryGetValue(项.标识, out var 物) ? 物 : null;
+                    if (物品 != null && (物品.类型 == "武器" || 物品.类型 == "防具"))
+                    {
+                        string 槽位 = string.IsNullOrEmpty(物品.槽位) ? "主手" : 物品.槽位;
+                        档案.装备到槽(槽位, 项.标识);
+                    }
+                    else 档案.添加物品(项.标识, 项.数量 > 0 ? 项.数量 : 1);
+                }
+            if (!string.IsNullOrEmpty(职业.天赋) && !档案.天赋.Contains(职业.天赋))
+                档案.天赋.Add(职业.天赋);
+        }
+
+        // 应用正负天赋：属性类效果直接落五维；状态类由档案派生属性读取
+        private void 应用天赋(List<string> 天赋标识列表)
+        {
+            if (天赋标识列表 == null) return;
+            foreach (var 标识 in 天赋标识列表)
+            {
+                if (string.IsNullOrEmpty(标识)) continue;
+                if (档案.天赋.Contains(标识)) continue;
+                if (!数据.天赋.TryGetValue(标识, out var 天赋)) continue;
+                档案.天赋.Add(标识);
+                if (天赋.效果 != null)
+                    foreach (var 效果 in 天赋.效果)
+                        if (效果 != null && !string.IsNullOrEmpty(效果.目标))
+                            档案.训练属性(解析属性(效果.目标), (int)效果.数值);
+            }
+        }
+
+        // 读档：成功则用存档档案，否则新游戏
         public void 读档()
         {
             var 存档数据 = 存档.读取();
             if (存档.有存档() && 存档数据?.玩家 != null)
             {
                 档案 = 存档数据.玩家;
-                接线装备解析(档案);
-                清理非法值(档案);   // 防御坏档/旧档：夹取越界、清负数、去空条目
-                事件.发布(new 日志事件(日志类型.系统, "读取存档，继续冒险。"));
+                接线解析器(档案);
+                清理非法值(档案);
+                事件.发布(new 日志事件(日志类型.系统, "读取存档，继续挣扎。"));
             }
             else { 新游戏(); }
             发布初始状态();
         }
 
-        // 发布当前生命/行动点/生存状态/属性，让 HUD 与角色面板初始化
+        // 发布当前状态，让 HUD 与角色面板初始化
         private void 发布初始状态()
         {
             事件.发布(new 生命变化事件(档案.生命, 档案.最大生命, 0));
@@ -75,14 +133,13 @@ using UnityEngine;
             事件.发布(new 精力变化事件(档案.行动点, 档案.最大行动点, 0));
             事件.发布(new 金币变化事件(档案.铜币, 0));
             事件.发布(new 属性变化事件(档案.体质, 档案.力量, 档案.智慧, 档案.敏捷, 档案.意志, 档案.自由属性点));
-            事件.发布(new 生存状态变化事件(生存状态类型.饥饿, 档案.饥饿, 0));
-            事件.发布(new 生存状态变化事件(生存状态类型.口渴, 档案.口渴, 0));
-            事件.发布(new 生存状态变化事件(生存状态类型.疲劳, 档案.疲劳, 0));
-            事件.发布(new 生存状态变化事件(生存状态类型.感染度, 档案.感染度, 0));
-            事件.发布(new 生存状态变化事件(生存状态类型.士气, 档案.士气, 0));
+            事件.发布(new 生存状态变化事件(生存状态类型.饱食度, 档案.饱食度, 0));
+            事件.发布(new 生存状态变化事件(生存状态类型.水分度, 档案.水分度, 0));
+            foreach (伤病类型 类型 in System.Enum.GetValues(typeof(伤病类型)))
+                事件.发布(new 伤病变化事件(类型, 档案.伤病值(类型), 0));
         }
 
-        // 读档后非法值清理：夹取越界、清负数、去空条目，防空异常（防坏档/旧档）
+        // 读档后非法值清理
         private static void 清理非法值(玩家档案 档案)
         {
             if (档案 == null) return;
@@ -96,12 +153,14 @@ using UnityEngine;
             if (档案.意志 < 0) 档案.意志 = 0;
             if (档案.自由属性点 < 0) 档案.自由属性点 = 0;
             if (档案.游戏分钟数 < 0) 档案.游戏分钟数 = 0;
-            档案.饥饿 = Mathf.Clamp(档案.饥饿, 0, 100);
-            档案.口渴 = Mathf.Clamp(档案.口渴, 0, 100);
+            档案.饱食度 = Mathf.Clamp(档案.饱食度, 0, 100);
+            档案.水分度 = Mathf.Clamp(档案.水分度, 0, 100);
             档案.疲劳 = Mathf.Clamp(档案.疲劳, 0, 100);
-            档案.感染度 = Mathf.Clamp(档案.感染度, 0, 100);
-            档案.士气 = Mathf.Clamp(档案.士气, 0, 100);
-            档案.噪音值 = Mathf.Clamp(档案.噪音值, 0, 100);
+            档案.中毒 = Mathf.Clamp(档案.中毒, 0, 100);
+            档案.感冒 = Mathf.Clamp(档案.感冒, 0, 100);
+            档案.流血 = Mathf.Clamp(档案.流血, 0, 100);
+            档案.骨折 = Mathf.Clamp(档案.骨折, 0, 100);
+            档案.发烧 = Mathf.Clamp(档案.发烧, 0, 100);
             档案.生命 = Mathf.Clamp(档案.生命, 0, 档案.最大生命);
             档案.行动点 = Mathf.Clamp(档案.行动点, 0, 档案.最大行动点);
             档案.背包 ??= new List<物品堆叠>();
@@ -112,6 +171,8 @@ using UnityEngine;
             档案.日常 ??= new List<日常任务>();
             档案.幸存者 ??= new List<string>();
             档案.抉择记录 ??= new List<string>();
+            档案.天赋 ??= new List<string>();
+            档案.家具 ??= new List<家具实例>();
             for (int i = 档案.背包.Count - 1; i >= 0; i--)
                 if (档案.背包[i] == null || 档案.背包[i].数量 <= 0 || string.IsNullOrEmpty(档案.背包[i].标识)) 档案.背包.RemoveAt(i);
             for (int i = 档案.装备.Count - 1; i >= 0; i--)
@@ -126,5 +187,21 @@ using UnityEngine;
                 if (string.IsNullOrEmpty(档案.已清空地点[i])) 档案.已清空地点.RemoveAt(i);
             for (int i = 档案.幸存者.Count - 1; i >= 0; i--)
                 if (string.IsNullOrEmpty(档案.幸存者[i])) 档案.幸存者.RemoveAt(i);
+            for (int i = 档案.天赋.Count - 1; i >= 0; i--)
+                if (string.IsNullOrEmpty(档案.天赋[i])) 档案.天赋.RemoveAt(i);
+        }
+
+        // 属性名 -> 属性类型（职业/天赋效果用）
+        private static 属性类型 解析属性(string 名)
+        {
+            switch (名)
+            {
+                case "体质": return 属性类型.体质;
+                case "力量": return 属性类型.力量;
+                case "智慧": return 属性类型.智慧;
+                case "敏捷": return 属性类型.敏捷;
+                case "意志": return 属性类型.意志;
+                default: return 属性类型.体质;
+            }
         }
     }
