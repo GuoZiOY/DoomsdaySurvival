@@ -1,0 +1,1432 @@
+fileFormatVersion: 2
+guid: 44ac43745ac43d944bfb77d5dc229b01
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5734406085098646471
+    second: FreePixelMeleeWeaponPack_0
+  - first:
+      213: -2452760036916128351
+    second: FreePixelMeleeWeaponPack_1
+  - first:
+      213: -7368290586247338411
+    second: FreePixelMeleeWeaponPack_2
+  - first:
+      213: 3076281106761717636
+    second: FreePixelMeleeWeaponPack_3
+  - first:
+      213: -5213862060679893057
+    second: FreePixelMeleeWeaponPack_4
+  - first:
+      213: -8056127330409091873
+    second: FreePixelMeleeWeaponPack_5
+  - first:
+      213: 1001639291965709304
+    second: FreePixelMeleeWeaponPack_6
+  - first:
+      213: -5239256953602778601
+    second: FreePixelMeleeWeaponPack_7
+  - first:
+      213: 165085297587571815
+    second: FreePixelMeleeWeaponPack_8
+  - first:
+      213: 1961722619379125199
+    second: FreePixelMeleeWeaponPack_9
+  - first:
+      213: -495737332258229707
+    second: FreePixelMeleeWeaponPack_10
+  - first:
+      213: 4134051972535924943
+    second: FreePixelMeleeWeaponPack_11
+  - first:
+      213: 2540721665036029958
+    second: FreePixelMeleeWeaponPack_12
+  - first:
+      213: -6238034307629356710
+    second: FreePixelMeleeWeaponPack_13
+  - first:
+      213: 6832374963357545614
+    second: FreePixelMeleeWeaponPack_14
+  - first:
+      213: -8098182615756822933
+    second: FreePixelMeleeWeaponPack_15
+  - first:
+      213: 1550699853780433592
+    second: FreePixelMeleeWeaponPack_16
+  - first:
+      213: 8791408804812504379
+    second: FreePixelMeleeWeaponPack_17
+  - first:
+      213: -7569781482543186514
+    second: FreePixelMeleeWeaponPack_18
+  - first:
+      213: 4405732922048589175
+    second: FreePixelMeleeWeaponPack_19
+  - first:
+      213: -6968552323406236974
+    second: FreePixelMeleeWeaponPack_20
+  - first:
+      213: 7913392262879844305
+    second: FreePixelMeleeWeaponPack_21
+  - first:
+      213: 109821722632979936
+    second: FreePixelMeleeWeaponPack_22
+  - first:
+      213: -3033938913711397276
+    second: FreePixelMeleeWeaponPack_23
+  - first:
+      213: -1202140367004929684
+    second: FreePixelMeleeWeaponPack_24
+  - first:
+      213: -4080024347855598264
+    second: FreePixelMeleeWeaponPack_25
+  - first:
+      213: -4982409402114772287
+    second: FreePixelMeleeWeaponPack_26
+  - first:
+      213: -2620469901217781712
+    second: FreePixelMeleeWeaponPack_27
+  - first:
+      213: 6970154147297537984
+    second: FreePixelMeleeWeaponPack_28
+  - first:
+      213: 1707171675678521343
+    second: FreePixelMeleeWeaponPack_29
+  - first:
+      213: -8183627791651784879
+    second: FreePixelMeleeWeaponPack_30
+  - first:
+      213: -331859700927510216
+    second: FreePixelMeleeWeaponPack_31
+  - first:
+      213: 7594599651633913519
+    second: FreePixelMeleeWeaponPack_32
+  - first:
+      213: -4163840618881190372
+    second: FreePixelMeleeWeaponPack_33
+  - first:
+      213: 7730213566578123606
+    second: FreePixelMeleeWeaponPack_34
+  - first:
+      213: -538966151860385135
+    second: FreePixelMeleeWeaponPack_35
+  - first:
+      213: 5379983694548009098
+    second: FreePixelMeleeWeaponPack_36
+  - first:
+      213: -7142813195920992180
+    second: FreePixelMeleeWeaponPack_37
+  - first:
+      213: -4363745334050649813
+    second: FreePixelMeleeWeaponPack_38
+  - first:
+      213: 9070457027802987678
+    second: FreePixelMeleeWeaponPack_39
+  - first:
+      213: 7473890566450425195
+    second: FreePixelMeleeWeaponPack_40
+  - first:
+      213: -1898158591757520143
+    second: FreePixelMeleeWeaponPack_41
+  - first:
+      213: -796851661779181997
+    second: FreePixelMeleeWeaponPack_42
+  - first:
+      213: 4583701749159161645
+    second: FreePixelMeleeWeaponPack_43
+  - first:
+      213: 8914742624299042336
+    second: FreePixelMeleeWeaponPack_44
+  - first:
+      213: 5709580636753652570
+    second: FreePixelMeleeWeaponPack_45
+  - first:
+      213: -7702933494281426090
+    second: FreePixelMeleeWeaponPack_46
+  - first:
+      213: -3564649567572726334
+    second: FreePixelMeleeWeaponPack_47
+  - first:
+      213: 6120498540656170418
+    second: FreePixelMeleeWeaponPack_48
+  - first:
+      213: 4968952255533288706
+    second: FreePixelMeleeWeaponPack_49
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: "\u81EA\u5236\u957F\u77DB"
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 128
+        width: 64
+        height: 32
+      alignment: 9
+      pivot: {x: 0.48804456, y: 0.43304968}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9345bdb3c0c4b60b0800000000000000
+      internalID: -5734406085098646471
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u788E\u9152\u74F6"
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a51750edbb06fdd0800000000000000
+      internalID: -2452760036916128351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u9489\u5B50\u68CD"
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5566fdc20c29eb990800000000000000
+      internalID: -7368290586247338411
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6728\u68CD"
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 48717c52e5521ba20800000000000000
+      internalID: 3076281106761717636
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6728\u7434"
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbfe94d7414a4a7b0800000000000000
+      internalID: -5213862060679893057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u94A2\u7BA1"
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdc66ad40e2e23090800000000000000
+      internalID: -8056127330409091873
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u5C0F\u65A7\u5934"
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8fb90be01a986ed00800000000000000
+      internalID: 1001639291965709304
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u952F\u5B50"
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 71ad2893f8b6a47b0800000000000000
+      internalID: -5239256953602778601
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u957F\u6728\u68CD"
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 76cc85814308a4200800000000000000
+      internalID: 165085297587571815
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 128
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fcb01f32450793b10800000000000000
+      internalID: 1961722619379125199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_10
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 53239d8d589ce19f0800000000000000
+      internalID: -495737332258229707
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_11
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc8b10aad5a1f5930800000000000000
+      internalID: 4134051972535924943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_12
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6009c9d94e4724320800000000000000
+      internalID: 2540721665036029958
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_13
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a596d0509dc0e69a0800000000000000
+      internalID: -6238034307629356710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_14
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e84f23764d871de50800000000000000
+      internalID: 6832374963357545614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_15
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b66229521d97d9f80800000000000000
+      internalID: -8098182615756822933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_16
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ba35d11d41358510800000000000000
+      internalID: 1550699853780433592
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_17
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3d3716aabb510a70800000000000000
+      internalID: 8791408804812504379
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_18
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eadfea919dbb2f690800000000000000
+      internalID: -7569781482543186514
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_19
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 96
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 77d23f100ce442d30800000000000000
+      internalID: 4405732922048589175
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6273\u624B"
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d2f5a4359aba4f90800000000000000
+      internalID: -6968552323406236974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_21
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d7174d065402dd60800000000000000
+      internalID: 7913392262879844305
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_22
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e5092e564a268100800000000000000
+      internalID: 109821722632979936
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_23
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4666ff9e1a845e5d0800000000000000
+      internalID: -3033938913711397276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_24
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c61738694b3215fe0800000000000000
+      internalID: -1202140367004929684
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_25
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 84d4f17f877d067c0800000000000000
+      internalID: -4080024347855598264
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_26
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c2f165fb0deadab0800000000000000
+      internalID: -4982409402114772287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_27
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 038af49328832abd0800000000000000
+      internalID: -2620469901217781712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_28
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0cfa26b7446fab060800000000000000
+      internalID: 6970154147297537984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_29
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 64
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff73d63189711b710800000000000000
+      internalID: 1707171675678521343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_30
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 157b498d1e9ed6e80800000000000000
+      internalID: -8183627791651784879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_31
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 839c2fa3c5ff46bf0800000000000000
+      internalID: -331859700927510216
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_32
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: faed1fe2520756960800000000000000
+      internalID: 7594599651633913519
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_33
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c167e32a4011736c0800000000000000
+      internalID: -4163840618881190372
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_34
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6536bc9484c374b60800000000000000
+      internalID: 7730213566578123606
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u96EA\u6A47"
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 19a0764f3253588f0800000000000000
+      internalID: -538966151860385135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u8B66\u68CD"
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a808de27aaa89aa40800000000000000
+      internalID: 5379983694548009098
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u9524\u5B50"
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c4818281e31afdc90800000000000000
+      internalID: -7142813195920992180
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6994\u5934"
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2984a12dbcd073c0800000000000000
+      internalID: -4363745334050649813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_39
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 32
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e9c74a40c9cb0ed70800000000000000
+      internalID: 9070457027802987678
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_40
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6dab6f2fd798b760800000000000000
+      internalID: 7473890566450425195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u72FC\u7259"
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f2ffe251d268a5e0800000000000000
+      internalID: -1898158591757520143
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_42
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35ed8f0b2a301f4f0800000000000000
+      internalID: -796851661779181997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6D88\u9632\u670D"
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2fe7f294749c9f30800000000000000
+      internalID: 4583701749159161645
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6728\u65A7"
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 026c0693f2787bb70800000000000000
+      internalID: 8914742624299042336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u5C0F\u94C1\u65A7"
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a5b6626a6518c3f40800000000000000
+      internalID: 5709580636753652570
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u6B66\u58EB\u5200"
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65ba5e08ccea91590800000000000000
+      internalID: -7702933494281426090
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u77ED\u6B66\u58EB\u5200"
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2cde318ca12d78ec0800000000000000
+      internalID: -3564649567572726334
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: FreePixelMeleeWeaponPack_48
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b59b14bef060f450800000000000000
+      internalID: 6120498540656170418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: "\u96EA\u6A47\u68CD"
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 0
+        width: 64
+        height: 32
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 20d00f0ffb345f440800000000000000
+      internalID: 4968952255533288706
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 471175f4ab3065d4ea3b15089dbb9166
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":32.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      FreePixelMeleeWeaponPack_10: -495737332258229707
+      FreePixelMeleeWeaponPack_11: 4134051972535924943
+      FreePixelMeleeWeaponPack_12: 2540721665036029958
+      FreePixelMeleeWeaponPack_13: -6238034307629356710
+      FreePixelMeleeWeaponPack_14: 6832374963357545614
+      FreePixelMeleeWeaponPack_15: -8098182615756822933
+      FreePixelMeleeWeaponPack_16: 1550699853780433592
+      FreePixelMeleeWeaponPack_17: 8791408804812504379
+      FreePixelMeleeWeaponPack_18: -7569781482543186514
+      FreePixelMeleeWeaponPack_19: 4405732922048589175
+      FreePixelMeleeWeaponPack_21: 7913392262879844305
+      FreePixelMeleeWeaponPack_22: 109821722632979936
+      FreePixelMeleeWeaponPack_23: -3033938913711397276
+      FreePixelMeleeWeaponPack_24: -1202140367004929684
+      FreePixelMeleeWeaponPack_25: -4080024347855598264
+      FreePixelMeleeWeaponPack_26: -4982409402114772287
+      FreePixelMeleeWeaponPack_27: -2620469901217781712
+      FreePixelMeleeWeaponPack_28: 6970154147297537984
+      FreePixelMeleeWeaponPack_29: 1707171675678521343
+      FreePixelMeleeWeaponPack_30: -8183627791651784879
+      FreePixelMeleeWeaponPack_31: -331859700927510216
+      FreePixelMeleeWeaponPack_32: 7594599651633913519
+      FreePixelMeleeWeaponPack_33: -4163840618881190372
+      FreePixelMeleeWeaponPack_34: 7730213566578123606
+      FreePixelMeleeWeaponPack_39: 9070457027802987678
+      FreePixelMeleeWeaponPack_40: 7473890566450425195
+      FreePixelMeleeWeaponPack_42: -796851661779181997
+      FreePixelMeleeWeaponPack_48: 6120498540656170418
+      FreePixelMeleeWeaponPack_9: 1961722619379125199
+      "\u5C0F\u65A7\u5934": 1001639291965709304
+      "\u5C0F\u94C1\u65A7": 5709580636753652570
+      "\u6273\u624B": -6968552323406236974
+      "\u6728\u65A7": 8914742624299042336
+      "\u6728\u68CD": 3076281106761717636
+      "\u6728\u7434": -5213862060679893057
+      "\u6994\u5934": -4363745334050649813
+      "\u6B66\u58EB\u5200": -7702933494281426090
+      "\u6D88\u9632\u670D": 4583701749159161645
+      "\u72FC\u7259": -1898158591757520143
+      "\u77ED\u6B66\u58EB\u5200": -3564649567572726334
+      "\u788E\u9152\u74F6": -2452760036916128351
+      "\u81EA\u5236\u957F\u77DB": -5734406085098646471
+      "\u8B66\u68CD": 5379983694548009098
+      "\u9489\u5B50\u68CD": -7368290586247338411
+      "\u94A2\u7BA1": -8056127330409091873
+      "\u9524\u5B50": -7142813195920992180
+      "\u952F\u5B50": -5239256953602778601
+      "\u957F\u6728\u68CD": 165085297587571815
+      "\u96EA\u6A47": -538966151860385135
+      "\u96EA\u6A47\u68CD": 4968952255533288706
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

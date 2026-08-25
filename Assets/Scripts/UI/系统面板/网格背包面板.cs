@@ -22,8 +22,10 @@ public sealed class 网格背包面板 : 面板基类
     [SerializeField] private float 物品边距 = 6f;                                  // 物品块四周内缩（不压网格线/不重叠）
     [SerializeField] private Color 物品底色 = new Color(0.28f, 0.3f, 0.36f, 0.95f);
     [SerializeField] private Color 选中底色 = new Color(0.45f, 0.38f, 0.18f, 0.95f);
+    [SerializeField, Range(0f, 1f)] private float 品质底色透明 = 0.3f;   // 品质底色（物品框层）半透明程度
     [SerializeField] private Color 放置可色 = new Color(0.45f, 1f, 0.5f, 0.35f);    // 拖拽投影：可放（淡绿半透明）
     [SerializeField] private Color 放置禁色 = new Color(1f, 0.4f, 0.4f, 0.35f);      // 拖拽投影：不可放（淡红半透明）
+    [SerializeField] private Color 合并色 = new Color(0.45f, 0.75f, 1f, 0.4f);       // 拖拽投影：可合并（淡蓝半透明）
     [SerializeField] private TMP_Text 信息条;          // 已用 X/Y 格 · 负重 A/B
     [SerializeField] private TMP_Text 详情文本;        // 选中物品详情
     [SerializeField] private Button 使用按钮, 装备按钮;
@@ -141,28 +143,50 @@ public sealed class 网格背包面板 : 面板基类
         }
     }
 
-    // 物品：图像+文本（非按钮）；点击选中/双击快捷操作；拖拽移动/换位
+    // 物品：两层结构 —— ① 物品框（全尺寸 Image = 品质底层色 + 黑描边，点击/拖拽挂这里）→ ② 内容层（内缩 Image = 深色占位块，将来贴美术图）。
+    // 品质色永远在框层：内容层内缩 物品边距，无论现在是色块还是将来的美术图，四周都会露出品质色环。
     private void 创建物品(物品堆叠 堆叠)
     {
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return;
         var 形状 = 档案.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
         int 宽 = 堆叠.旋转 ? 形状.高 : 形状.宽;
         int 高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
+        // ① 物品框：全尺寸贴格（品质底层色；选中 = 选中底色）
         var 物体 = new GameObject($"物品_{物品.名称}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(网格容器, false);
-        var 图 = 物体.GetComponent<Image>();
-        图.color = 选中 == 堆叠 ? 选中底色 : 物品底色;
+        var 框图 = 物体.GetComponent<Image>();
+        框图.color = 选中 == 堆叠 ? 选中底色 : 品质底层色(堆叠);
         var 边框 = 物体.AddComponent<Outline>();
         边框.effectColor = new Color(0f, 0f, 0f, 0.6f);
         边框.effectDistance = new Vector2(3f, -3f);
         var 矩形 = 物体.GetComponent<RectTransform>();
-        // 内缩定位：尺寸比占格面积小 2×边距，位置向格内偏移——不压网格线、相邻物品不重叠
         矩形.anchorMin = new Vector2(0, 1);
         矩形.anchorMax = new Vector2(0, 1);
         矩形.pivot = new Vector2(0, 1);
-        矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸 + 物品边距, -堆叠.行 * 格尺寸 - 物品边距);
-        矩形.sizeDelta = new Vector2(宽 * 格尺寸 - 物品边距 * 2f, 高 * 格尺寸 - 物品边距 * 2f);
-        // 标签（名称×数量）
+        矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸, -堆叠.行 * 格尺寸);
+        矩形.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
+        // ② 内容层（内缩：尺寸少 2×边距，向格内偏移——不压网格线、不叠品质环；将来替换为美术图 sprite）
+        var 内容物体 = new GameObject("内容", typeof(RectTransform), typeof(Image));
+        内容物体.transform.SetParent(物体.transform, false);
+        var 内容图 = 内容物体.GetComponent<Image>();
+        内容图.color = 物品底色;
+        内容图.raycastTarget = false;   // 不挡底层交互（点击/拖拽挂在物品框上）
+        // 手动挂图：items.json 的 "图片" 引用 → 内容层显示精灵；无图/未挂 = 保持色块（品质色环在物品框层不受影响）
+        var 图标 = 物品图标服务.获取(物品.图片);
+        if (图标 != null)
+        {
+            内容图.sprite = 图标;
+            内容图.color = Color.white;          // 有图时不再用色底染色
+            内容图.preserveAspect = true;        // 按比例居中，避免拉伸（武器横向图标在格内等比缩放）
+        }
+        var 内容矩形 = 内容物体.GetComponent<RectTransform>();
+        内容矩形.anchorMin = new Vector2(0.5f, 0.5f);
+        内容矩形.anchorMax = new Vector2(0.5f, 0.5f);
+        内容矩形.pivot = new Vector2(0.5f, 0.5f);
+        内容矩形.anchoredPosition = Vector2.zero;   // 居中于物品框
+        内容矩形.sizeDelta = new Vector2(形状.宽 * 格尺寸 - 物品边距 * 2f, 形状.高 * 格尺寸 - 物品边距 * 2f);   // 未旋转宽高（旋转由 rotation 承担）
+        内容矩形.localRotation = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);   // 图标跟随物品旋转 90°
+        // ③ 标签（名称×数量）：挂在物品框下，始终水平居中（不随内容层旋转）
         var 标签物体 = new GameObject("标签", typeof(RectTransform), typeof(TextMeshProUGUI));
         标签物体.transform.SetParent(物体.transform, false);
         var 标签 = 标签物体.GetComponent<TextMeshProUGUI>();
@@ -170,11 +194,13 @@ public sealed class 网格背包面板 : 面板基类
         标签.fontSize = 宽 >= 2 ? 32f : 24f;
         标签.alignment = TextAlignmentOptions.Center;
         标签.color = 选中 == 堆叠 ? new Color(1f, 0.9f, 0.55f) : Color.white;
-        标签.rectTransform.anchorMin = Vector2.zero;
-        标签.rectTransform.anchorMax = Vector2.one;
-        标签.rectTransform.offsetMin = Vector2.zero;
-        标签.rectTransform.offsetMax = Vector2.zero;
-        // 点击（非按钮） + 拖拽
+        标签.raycastTarget = false;   // 不挡物品框的点击/拖拽
+        标签.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        标签.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        标签.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        标签.rectTransform.anchoredPosition = Vector2.zero;
+        标签.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸 - 物品边距 * 2f, 高 * 格尺寸 - 物品边距 * 2f);
+        // ④ 点击（非按钮） + 拖拽（挂在物品框上）
         var 点击 = 物体.AddComponent<物品点击>();
         点击.堆叠 = 堆叠;
         点击.面板 = this;
@@ -192,6 +218,29 @@ public sealed class 网格背包面板 : 面板基类
         矩形.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);
         矩形.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
     }
+
+    // 品质底层色（物品框）：全部物品按有效品质整块着色（深底与品质色混合，半透明）；普通 = 透明（无品质染色）。
+    // 架构约定：品质色永远属于"物品框层"（全尺寸底层）——将来内容层换成美术图片后，四周仍露出品质色环。
+    private Color 品质底层色(物品堆叠 堆叠)
+    {
+        if (堆叠 == null || !数据.物品.TryGetValue(堆叠.标识, out var 物品)) return new Color(0f, 0f, 0f, 0f);
+        品质 档 = 有效品质(堆叠, 物品);
+        if (档 == 品质.普通) return new Color(0f, 0f, 0f, 0f);
+        var 色 = Color.Lerp(物品底色, 品质工具.颜色(档), 0.55f);
+        色.a = 品质底色透明;   // 半透明（能看到底座格/分隔线，品质色仍是区分度）
+        return 色;
+    }
+
+    // 拖拽代理底色：非普通 = 品质底层色；普通 = 内容层色（不透明，跟手可见）
+    private Color 物品品质底(物品堆叠 堆叠)
+    {
+        var 层色 = 品质底层色(堆叠);
+        return 层色.a <= 0f ? 物品底色 : 层色;
+    }
+
+    // 有效品质：堆叠品质覆盖（合成提升）优先，否则取物品模板品质
+    private static 品质 有效品质(物品堆叠 堆叠, 物品数据 模板)
+        => !string.IsNullOrEmpty(堆叠.品质) ? 数据解析.枚举<品质>(堆叠.品质) : 模板.品质档;
 
     // ===== 点击交互 =====
 
@@ -230,8 +279,21 @@ public sealed class 网格背包面板 : 面板基类
         var 物体 = new GameObject("拖拽代理", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(网格容器, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = new Color(物品底色.r, 物品底色.g, 物品底色.b, 0.85f);
         图.raycastTarget = false;
+        // 代理优先显示挂载图标；无图则用品质底色块（半透明跟手）
+        var 代理物品 = 数据.物品.TryGetValue(堆叠.标识, out var 代理数据) ? 代理数据 : null;
+        var 代理图标 = 代理物品 != null ? 物品图标服务.获取(代理物品.图片) : null;
+        if (代理图标 != null)
+        {
+            图.sprite = 代理图标;
+            图.color = new Color(1f, 1f, 1f, 0.85f);
+            图.preserveAspect = true;
+        }
+        else
+        {
+            var 代理底 = 物品品质底(堆叠);
+            图.color = new Color(代理底.r, 代理底.g, 代理底.b, 0.85f);
+        }
         拖拽代理 = 物体.GetComponent<RectTransform>();
         拖拽代理.anchorMin = new Vector2(0, 1);
         拖拽代理.anchorMax = new Vector2(0, 1);
@@ -239,7 +301,7 @@ public sealed class 网格背包面板 : 面板基类
         var 标签物体 = new GameObject("标签", typeof(RectTransform), typeof(TextMeshProUGUI));
         标签物体.transform.SetParent(物体.transform, false);
         var 标签 = 标签物体.GetComponent<TextMeshProUGUI>();
-        标签.text = 数据.物品.TryGetValue(堆叠.标识, out var 物) ? 物.名称 : 堆叠.标识;
+        标签.text = 数据.物品.TryGetValue(堆叠.标识, out var 物) ? (堆叠.数量 > 1 ? $"{物.名称}×{堆叠.数量}" : 物.名称) : 堆叠.标识;
         标签.fontSize = 26f;
         标签.alignment = TextAlignmentOptions.Center;
         标签.rectTransform.anchorMin = Vector2.zero;
@@ -269,7 +331,10 @@ public sealed class 网格背包面板 : 面板基类
         影矩形.anchorMax = new Vector2(0, 1);
         影矩形.pivot = new Vector2(0, 1);
         影矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸 + 物品边距, -堆叠.行 * 格尺寸 - 物品边距);
-        影矩形.sizeDelta = 拖拽代理.sizeDelta;
+        var 影形状 = 档案.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
+        int 影宽 = 堆叠.旋转 ? 影形状.高 : 影形状.宽;
+        int 影高 = 堆叠.旋转 ? 影形状.宽 : 影形状.高;
+        影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 物品边距 * 2f, 影高 * 格尺寸 - 物品边距 * 2f);   // 影子=物品实际占用的内缩块（旋转后）
         原位置影子 = 影体;
         拖拽代理.SetAsLastSibling();   // 代理置顶渲染——否则同格的落点投影（后创建）会盖住它
     }
@@ -320,16 +385,21 @@ public sealed class 网格背包面板 : 面板基类
         拖拽代理.anchorMax = new Vector2(0, 1);
         拖拽代理.pivot = new Vector2(0.5f, 0.5f);   // 中心 = 鼠标
         拖拽代理.anchoredPosition = new Vector2(相对.x, 相对.y - 尺寸.y);   // 相对左下 → 左上锚点（y 向下）
-        // ② 落点投影：吸附网格贴格（鼠标在格内投影不移动，跨格才跳；绿/红指示落格合法性）
+        // ② 落点投影：吸附网格贴格（鼠标在格内投影不移动，跨格才跳；绿/红/蓝指示落格合法性：可放/不可放/可合并）
         var 目标 = 该格物品(列, 行);
         bool 可放;
-        if (目标 != null && 目标 != 拖拽源) 可放 = 档案.可换位(拖拽源, 目标);
+        bool 可合并 = false;
+        if (目标 != null && 目标 != 拖拽源)
+        {
+            if (档案.可合并(目标, 拖拽源)) { 可放 = true; 可合并 = true; }
+            else 可放 = 档案.可换位(拖拽源, 目标);
+        }
         else 可放 = 档案.可放置(拖拽源.标识, 列, 行, 拖拽旋转, 拖拽源);
         if (落点投影 != null)
         {
             落点投影.gameObject.SetActive(true);
             落点投影.rectTransform.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);   // 精确贴格（吸附网格）
-            落点投影.color = 可放 ? 放置可色 : 放置禁色;
+            落点投影.color = 可合并 ? 合并色 : (可放 ? 放置可色 : 放置禁色);
         }
     }
 
@@ -340,8 +410,10 @@ public sealed class 网格背包面板 : 面板基类
         var 形状 = 档案.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
         int 宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
         int 高 = 拖拽旋转 ? 形状.宽 : 形状.高;
-        拖拽代理.sizeDelta = new Vector2(宽 * 格尺寸 - 物品边距 * 2f, 高 * 格尺寸 - 物品边距 * 2f);
-        if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);   // 投影贴格
+        // 代理：未旋转内缩宽高 + 随 拖拽旋转 转 90°（跟手图片跟随旋转预览）
+        拖拽代理.sizeDelta = new Vector2(形状.宽 * 格尺寸 - 物品边距 * 2f, 形状.高 * 格尺寸 - 物品边距 * 2f);
+        拖拽代理.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);
+        if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);   // 投影贴格（旋转后）
     }
 
     // R 键检测（拖拽中旋转预览）：兼容新(InputSystem)/旧(Input Manager)
@@ -382,7 +454,9 @@ public sealed class 网格背包面板 : 面板基类
         var 目标物品 = 该格物品(列, 行);
         if (目标物品 != null && 目标物品 != 源)
         {
-            if (档案.换位(源, 目标物品)) 音效管理器.实例?.播放成功();
+            // 同标识可堆叠 → 合并（并入目标，超上限余量留在原格）；否则尝试换位
+            if (档案.合并堆叠(目标物品, 源) > 0) 音效管理器.实例?.播放成功();
+            else if (档案.换位(源, 目标物品)) 音效管理器.实例?.播放成功();
             else 音效管理器.实例?.播放失败();
         }
         else
@@ -460,8 +534,11 @@ public sealed class 网格背包面板 : 面板基类
         if (物品.生命加成 > 0) 数值 += $"生命 {物品.生命加成}  ";
         if (物品.恢复量 > 0) 数值 += $"恢复 {物品.恢复量}（{物品.恢复目标}）";
         string 操作提示 = 物品.恢复量 > 0 ? "双击使用" : (!string.IsNullOrEmpty(物品.槽位) ? "双击装备" : "");
+        int 上限 = 档案.堆叠上限(选中.标识);
+        string 堆叠文本 = 上限 > 1 ? $"堆叠 {选中.数量}/{上限}" : $"数量 {选中.数量}";
+        string 品质名称行 = 物品工具.品质名称(有效品质(选中, 物品), 物品.名称);
         设文本(详情文本,
-            $"<b>{物品.名称}</b>（{物品.类型}）\n{物品.描述}\n{数值}\n形状 {形状.宽}×{形状.高} · 重量 {物品.重量} · 价值 {物品.价值} · 数量 {选中.数量}\n{操作提示}");
+            $"<b>{品质名称行}</b>（{物品.类型}）\n{物品.描述}\n{数值}\n形状 {形状.宽}×{形状.高} · 重量 {物品.重量} · 价值 {物品.价值} · {堆叠文本}\n{操作提示}");
     }
 
     // ===== 内部组件：非按钮点击 + 拖拽 =====

@@ -86,6 +86,7 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 抗性加成解析;        // 标识 -> 抗性百分数贡献点
         [NonSerialized] public Func<string, 物品形状> 形状解析;        // 标识 -> 物品形状（宽×高）
         [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量
+        [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限（0/缺省 = 不可堆叠，每格恒 1 件）
         [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板
 
         // —— 身份：职业与天赋 ——
@@ -510,21 +511,93 @@ using System.Collections.Generic;
             return true;
         }
 
-        // 放入网格（自动找空位；放不下返回 false）
-        public bool 放入网格(string 标识, int 数量 = 1)
+        // ================= 堆叠规则 =================
+
+        // 该标识是否可堆叠（堆叠上限 > 1 才可合并；武器/防具/任务品 上限 1 = 每格独立一件）
+        public bool 可堆叠(string 标识) => 堆叠上限(标识) > 1;
+
+        // 该标识的堆叠上限（0/缺省 = 不可堆叠）
+        public int 堆叠上限(string 标识) => 堆叠上限解析?.Invoke(标识) ?? 0;
+
+        // 两堆叠能否合并：同标识 + 可堆叠 + 无词缀（词缀是装备实例，不可并入）+ 品质覆盖相同（空则忽略）+ 目标未满
+        public bool 可合并(物品堆叠 目标, 物品堆叠 来源)
         {
-            var 堆叠 = 找堆叠(标识);
-            if (堆叠 != null && 堆叠.列 >= 0) { 堆叠.数量 += 数量; return true; }   // 已在网格中则叠放
-            var 新堆叠 = new 物品堆叠(标识, 数量);
+            if (目标 == null || 来源 == null || 目标 == 来源) return false;
+            if (目标.标识 != 来源.标识) return false;
+            if (目标.词缀 != null && 目标.词缀.Count > 0) return false;
+            if (来源.词缀 != null && 来源.词缀.Count > 0) return false;
+            if (!string.IsNullOrEmpty(目标.品质) || !string.IsNullOrEmpty(来源.品质))
+                if (目标.品质 != 来源.品质) return false;
+            if (!可堆叠(目标.标识)) return false;
+            return 目标.数量 < 堆叠上限(目标.标识);
+        }
+
+        // 合并：来源并入目标（受上限限制），返回实际并入数量；来源耗尽则移除。来源剩余留在原格（拖拽源未移动）。
+        public int 合并堆叠(物品堆叠 目标, 物品堆叠 来源)
+        {
+            if (!可合并(目标, 来源)) return 0;
+            int 空位 = 堆叠上限(目标.标识) - 目标.数量;
+            int 并入 = Math.Min(空位, 来源.数量);
+            if (并入 <= 0) return 0;
+            目标.数量 += 并入;
+            来源.数量 -= 并入;
+            if (来源.数量 <= 0) 背包.Remove(来源);
+            return 并入;
+        }
+
+        // 放入网格（填已有堆叠优先，满额再开新堆叠；不可堆叠每次新开一件）。返回实际放入数量（0 = 一个都放不下）。
+        public int 放入网格(string 标识, int 数量 = 1)
+        {
+            if (string.IsNullOrEmpty(标识) || 数量 <= 0) return 0;
+            int 原数量 = 数量;
+            int 上限 = 堆叠上限(标识);
+            // ① 先填已入格的未满堆叠（仅 列>=0、无词缀）
+            foreach (var 堆叠 in 背包)
+            {
+                if (堆叠 == null || 堆叠.列 < 0 || 堆叠.标识 != 标识) continue;
+                if (堆叠.词缀 != null && 堆叠.词缀.Count > 0) continue;
+                int 空位 = 上限 - 堆叠.数量;
+                if (空位 <= 0) continue;
+                int 并入 = Math.Min(空位, 数量);
+                堆叠.数量 += 并入;
+                数量 -= 并入;
+                if (数量 <= 0) return 原数量;
+            }
+            // ② 剩余开新堆叠（可堆叠：每堆 ≤上限；不可堆叠：每堆 1 件）
+            while (数量 > 0)
+            {
+                int 本次 = 上限 > 1 ? Math.Min(上限, 数量) : 1;
+                var 新堆叠 = new 物品堆叠(标识, 本次);
+                bool 放下 = false;
+                for (int 行 = 0; 行 < 网格行 && !放下; 行++)
+                    for (int 列 = 0; 列 < 网格列 && !放下; 列++)
+                        if (可放置(标识, 列, 行, false))
+                        {
+                            新堆叠.列 = 列; 新堆叠.行 = 行;
+                            背包.Add(新堆叠);
+                            放下 = true;
+                        }
+                if (!放下) return 原数量 - 数量;   // 背包满了：返回实际放入数（部分已放入）
+                数量 -= 本次;
+            }
+            return 原数量;
+        }
+
+        // 放入一个已有堆叠实例（含词缀的装备/掉落物/换装回包/旧存档迁移）：找空位放置并写入坐标；背包满返回 false（不改变该堆叠）
+        public bool 放入网格堆叠(物品堆叠 堆叠)
+        {
+            if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识) || 堆叠.数量 <= 0 || 形状解析 == null) return false;
+            if (堆叠.列 >= 0) return true;   // 已在网格中
+            bool 已在背包 = 背包.Contains(堆叠);   // 旧存档迁移的堆叠已在列表里（列=-1），勿重复添加
             for (int 行 = 0; 行 < 网格行; 行++)
                 for (int 列 = 0; 列 < 网格列; 列++)
-                    if (可放置(标识, 列, 行, false))
+                    if (可放置(堆叠.标识, 列, 行, false))
                     {
-                        新堆叠.列 = 列; 新堆叠.行 = 行;
-                        背包.Add(新堆叠);
+                        堆叠.列 = 列; 堆叠.行 = 行;
+                        if (!已在背包) 背包.Add(堆叠);
                         return true;
                     }
-            return false;   // 背包满了
+            return false;
         }
 
         // 从网格移除（数量耗尽则删除）
@@ -544,13 +617,8 @@ using System.Collections.Generic;
 
         // ================= 背包基础操作（兼容旧引用） =================
 
-        public void 添加物品(string 标识, int 数量 = 1)
-        {
-            if (string.IsNullOrEmpty(标识)) return;
-            foreach (var 堆叠 in 背包)
-                if (堆叠.标识 == 标识) { 堆叠.数量 += 数量; return; }
-            背包.Add(new 物品堆叠(标识, 数量));
-        }
+        // 添加物品（网格版）：等价于 放入网格 —— 先并入已有未满堆叠，再开新堆叠；返回实际放入数量
+        public int 添加物品(string 标识, int 数量 = 1) => 放入网格(标识, 数量);
 
         public void 添加堆叠(物品堆叠 堆叠)
         {

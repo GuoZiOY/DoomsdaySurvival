@@ -145,6 +145,8 @@ using System;
         public int 形状宽 = 1;    // 网格占用宽
         public int 形状高 = 1;    // 网格占用高
         public int 重量 = 1;      // 负重占用
+        public int 堆叠上限;      // 单格堆叠上限（0/缺省 = 不可堆叠，每格恒 1 件；武器/防具/任务品=1，弹药/消耗品/材料>1）
+        public string 图片;       // 物品图标引用（Resources 名/子精灵名；空 = 无图，内容层显示色块）
         // —— 以物易物 ——
         public int 价值 = 1;      // 1~100 价值点数
         public int 价格 => 价值;  // 兼容旧引用（原"价格"字段语义）
