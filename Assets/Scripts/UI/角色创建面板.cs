@@ -35,9 +35,10 @@ public sealed class 角色创建面板 : 面板基类
     [SerializeField] private RectTransform 正面天赋区;
     [SerializeField] private RectTransform 负面天赋区;
     [SerializeField] private GameObject 天赋行模板;   // 天赋行模板（可选；不设则用 按钮预制体）
+    [SerializeField] private int 建议天赋数 = 3;      // 建议上限（仅引导提示 + 随机数量基准，不强制限制；玩家可多选）
 
     // —— 底部 ——
-    [SerializeField] private Button 随机按钮, 重置按钮, 确认按钮;
+    [SerializeField] private Button 返回按钮, 随机按钮, 重置按钮, 确认按钮;   // 返回按钮 → 回主菜单
 
     // ===== 构筑状态 =====
     private string 选中职业 = "";
@@ -99,6 +100,7 @@ public sealed class 角色创建面板 : 面板基类
         // 角色名
         if (角色名输入 != null) 角色名输入.onValueChanged.AddListener(v => 角色名 = string.IsNullOrEmpty(v) ? "无名幸存者" : v);
         // 底部
+        if (返回按钮 != null) 返回按钮.onClick.AddListener(() => 回退());   // 返回主菜单（与右键/侧边栏取消同语义）
         if (随机按钮 != null) 随机按钮.onClick.AddListener(随机角色);
         if (重置按钮 != null) 重置按钮.onClick.AddListener(() => { 重置构筑(); 渲染(); });
         if (确认按钮 != null) 确认按钮.onClick.AddListener(确认开始);
@@ -125,10 +127,19 @@ public sealed class 角色创建面板 : 面板基类
         渲染底部();
     }
 
+    // 总览文本：角色名 / 职业 / 最终五维 / 天赋（含职业天赋，随构筑实时刷新）
     private void 渲染预览()
     {
         int[] 最终 = 计算最终五维();
-        string 文本 = $"角色：{角色名}\n体质 {最终[0]}  力量 {最终[1]}  智慧 {最终[2]}  敏捷 {最终[3]}  意志 {最终[4]}";
+        string 职业名 = 数据.职业.TryGetValue(选中职业, out var 职业) ? 职业.名称 : "未选择";
+        var 天赋名表 = new List<string>();
+        foreach (var 标识 in 已选天赋)
+            if (数据.天赋.TryGetValue(标识, out var 天赋)) 天赋名表.Add(天赋.名称);
+        // 职业天赋自动生效，一并显示（若未在 已选天赋 中）
+        if (!string.IsNullOrEmpty(选中职业) && 数据.职业.TryGetValue(选中职业, out var 职) && !string.IsNullOrEmpty(职.天赋))
+            if (!已选天赋.Contains(职.天赋) && 数据.天赋.TryGetValue(职.天赋, out var 职业天赋)) 天赋名表.Add(职业天赋.名称);
+        string 天赋文本 = 天赋名表.Count > 0 ? string.Join("、", 天赋名表) : "无";
+        string 文本 = $"角色：{角色名}\n职业：{职业名}\n体质 {最终[0]}  力量 {最终[1]}  智慧 {最终[2]}  敏捷 {最终[3]}  意志 {最终[4]}\n天赋：{天赋文本}";
         设文本(预览五维, 文本);
     }
 
@@ -237,7 +248,10 @@ public sealed class 角色创建面板 : 面板基类
 
     private void 渲染天赋()
     {
-        设文本(剩余预算文本, $"剩余预算：{天赋预算}");
+        // 天赋剩余预算：只显示数值；负数时红色富文本
+        string 预算文本 = 天赋预算.ToString();
+        if (天赋预算 < 0) 预算文本 = $"<color={游戏主题.危险色值}>{预算文本}</color>";
+        设文本(剩余预算文本, 预算文本);
         渲染天赋列表(正面天赋区, 正面: true);
         渲染天赋列表(负面天赋区, 正面: false);
     }
@@ -277,7 +291,14 @@ public sealed class 角色创建面板 : 面板基类
         if (!数据.天赋.TryGetValue(标识, out var 天赋)) return;
         bool 已选 = 已选天赋.Contains(标识);
         if (已选) { 已选天赋.Remove(标识); 天赋预算 += 天赋.点数; }
-        else if (天赋.点数 > 0 ? 天赋预算 >= 天赋.点数 : true) { 已选天赋.Add(标识); 天赋预算 -= 天赋.点数; }
+        else if (天赋.点数 > 0 ? 天赋预算 >= 天赋.点数 : true)
+        {
+            // 引导（不强制）：超过建议数量时提示一次（选第 建议数+1 个时），玩家仍可继续选
+            if (已选天赋.Count == 建议天赋数)
+                ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏,
+                    $"天赋越多，活下去越难——建议最多 {建议天赋数} 个（仅建议，可继续选择）。"));
+            已选天赋.Add(标识); 天赋预算 -= 天赋.点数;
+        }
         else { 音效管理器.实例?.播放失败(); return; }
         渲染();
     }
@@ -304,15 +325,17 @@ public sealed class 角色创建面板 : 面板基类
             分配[类型] = 分配.TryGetValue(类型, out var v) ? v + 1 : 1;
             剩余自由点--;
         }
+        // 随机天赋：默认只随机几个（1~建议天赋数），预算内抽选（正面买不起则跳过，负面可选）
         var 候选 = new List<string>(数据.天赋.Keys);
+        int 目标数 = Random.Range(1, 建议天赋数 + 1);
         守卫 = 0;
-        while (候选.Count > 0 && 守卫++ < 30 && 天赋预算 > 0)
+        while (候选.Count > 0 && 已选天赋.Count < 目标数 && 守卫++ < 30)
         {
             var 标识 = 候选[Random.Range(0, 候选.Count)];
-            if (!数据.天赋.TryGetValue(标识, out var 天赋)) continue;
+            if (!数据.天赋.TryGetValue(标识, out var 天赋)) { 候选.Remove(标识); continue; }
             if (已选天赋.Contains(标识)) { 候选.Remove(标识); continue; }
-            if (天赋.点数 > 0 && 天赋预算 >= 天赋.点数) { 已选天赋.Add(标识); 天赋预算 -= 天赋.点数; }
-            else if (天赋.点数 <= 0) { 已选天赋.Add(标识); 天赋预算 -= 天赋.点数; }
+            if (天赋.点数 > 0 && 天赋预算 < 天赋.点数) { 候选.Remove(标识); continue; }
+            已选天赋.Add(标识); 天赋预算 -= 天赋.点数;
             候选.Remove(标识);
         }
         角色名 = "无名幸存者";

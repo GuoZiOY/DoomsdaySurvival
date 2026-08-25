@@ -121,8 +121,8 @@ using System.Collections.Generic;
         public int 发烧 = 0;          // 伤口恶化/重伤，抗生素治疗
 
         // —— 网格背包 ——
-        public int 网格列 = 4;        // 背包装备决定（腰包 4×2 → 战术背包 5×4 → 登山包 6×5）
-        public int 网格行 = 2;
+        public int 网格列 = 5;        // 默认小背包 20 格（5×4）；背包装备可扩展（战术 5×4 → 登山 6×5）
+        public int 网格行 = 4;
         public List<物品堆叠> 背包 = new List<物品堆叠>();
 
         // —— 装备：8 槽（主手/副手/头部/胸部/腿部/脚部/手部/背包） ——
@@ -220,13 +220,14 @@ using System.Collections.Generic;
         // 恐惧抗性%：意志×1.5（夜晚/尸群/恐怖事件判定）
         public float 恐惧抗性 => Math.Min(0.8f, 意志 * 1.5f / 100f);
 
-        // 饱食下降速度修正（体质减缓；天赋"胃口大"加速）
+        // 饱食下降速度修正（体质减缓；天赋"铁胃"减缓、"胃口大"加速）
         public float 饱食下降修正
         {
             get
             {
                 float 修正 = 1f - (体质 - 5) * 0.04f;   // 每点体质 -4%
-                if (天赋.Contains("胃口大")) 修正 += 0.5f;
+                if (天赋.Contains("铁胃")) 修正 -= 0.15f;
+                if (天赋.Contains("胃口大")) 修正 += 0.6f;
                 return Math.Max(0.2f, 修正);
             }
         }
@@ -237,22 +238,22 @@ using System.Collections.Generic;
             get
             {
                 float 修正 = 1f - (体质 - 5) * 0.04f;
-                if (天赋.Contains("口渴快")) 修正 += 0.5f;
+                if (天赋.Contains("口渴快")) 修正 += 0.6f;
                 return Math.Max(0.2f, 修正);
             }
         }
 
         // 经验获取修正（天赋"快速学习者"）
-        public float 经验修正 => 天赋.Contains("快速学习者") ? 1.15f : 1f;
+        public float 经验修正 => 天赋.Contains("快速学习者") ? 1.10f : 1f;
 
         // 医疗品效果修正（天赋"医者仁心"）
-        public float 医疗修正 => 天赋.Contains("医者仁心") ? 1.1f : 1f;
+        public float 医疗修正 => 天赋.Contains("医者仁心") ? 1.05f : 1f;
 
         // 制作消耗修正（天赋"节俭"）
-        public float 制作消耗修正 => 天赋.Contains("节俭") ? 0.9f : 1f;
+        public float 制作消耗修正 => 天赋.Contains("节俭") ? 0.95f : 1f;
 
         // 夜晚行动点消耗修正（天赋"夜行者"）
-        public float 夜晚消耗修正 => 天赋.Contains("夜行者") ? 0.8f : 1f;
+        public float 夜晚消耗修正 => 天赋.Contains("夜行者") ? 0.85f : 1f;
 
         // 抗性百分数（装备来源）：非线性收益递减 + 硬上限 50%
         public int 抗性百分比
@@ -381,8 +382,8 @@ using System.Collections.Generic;
         // 睡觉结算（回营地睡觉）：恢复生命/行动点/疲劳，推进时间到次日 6:00
         public void 睡觉()
         {
-            // 失眠天赋：恢复 -30%
-            float 恢复系数 = 天赋.Contains("失眠") ? 0.7f : 1f;
+            // 失眠天赋：恢复 -40%
+            float 恢复系数 = 天赋.Contains("失眠") ? 0.6f : 1f;
             生命 = Math.Max(1, (int)(最大生命 * 恢复系数));
             行动点 = Math.Max(1, (int)(最大行动点 * 恢复系数));
             疲劳 = Math.Max(0, (int)(疲劳 * (1 - 0.8f * 恢复系数)));
@@ -436,21 +437,27 @@ using System.Collections.Generic;
             return "饰品1";
         }
 
-        // 背包装备 → 网格尺寸（腰包 4×2 / 战术背包 5×4 / 登山包 6×5）
+        // 背包装备 → 网格尺寸（默认小背包 20 格 5×4 / 战术背包 5×4 / 登山包 6×5 / 无背包=默认 20 格）
+        public (int 列, int 行) 背包网格尺寸(string 包标识 = null)
+        {
+            if (string.IsNullOrEmpty(包标识)) 包标识 = 装备标识("背包");
+            if (string.IsNullOrEmpty(包标识)) return (5, 4);   // 默认小背包 20 格
+            if (包标识.Contains("腰包")) return (4, 2);
+            if (包标识.Contains("战术")) return (5, 4);
+            if (包标识.Contains("登山")) return (6, 5);
+            return (5, 4);
+        }
+
         public void 应用背包装备()
         {
-            string 包 = 装备标识("背包");
-            if (string.IsNullOrEmpty(包)) { 网格列 = 2; 网格行 = 2; return; }
-            if (包.Contains("腰包")) { 网格列 = 4; 网格行 = 2; }
-            else if (包.Contains("战术")) { 网格列 = 5; 网格行 = 4; }
-            else if (包.Contains("登山")) { 网格列 = 6; 网格行 = 5; }
-            else { 网格列 = 4; 网格行 = 2; }
+            var (列, 行) = 背包网格尺寸();
+            网格列 = 列; 网格行 = 行;
         }
 
         // ================= 网格背包 =================
 
-        // 检查某物品能否放在 (列,行)（不越界、不重叠）
-        public bool 可放置(string 标识, int 列, int 行, bool 旋转)
+        // 检查某物品能否放在 (列,行)（不越界、不重叠）；排除 = 自身堆叠（移动/换位校验用，忽略其占格）
+        public bool 可放置(string 标识, int 列, int 行, bool 旋转, 物品堆叠 排除 = null)
         {
             if (形状解析 == null) return false;
             var 形状 = 形状解析(标识);
@@ -459,7 +466,7 @@ using System.Collections.Generic;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
             foreach (var 堆叠 in 背包)
             {
-                if (堆叠 == null || 堆叠.列 < 0) continue;
+                if (堆叠 == null || 堆叠 == 排除 || 堆叠.列 < 0) continue;
                 if (占据(堆叠, 列, 行, 宽, 高)) return false;
             }
             return true;
@@ -473,6 +480,34 @@ using System.Collections.Generic;
             int 已宽 = 已有.旋转 ? 形状.高 : 形状.宽;
             int 已高 = 已有.旋转 ? 形状.宽 : 形状.高;
             return 列 < 已有.列 + 已宽 && 列 + 宽 > 已有.列 && 行 < 已有.行 + 已高 && 行 + 高 > 已有.行;
+        }
+
+        // 移动/旋转已入格物品到指定坐标（目标格被占则不移动，返回 false）
+        public bool 移动堆叠(物品堆叠 堆叠, int 列, int 行, bool 旋转)
+        {
+            if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识) || 堆叠.列 < 0 || 形状解析 == null) return false;
+            if (堆叠.列 == 列 && 堆叠.行 == 行 && 堆叠.旋转 == 旋转) return true;   // 原位无操作
+            if (!可放置(堆叠.标识, 列, 行, 旋转, 堆叠)) return false;
+            堆叠.列 = 列; 堆叠.行 = 行; 堆叠.旋转 = 旋转;
+            return true;
+        }
+
+        // 换位预测（拖拽投影的绿/红判定用）：两物品互换位置后是否都放得下（不改变状态）
+        public bool 可换位(物品堆叠 甲, 物品堆叠 乙)
+        {
+            if (甲 == null || 乙 == null || 甲 == 乙) return false;
+            if (甲.列 < 0 || 乙.列 < 0 || 形状解析 == null) return false;
+            return 可放置(乙.标识, 甲.列, 甲.行, 乙.旋转, 乙) && 可放置(甲.标识, 乙.列, 乙.行, 甲.旋转, 甲);
+        }
+
+        // 换位（交换两物品的位置与旋转）：互换后两件都必须放得下才执行
+        public bool 换位(物品堆叠 甲, 物品堆叠 乙)
+        {
+            if (!可换位(甲, 乙)) return false;
+            int 列 = 甲.列; 甲.列 = 乙.列; 乙.列 = 列;
+            int 行 = 甲.行; 甲.行 = 乙.行; 乙.行 = 行;
+            bool 转 = 甲.旋转; 甲.旋转 = 乙.旋转; 乙.旋转 = 转;
+            return true;
         }
 
         // 放入网格（自动找空位；放不下返回 false）
