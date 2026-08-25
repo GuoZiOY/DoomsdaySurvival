@@ -10,6 +10,7 @@ using System.Collections.Generic;
         public int 列 = -1;        // 网格列位置（-1 = 未放入网格）
         public int 行 = -1;        // 网格行位置
         public bool 旋转;          // 是否旋转 90°
+        public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
 
@@ -54,6 +55,7 @@ using System.Collections.Generic;
     {
         public string 槽位;
         public string 标识;
+        public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
 
@@ -87,6 +89,7 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, 物品形状> 形状解析;        // 标识 -> 物品形状（宽×高）
         [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量
         [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限（0/缺省 = 不可堆叠，每格恒 1 件）
+        [NonSerialized] public Func<string, int> 最大耐久解析;        // 标识 -> 最大耐久（0 = 无耐久，不损坏）
         [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板
 
         // —— 身份：职业与天赋 ——
@@ -122,8 +125,8 @@ using System.Collections.Generic;
         public int 发烧 = 0;          // 伤口恶化/重伤，抗生素治疗
 
         // —— 网格背包 ——
-        public int 网格列 = 5;        // 默认小背包 20 格（5×4）；背包装备可扩展（战术 5×4 → 登山 6×5）
-        public int 网格行 = 4;
+        public int 网格列 = 5;       // 默认背包 50 格（5列×10行）——测试用大背包；背包装备可扩展/缩小
+        public int 网格行 = 10;
         public List<物品堆叠> 背包 = new List<物品堆叠>();
 
         // —— 装备：8 槽（主手/副手/头部/胸部/腿部/脚部/手部/背包） ——
@@ -404,16 +407,17 @@ using System.Collections.Generic;
             return "";
         }
 
-        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null)
+        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null, int? 当前耐久 = null)
         {
             foreach (var e in 装备)
                 if (e.槽位 == 槽位)
                 {
-                    var 旧 = new 装备记录(槽位, e.标识) { 词缀 = e.词缀 };
+                    var 旧 = new 装备记录(槽位, e.标识) { 词缀 = e.词缀, 当前耐久 = e.当前耐久 };
                     e.标识 = 标识; e.词缀 = 词缀;
+                    e.当前耐久 = 当前耐久 ?? 有效最大耐久(标识);   // 透传实例耐久；无则按模板初始化
                     return 旧;
                 }
-            装备.Add(new 装备记录(槽位, 标识) { 词缀 = 词缀 });
+            装备.Add(new 装备记录(槽位, 标识) { 词缀 = 词缀, 当前耐久 = 当前耐久 ?? 有效最大耐久(标识) });
             return null;
         }
 
@@ -438,15 +442,15 @@ using System.Collections.Generic;
             return "饰品1";
         }
 
-        // 背包装备 → 网格尺寸（默认小背包 20 格 5×4 / 战术背包 5×4 / 登山包 6×5 / 无背包=默认 20 格）
+        // 背包装备 → 网格尺寸（默认背包 50 格 10×5 / 战术背包 5×4 / 登山包 6×5 / 腰包 4×2）
         public (int 列, int 行) 背包网格尺寸(string 包标识 = null)
         {
             if (string.IsNullOrEmpty(包标识)) 包标识 = 装备标识("背包");
-            if (string.IsNullOrEmpty(包标识)) return (5, 4);   // 默认小背包 20 格
+            if (string.IsNullOrEmpty(包标识)) return (5, 10);   // 默认背包 50 格（5列×10行，测试）
             if (包标识.Contains("腰包")) return (4, 2);
             if (包标识.Contains("战术")) return (5, 4);
             if (包标识.Contains("登山")) return (6, 5);
-            return (5, 4);
+            return (5, 10);
         }
 
         public void 应用背包装备()
@@ -567,7 +571,7 @@ using System.Collections.Generic;
             while (数量 > 0)
             {
                 int 本次 = 上限 > 1 ? Math.Min(上限, 数量) : 1;
-                var 新堆叠 = new 物品堆叠(标识, 本次);
+                var 新堆叠 = new 物品堆叠(标识, 本次) { 当前耐久 = 有效最大耐久(标识) };   // 装备初始化完整耐久
                 bool 放下 = false;
                 for (int 行 = 0; 行 < 网格行 && !放下; 行++)
                     for (int 列 = 0; 列 < 网格列 && !放下; 列++)
@@ -656,6 +660,13 @@ using System.Collections.Generic;
             foreach (var 堆叠 in 背包)
                 if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.词缀;
             return null;
+        }
+
+        public int 背包当前耐久(string 标识)
+        {
+            foreach (var 堆叠 in 背包)
+                if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.当前耐久;
+            return 0;
         }
 
         // 已装备某物品的词缀（详情显示用）
@@ -861,12 +872,66 @@ using System.Collections.Generic;
         private static int 夹(int 值, int 最小, int 最大) => 值 < 最小 ? 最小 : (值 > 最大 ? 最大 : 值);
         private static int 随机(int 上限) => 上限 <= 0 ? 0 : new System.Random().Next(上限);
 
+        // 有效最大耐久：优先 items.json 配置；缺省给"有攻击或防御加成"的装备默认 15（武器/防具）
+        public int 有效最大耐久(string 标识)
+        {
+            int 配 = 最大耐久解析?.Invoke(标识) ?? 0;
+            if (配 > 0) return 配;
+            if ((攻击加成解析?.Invoke(标识) ?? 0) > 0 || (防御加成解析?.Invoke(标识) ?? 0) > 0) return 15;
+            return 0;
+        }
+
+        // 指定槽装备当前耐久
+        public int 装备当前耐久(string 槽位)
+        {
+            foreach (var e in 装备) if (e.槽位 == 槽位) return e.当前耐久;
+            return 0;
+        }
+
+        // 指定槽装备是否损坏（有装备、有耐久、且 当前耐久<=0）
+        public bool 装备已损坏(string 槽位)
+        {
+            string 标识 = 装备标识(槽位);
+            if (string.IsNullOrEmpty(标识)) return false;
+            if (有效最大耐久(标识) <= 0) return false;
+            foreach (var e in 装备) if (e.槽位 == 槽位) return e.当前耐久 <= 0;
+            return false;
+        }
+
+        // 扣指定槽位装备耐久（不掉出负数）
+        public void 扣装备耐久(string 槽位, int 量)
+        {
+            if (量 <= 0) return;
+            foreach (var e in 装备)
+                if (e.槽位 == 槽位 && 有效最大耐久(e.标识) > 0)
+                {
+                    e.当前耐久 = Math.Max(0, e.当前耐久 - 量);
+                    return;
+                }
+        }
+
+        // 扣指定标识装备耐久（任意槽位，用于按当前武器标识扣）
+        public void 扣装备标识耐久(string 标识, int 量)
+        {
+            if (量 <= 0 || string.IsNullOrEmpty(标识)) return;
+            foreach (var e in 装备)
+                if (e.标识 == 标识 && 有效最大耐久(e.标识) > 0)
+                {
+                    e.当前耐久 = Math.Max(0, e.当前耐久 - 量);
+                    return;
+                }
+        }
+
         private int 装备数值(Func<string, int> 加成)
         {
             if (加成 == null) return 0;
             int 总 = 0;
             foreach (var e in 装备)
-                if (!string.IsNullOrEmpty(e.标识)) 总 += 加成(e.标识);
+            {
+                if (string.IsNullOrEmpty(e.标识)) continue;
+                if (有效最大耐久(e.标识) > 0 && e.当前耐久 <= 0) continue;   // 耐久归零：该装备加成失效
+                总 += 加成(e.标识);
+            }
             return 总;
         }
 
@@ -877,6 +942,7 @@ using System.Collections.Generic;
             foreach (var e in 装备)
             {
                 if (e.词缀 == null) continue;
+                if (有效最大耐久(e.标识) > 0 && e.当前耐久 <= 0) continue;   // 损坏装备的词缀失效
                 foreach (var c in e.词缀)
                     if (词缀定义表.TryGetValue(c.标识, out var def) && def.属性枚举 == 属性) 总 += c.数值;
             }

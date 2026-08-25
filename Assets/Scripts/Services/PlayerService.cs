@@ -49,6 +49,7 @@ using UnityEngine;
             档案.形状解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? new 物品形状(物品.形状宽, 物品.形状高) : new 物品形状(1, 1);
             档案.重量解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.重量 : 1;
             档案.堆叠上限解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.堆叠上限 : 0;
+            档案.最大耐久解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.最大耐久 : 0;
             档案.词缀定义表 = 数据.词缀;
         }
 
@@ -196,6 +197,13 @@ using UnityEngine;
                     档案.放入网格堆叠(档案.背包[i]);
             for (int i = 档案.装备.Count - 1; i >= 0; i--)
                 if (档案.装备[i] == null || string.IsNullOrEmpty(档案.装备[i].槽位) || string.IsNullOrEmpty(档案.装备[i].标识)) 档案.装备.RemoveAt(i);
+            // 旧存档无耐久字段：有最大耐久的装备若当前耐久<=0（未记录），视为全新回满，避免旧档案全部损坏
+            foreach (var 堆叠 in 档案.背包)
+                if (堆叠 != null && 档案.有效最大耐久(堆叠.标识) > 0 && 堆叠.当前耐久 <= 0)
+                    堆叠.当前耐久 = 档案.有效最大耐久(堆叠.标识);
+            foreach (var e in 档案.装备)
+                if (e != null && !string.IsNullOrEmpty(e.标识) && 档案.有效最大耐久(e.标识) > 0 && e.当前耐久 <= 0)
+                    e.当前耐久 = 档案.有效最大耐久(e.标识);
             for (int i = 档案.已学技能.Count - 1; i >= 0; i--)
                 if (档案.已学技能[i] == null || string.IsNullOrEmpty(档案.已学技能[i].标识)) 档案.已学技能.RemoveAt(i);
             for (int i = 档案.任务.Count - 1; i >= 0; i--)

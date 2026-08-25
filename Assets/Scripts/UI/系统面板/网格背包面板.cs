@@ -15,7 +15,16 @@ using UnityEngine.InputSystem;
 public sealed class 网格背包面板 : 面板基类
 {
     [SerializeField] private RectTransform 网格容器;   // 网格区域（左上锚定；代码动态生成底座与物品）
-    [SerializeField] private float 格尺寸 = 150f;      // 单格像素（Inspector 可调）
+    [SerializeField] private int 背包列数 = 5;         // 临时测试：背包网格列数（>0 时覆盖 档案.网格列）
+    [SerializeField] private int 背包行数 = 10;        // 临时测试：背包网格行数（>0 时覆盖 档案.网格行）
+    [SerializeField] private float 仓库宽 = 900f;      // 仓库容器 UI 宽；>0 时 格尺寸 自动 = 仓库宽/背包列数（填满仓库宽）
+    [SerializeField] private float 格尺寸 = 150f;      // 单格像素（仓库宽=0 时手动；>0 时被 仓库宽/列数 覆盖）
+    [SerializeField] private float 格尺寸最小 = 60f;    // 格子尺寸下限（太小看不清/点不中）
+    [SerializeField] private float 格尺寸最大 = 180f;    // 格子尺寸上限
+    [SerializeField] private int 背包列数最小 = 1;       // 背包列数（格子宽）下限
+    [SerializeField] private int 背包列数最大 = 14;      // 背包列数上限（另受 仓库宽/格尺寸最小 约束）
+    [SerializeField] private int 背包行数最小 = 1;       // 背包行数下限
+    [SerializeField] private int 背包行数最大 = 20;      // 背包行数上限
     [SerializeField] private Color 底座色 = new Color(0f, 0f, 0f, 0.35f);          // 空格底图
     [SerializeField] private Color 线色 = new Color(1f, 1f, 1f, 0.55f);            // 网格分隔线
     [SerializeField] private float 线宽 = 4f;                                      // 分隔线宽（px）
@@ -33,6 +42,18 @@ public sealed class 网格背包面板 : 面板基类
     private 玩家档案 档案 => ServiceRegistry.Get<PlayerService>().档案;
     private DataService 数据 => ServiceRegistry.Get<DataService>();
     private 物品堆叠 选中;
+    private RectTransform 底座层, 线层, 物品层;   // 网格分层（底座Grid铺格 / 分隔线 / 物品与拖拽视觉），Content 滚动容器
+
+    // 清空某网格层的子物体：先脱离父（避免 GridLayoutGroup 的 LayoutRebuilder 访问已销毁的格），再销毁
+    private void 清空层(RectTransform 层)
+    {
+        if (层 == null) return;
+        for (int i = 层.childCount - 1; i >= 0; i--)
+        {
+            var 子 = 层.GetChild(i);
+            if (子 != null) { 子.SetParent(null); Destroy(子.gameObject); }
+        }
+    }
 
     // —— 拖拽状态 ——
     private 物品堆叠 拖拽源;
@@ -81,12 +102,28 @@ public sealed class 网格背包面板 : 面板基类
 
     // ===== 渲染 =====
 
-    // 重建整个网格：动态底座（网格列×行 个底格）→ 物品层
+    // 重建整个网格：底座层(GridLayoutGroup 铺格) → 线层 → 物品层；Content 由 ContentSizeFitter 依底座层撑开
     private void 刷新网格()
     {
         if (网格容器 == null) return;
-        清空(网格容器);
-        网格容器.sizeDelta = new Vector2(档案.网格列 * 格尺寸, 档案.网格行 * 格尺寸);
+        准备层();
+        // 临时测试：背包宽/高 上下限 clamp；格子尺寸 上下限 clamp（都来自 仓库宽/列数，避免溢出/过小）
+        int 有效列 = 背包列数 > 0 ? 背包列数 : 档案.网格列;
+        有效列 = Mathf.Clamp(有效列, 背包列数最小, 背包列数最大);
+        if (仓库宽 > 0 && 格尺寸最小 > 0) 有效列 = Mathf.Min(有效列, Mathf.FloorToInt(仓库宽 / 格尺寸最小));   // 宽上限：保证格尺寸不小于最小
+        档案.网格列 = 有效列;
+        档案.网格行 = Mathf.Clamp(背包行数 > 0 ? 背包行数 : 档案.网格行, 背包行数最小, 背包行数最大);
+        if (仓库宽 > 0 && 有效列 > 0)
+            格尺寸 = Mathf.Clamp(Mathf.FloorToInt(仓库宽 / 有效列), 格尺寸最小, 格尺寸最大);   // 格尺寸=仓库宽/列数（取整）再夹在 [最小,最大]
+        var cf = 网格容器.GetComponent<ContentSizeFitter>();
+        if (cf != null) cf.enabled = false;   // 禁用可能残留的 ContentSizeFitter，避免按子对象 preferred 把 Content 撑成 0
+        float 网格宽 = 档案.网格列 * 格尺寸, 网格高 = 档案.网格行 * 格尺寸;
+        float 视口宽 = 网格容器.parent != null ? ((RectTransform)网格容器.parent).rect.width : 网格宽;
+        网格容器.sizeDelta = new Vector2(Mathf.Max(视口宽, 网格宽), 网格高);   // 宽=视口宽（内容可水平居中），高=网格高（滚动）
+        底座层.sizeDelta = new Vector2(网格宽, 网格高);   // 三层都以 网格 为基准：顶部 + 水平居中 于 Content
+        线层.sizeDelta = new Vector2(网格宽, 网格高);
+        物品层.sizeDelta = new Vector2(网格宽, 网格高);
+        清空层(底座层); 清空层(线层); 清空层(物品层);
         for (int 行 = 0; 行 < 档案.网格行; 行++)
             for (int 列 = 0; 列 < 档案.网格列; 列++)
                 创建底格(列, 行);
@@ -97,15 +134,40 @@ public sealed class 网格背包面板 : 面板基类
         刷新信息();
     }
 
-    // 底座一格（底图 + 粗描边线形成网格；无交互）
+    // 首次准备网格分层：Content(网格容器) 下 底座层(GridLayoutGroup) / 线层 / 物品层；Content 挂 ContentSizeFitter 自撑
+    private void 准备层()
+    {
+        if (底座层 != null) return;
+        底座层 = 创建网格层("底座层");
+        线层 = 创建网格层("线层");
+        物品层 = 创建网格层("物品层");
+        // 注：不挂 GridLayoutGroup/ContentSizeFitter——底格手动定位、Content 尺寸手动撑，
+        //     避免 GridLayoutGroup 的 LayoutRebuilder 在销毁格后访问已销毁实例的 MissingReference 报错。
+    }
+
+    // 创建网格层（在 网格容器 下）：撑满 Content、pivot 左上——物品/线 以 网格 左上为原点绝对定位
+    private RectTransform 创建网格层(string 名字)
+    {
+        var 物体 = new GameObject(名字, typeof(RectTransform));
+        物体.transform.SetParent(网格容器, false);
+        var r = 物体.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(0.5f, 1f);
+        r.anchorMax = new Vector2(0.5f, 1f);
+        r.pivot = new Vector2(0.5f, 1f);
+        r.anchoredPosition = Vector2.zero;
+        r.sizeDelta = new Vector2(档案.网格列 * 格尺寸, 档案.网格行 * 格尺寸);   // 层 = 网格尺寸，顶部 + 水平居中 于 Content
+        return r;
+    }
+
+    // 底座一格（底图；由 GridLayoutGroup 自动铺格/对齐——不再手动定位）
     private void 创建底格(int 列, int 行)
     {
         var 物体 = new GameObject($"底格_{行}_{列}", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(网格容器, false);
+        物体.transform.SetParent(底座层, false);
         var 图 = 物体.GetComponent<Image>();
         图.color = 底座色;
         图.raycastTarget = false;   // 纯底图（不描边——分隔线由 画分隔线 统一绘制，格子在线内）
-        定位(物体.GetComponent<RectTransform>(), 列, 行, 1, 1);
+        定位(物体.GetComponent<RectTransform>(), 列, 行, 1, 1);   // 手动铺格（相对 底座层 左上）
     }
 
     // 画网格分隔线：横线（行+1 条）+ 竖线（列+1 条），线中心对齐格子边界——线只用于分离格子，格子底图在线内
@@ -116,7 +178,7 @@ public sealed class 网格背包面板 : 面板基类
         for (int i = 0; i <= 档案.网格列; i++)   // 竖线（含左右边界）
         {
             var 物体 = new GameObject($"竖线_{i}", typeof(RectTransform), typeof(Image));
-            物体.transform.SetParent(网格容器, false);
+            物体.transform.SetParent(线层, false);
             var 图 = 物体.GetComponent<Image>();
             图.color = 线色;
             图.raycastTarget = false;
@@ -130,7 +192,7 @@ public sealed class 网格背包面板 : 面板基类
         for (int j = 0; j <= 档案.网格行; j++)   // 横线（含上下边界）
         {
             var 物体 = new GameObject($"横线_{j}", typeof(RectTransform), typeof(Image));
-            物体.transform.SetParent(网格容器, false);
+            物体.transform.SetParent(线层, false);
             var 图 = 物体.GetComponent<Image>();
             图.color = 线色;
             图.raycastTarget = false;
@@ -153,7 +215,7 @@ public sealed class 网格背包面板 : 面板基类
         int 高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
         // ① 物品框：全尺寸贴格（品质底层色；选中 = 选中底色）
         var 物体 = new GameObject($"物品_{物品.名称}", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(网格容器, false);
+        物体.transform.SetParent(物品层, false);
         var 框图 = 物体.GetComponent<Image>();
         框图.color = 选中 == 堆叠 ? 选中底色 : 品质底层色(堆叠);
         var 边框 = 物体.AddComponent<Outline>();
@@ -200,6 +262,25 @@ public sealed class 网格背包面板 : 面板基类
         标签.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         标签.rectTransform.anchoredPosition = Vector2.zero;
         标签.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸 - 物品边距 * 2f, 高 * 格尺寸 - 物品边距 * 2f);
+        // 耐久：有最大耐久的物品在格底显示 当前/最大；损坏变红
+        int 耐久上限 = 档案.有效最大耐久(堆叠.标识);
+        if (耐久上限 > 0)
+        {
+            var 耐体 = new GameObject("耐久", typeof(RectTransform), typeof(TextMeshProUGUI));
+            耐体.transform.SetParent(物体.transform, false);
+            var 耐 = 耐体.GetComponent<TextMeshProUGUI>();
+            耐.text = 堆叠.当前耐久 <= 0 ? "损坏" : $"{堆叠.当前耐久}/{耐久上限}";
+            耐.fontSize = 22f;
+            耐.alignment = TextAlignmentOptions.Bottom;
+            耐.color = 堆叠.当前耐久 <= 0 ? new Color(1f, 0.5f, 0.4f) : new Color(0.92f, 0.92f, 0.92f);
+            耐.raycastTarget = false;
+            var 耐矩 = 耐体.GetComponent<RectTransform>();
+            耐矩.anchorMin = new Vector2(0, 0);
+            耐矩.anchorMax = new Vector2(1, 0);
+            耐矩.pivot = new Vector2(0.5f, 0);
+            耐矩.anchoredPosition = new Vector2(0, 2f);
+            耐矩.sizeDelta = new Vector2(-8f, 26f);
+        }
         // ④ 点击（非按钮） + 拖拽（挂在物品框上）
         var 点击 = 物体.AddComponent<物品点击>();
         点击.堆叠 = 堆叠;
@@ -277,7 +358,7 @@ public sealed class 网格背包面板 : 面板基类
     {
         // ① 跟手代理
         var 物体 = new GameObject("拖拽代理", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(网格容器, false);
+        物体.transform.SetParent(物品层, false);
         var 图 = 物体.GetComponent<Image>();
         图.raycastTarget = false;
         // 代理优先显示挂载图标；无图则用品质底色块（半透明跟手）
@@ -310,7 +391,7 @@ public sealed class 网格背包面板 : 面板基类
         标签.rectTransform.offsetMax = Vector2.zero;
         // ② 落点投影（绿/红，贴格）
         var 投体 = new GameObject("落点投影", typeof(RectTransform), typeof(Image));
-        投体.transform.SetParent(网格容器, false);
+        投体.transform.SetParent(物品层, false);
         落点投影 = 投体.GetComponent<Image>();
         落点投影.color = 放置可色;
         落点投影.raycastTarget = false;
@@ -322,7 +403,7 @@ public sealed class 网格背包面板 : 面板基类
         更新代理尺寸();
         // ③ 原位置半透明影子（虚影：物品将离开的位置；内缩尺寸与物品一致）
         var 影体 = new GameObject("原位置影子", typeof(RectTransform), typeof(Image));
-        影体.transform.SetParent(网格容器, false);
+        影体.transform.SetParent(物品层, false);
         var 影图 = 影体.GetComponent<Image>();
         影图.color = new Color(0.65f, 0.65f, 0.7f, 0.3f);   // 半透明灰
         影图.raycastTarget = false;
@@ -339,17 +420,19 @@ public sealed class 网格背包面板 : 面板基类
         拖拽代理.SetAsLastSibling();   // 代理置顶渲染——否则同格的落点投影（后创建）会盖住它
     }
 
-    // 屏幕点 → 相对容器左下（**逻辑单位**，除以 Canvas 缩放——与 格尺寸 同基准，任何分辨率/缩放下都准）
+    // 屏幕点 → 相对容器左下（**逻辑单位**，除以 Canvas 缩放——与 格尺寸 同基准，任何分辨率/缩放下都准）。
+    // 以 物品层(=网格尺寸) 为基准：内容在 Content 里居中时仍与物品坐标对齐，拖拽不错位。
     private bool 屏幕到容器相对(PointerEventData 事件, out Vector2 相对, out Vector2 容器尺寸)
     {
-        容器尺寸 = 网格容器.rect.size;
-        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(网格容器, 事件.position, 事件.pressEventCamera, out var 世界点))
+        var 基准 = 物品层 != null ? 物品层 : 网格容器;
+        容器尺寸 = 基准.rect.size;
+        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(基准, 事件.position, 事件.pressEventCamera, out var 世界点))
         {
             相对 = Vector2.zero;
             return false;
         }
-        var 原点 = 网格容器.TransformPoint(new Vector3(-网格容器.rect.width * 网格容器.pivot.x, -网格容器.rect.height * 网格容器.pivot.y, 0f));
-        var 缩放 = 网格容器.lossyScale;
+        var 原点 = 基准.TransformPoint(new Vector3(-基准.rect.width * 基准.pivot.x, -基准.rect.height * 基准.pivot.y, 0f));
+        var 缩放 = 基准.lossyScale;
         相对 = new Vector2((世界点.x - 原点.x) / 缩放.x, (世界点.y - 原点.y) / 缩放.y);   // 逻辑单位（x 向右、y 向上）
         return true;
     }
@@ -536,9 +619,11 @@ public sealed class 网格背包面板 : 面板基类
         string 操作提示 = 物品.恢复量 > 0 ? "双击使用" : (!string.IsNullOrEmpty(物品.槽位) ? "双击装备" : "");
         int 上限 = 档案.堆叠上限(选中.标识);
         string 堆叠文本 = 上限 > 1 ? $"堆叠 {选中.数量}/{上限}" : $"数量 {选中.数量}";
+        int 耐上 = 档案.有效最大耐久(选中.标识);
+        string 耐文本 = 耐上 > 0 ? $" · 耐久 {选中.当前耐久}/{耐上}" : "";
         string 品质名称行 = 物品工具.品质名称(有效品质(选中, 物品), 物品.名称);
         设文本(详情文本,
-            $"<b>{品质名称行}</b>（{物品.类型}）\n{物品.描述}\n{数值}\n形状 {形状.宽}×{形状.高} · 重量 {物品.重量} · 价值 {物品.价值} · {堆叠文本}\n{操作提示}");
+            $"<b>{品质名称行}</b>（{物品.类型}）\n{物品.描述}\n{数值}\n形状 {形状.宽}×{形状.高} · 重量 {物品.重量} · 价值 {物品.价值} · {堆叠文本}{耐文本}\n{操作提示}");
     }
 
     // ===== 内部组件：非按钮点击 + 拖拽 =====
