@@ -165,19 +165,32 @@ using System.Collections.Generic;
         }
 
         // 把 物品集 全部摆进 (区域列,区域行,区域宽,区域高) 区域：① 先试整体平移(保持相对位置) ② 放不下再回溯。返回实际位置；无解 null
-        private List<(物品堆叠, int, int)> 布局摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略)
+        // 禁区矩形 (禁列,禁行,禁宽,禁高)：目标物品不能摆进该区域（用于 A 新位置占格，避免搬回原位时撞 A）。禁宽<=0 表示无禁区。
+        private List<(物品堆叠, int, int)> 布局摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略,
+            int 禁列 = -1, int 禁行 = -1, int 禁宽 = 0, int 禁高 = 0)
         {
             if (物品集 == null || 物品集.Count == 0) return new List<(物品堆叠, int, int)>();
-            var 平移 = 平移布局(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略);
+            var 平移 = 平移布局(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 禁列, 禁行, 禁宽, 禁高);
             if (平移 != null) return 平移;   // 符合直觉：尽量保持相对位置整体平移
             物品集.Sort((a, b) => 堆叠面积(b).CompareTo(堆叠面积(a)));   // 回溯：面积大的先放
             var 已放 = new List<物品堆叠>();
             var 结果 = new List<(物品堆叠, int, int)>();
-            return 递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果) ? 结果 : null;
+            return 递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果, 禁列, 禁行, 禁宽, 禁高) ? 结果 : null;
+        }
+
+        // 换位安置（固定位置互换）：目标物品整体搬回 A 原位区（保持相对位置）。
+        // 搬得下（大换小）→ 换；搬不下（小换大）→ 不允许。暂不做小换大。
+        // 禁区 = A 新位置（目标区）：目标物品搬回原位时不能占 A 即将落位的格子（否则与 A 重叠）。
+        private List<(物品堆叠, int, int)> 区域安置(List<物品堆叠> 物品集, 物品堆叠 A, int 原宽, int 原高, 物品堆叠 忽略,
+            int 禁列 = -1, int 禁行 = -1, int 禁宽 = 0, int 禁高 = 0)
+        {
+            if (物品集 == null || 物品集.Count == 0) return new List<(物品堆叠, int, int)>();
+            return 布局摆进(物品集, A.列, A.行, 原宽, 原高, 忽略, 禁列, 禁行, 禁宽, 禁高);
         }
 
         // 整体平移：以 物品集 最小列/行为参考，把相对位置平移到 区域；全部放得下才返回，否则 null
-        private List<(物品堆叠, int, int)> 平移布局(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略)
+        private List<(物品堆叠, int, int)> 平移布局(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略,
+            int 禁列 = -1, int 禁行 = -1, int 禁宽 = 0, int 禁高 = 0)
         {
             int minCol = int.MaxValue, minRow = int.MaxValue;
             foreach (var s in 物品集) { if (s.列 < minCol) minCol = s.列; if (s.行 < minRow) minRow = s.行; }
@@ -190,6 +203,7 @@ using System.Collections.Generic;
                 int w = s.旋转 ? 形状.高 : 形状.宽;
                 int h = s.旋转 ? 形状.宽 : 形状.高;
                 if (nc < 区域列 || nr < 区域行 || nc + w > 区域列 + 区域宽 || nr + h > 区域行 + 区域高) return null;   // 越出原位区
+                if (禁宽 > 0 && 与禁区重叠(nc, nr, w, h, 禁列, 禁行, 禁宽, 禁高)) return null;   // 落入 A 新位置
                 if (与已摆重叠(s, nc, nr, 结果)) return null;   // 相对位置内部不自叠
                 结果.Add((s, nc, nr));
             }
@@ -198,13 +212,18 @@ using System.Collections.Generic;
             return 结果;
         }
 
+        // 矩形 (列,行,宽,高) 是否与禁区矩形重叠
+        private bool 与禁区重叠(int 列, int 行, int 宽, int 高, int 禁列, int 禁行, int 禁宽, int 禁高)
+            => 列 < 禁列 + 禁宽 && 列 + 宽 > 禁列 && 行 < 禁行 + 禁高 && 行 + 高 > 禁行;
+
         private int 堆叠面积(物品堆叠 堆叠)
         {
             var 形状 = 形状解析(堆叠.标识);
             return (堆叠.旋转 ? 形状.高 : 形状.宽) * (堆叠.旋转 ? 形状.宽 : 形状.高);
         }
 
-        private bool 递归摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略, List<物品堆叠> 已放, List<(物品堆叠, int, int)> 结果)
+        private bool 递归摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略, List<物品堆叠> 已放, List<(物品堆叠, int, int)> 结果,
+            int 禁列 = -1, int 禁行 = -1, int 禁宽 = 0, int 禁高 = 0)
         {
             if (已放.Count >= 物品集.Count) return true;
             var 物品 = 物品集[已放.Count];   // 按 已放 计数 顺序 处理（调用前已 面积 降序）
@@ -216,11 +235,12 @@ using System.Collections.Generic;
             for (int r = 区域行; r + 高 <= 区域行 + 区域高; r++)
                 for (int c = 区域列; c + 宽 <= 区域列 + 区域宽; c++)
                 {
+                    if (禁宽 > 0 && 与禁区重叠(c, r, 宽, 高, 禁列, 禁行, 禁宽, 禁高)) continue;   // 落入 A 新位置
                     if (!可放置忽略多个(物品.标识, c, r, 物品.旋转, 未摆, 忽略)) continue;
                     if (与已摆重叠(物品, c, r, 结果)) continue;   // 已摆放目标在 A 原位的新位置占位，避免互相重叠
                     已放.Add(物品);
                     结果.Add((物品, c, r));
-                    if (递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果)) return true;
+                    if (递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果, 禁列, 禁行, 禁宽, 禁高)) return true;
                     已放.RemoveAt(已放.Count - 1);
                     结果.RemoveAt(结果.Count - 1);
                 }
@@ -255,7 +275,7 @@ using System.Collections.Generic;
             if (!可放置忽略多个(A.标识, 目标列, 目标行, 目标旋转, 目标, A)) return false;   // A 能否进目标区
             int 原宽 = A.旋转 ? 形状.高 : 形状.宽;   // A 原位区 尺寸（按 A 当前旋转）
             int 原高 = A.旋转 ? 形状.宽 : 形状.高;
-            var 布局 = 布局摆进(目标, A.列, A.行, 原宽, 原高, A);
+            var 布局 = 区域安置(目标, A, 原宽, 原高, A, 目标列, 目标行, 宽, 高);   // 禁区=A 新位置：目标物品搬回原位时不能占 A 将落位的格子
             if (布局 == null) return false;
             return 区域互换后安全(A, 目标列, 目标行, 目标旋转, 目标, 布局);   // 与 区域互换 的"布局安全()"判据一致——投影绿=执行必成功
         }
@@ -286,7 +306,7 @@ using System.Collections.Generic;
             if (!可放置忽略多个(A.标识, 目标列, 目标行, 目标旋转, 目标, A)) return false;
             int 原宽 = A.旋转 ? 形状.高 : 形状.宽;
             int 原高 = A.旋转 ? 形状.宽 : 形状.高;
-            var 布局 = 布局摆进(目标, A.列, A.行, 原宽, 原高, A);
+            var 布局 = 区域安置(目标, A, 原宽, 原高, A, 目标列, 目标行, 宽, 高);   // 禁区=A 新位置：目标物品搬回原位时不能占 A 将落位的格子
             if (布局 == null) return false;
             // 备份 参与者(含 形状/位置) 用于回滚
             var 备份 = new List<(物品堆叠, int, int, bool)>();

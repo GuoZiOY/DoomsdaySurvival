@@ -62,7 +62,6 @@ public sealed class 网格背包面板 : 面板基类
     private Image 落点投影;           // 网格上的绿/红落点指示
     private GameObject 原位置影子;    // 原位置的半透明虚影
     private bool 拖拽旋转;
-    private Vector2 抓取偏移;         // 抓起时 鼠标相对物品左上角的偏移（格，浮点）——物品跟随鼠标移动量（大面积物品平移一格即一格）
     private int 落点列, 落点行;        // 拖拽中最后有效投影格（放下用，不随松手重算）
     private bool 落点有效;            // 投影当前是否有效（在网格内）
 
@@ -401,19 +400,12 @@ public sealed class 网格背包面板 : 面板基类
 
     // ===== 拖拽交互 =====
 
-    // 按下进入拖拽：记录源物品 + 抓取偏移（鼠标相对物品左上角）+ 创建视觉，立即开始
+    // 按下进入拖拽：记录源物品 + 创建视觉（代理/投影/影子），立即开始
     private void 开始拖拽(物品堆叠 堆叠, PointerEventData 事件)
     {
         拖拽源 = 堆叠;
         拖拽旋转 = 堆叠.旋转;
         落点有效 = false;
-        // 抓取偏移：鼠标相对物品左上角的偏移（格）——拖拽时物品保持该相对位置跟随鼠标移动量
-        if (屏幕到容器相对(事件, out var 抓取相对, out var 抓取尺寸))
-        {
-            float 抓取顶 = 抓取尺寸.y - 抓取相对.y;
-            抓取偏移 = new Vector2(抓取相对.x / 格尺寸 - 堆叠.列, 抓取顶 / 格尺寸 - 堆叠.行);
-        }
-        else 抓取偏移 = Vector2.zero;
         创建拖拽视觉(堆叠);
         拖拽移动(事件);
     }
@@ -501,11 +493,11 @@ public sealed class 网格背包面板 : 面板基类
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
             return;
         }
-        // 物品左上角格 = 鼠标位置 - 抓取偏移（物品跟随鼠标移动量，抓哪跟哪——大面积物品平移一格即一格）
+        // 投影格 = 物品中心对齐（四舍五入：偏差对称 ±半格内，1×1 精确——大物体不错位）
         var (物宽, 物高) = 档案.物品占格(拖拽源);
         float 相对顶 = 尺寸.y - 相对.y;
-        int 列 = Mathf.RoundToInt(相对.x / 格尺寸 - 抓取偏移.x);
-        int 行 = Mathf.RoundToInt(相对顶 / 格尺寸 - 抓取偏移.y);
+        int 列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
+        int 行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
         bool 网格内 = 列 >= 0 && 行 >= 0 && 列 < 档案.网格列 && 行 < 档案.网格行;
         if (!网格内)
         {
@@ -515,14 +507,12 @@ public sealed class 网格背包面板 : 面板基类
             return;   // 拖出网格：隐藏代理与落点
         }
         落点有效 = true; 落点列 = 列; 落点行 = 行;   // 记录本次投影格（放下用）
-        // ① 物品图片：中心 = 同一物品左上角 + 半尺寸——物品图与投影同心、连续跟手
+        // ① 物品图片：自由跟手（中心 = 鼠标位置，随鼠标连续移动）
         拖拽代理.gameObject.SetActive(true);
         拖拽代理.anchorMin = new Vector2(0, 1);
         拖拽代理.anchorMax = new Vector2(0, 1);
-        拖拽代理.pivot = new Vector2(0.5f, 0.5f);
-        拖拽代理.anchoredPosition = new Vector2(
-            (相对.x / 格尺寸 - 抓取偏移.x) * 格尺寸 + 物宽 * 格尺寸 / 2f,
-            -(相对顶 / 格尺寸 - 抓取偏移.y) * 格尺寸 - 物高 * 格尺寸 / 2f);
+        拖拽代理.pivot = new Vector2(0.5f, 0.5f);   // 中心 = 鼠标
+        拖拽代理.anchoredPosition = new Vector2(相对.x, 相对.y - 尺寸.y);   // 相对左下 → 左上锚点（y 向下）
         // ② 落点投影：吸附网格贴格（鼠标在格内投影不移动，跨格才跳；绿/红/蓝指示落格合法性：可放/不可放/可合并）
         var 目标 = 该格物品(列, 行);
         bool 可放;
