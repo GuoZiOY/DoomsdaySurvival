@@ -62,6 +62,9 @@ using UnityEngine;
             背.堆叠上限解析 = 档案.堆叠上限解析;
             背.有效最大耐久解析 = 标识 => 档案.有效最大耐久(标识);
             背.重量解析 = 档案.重量解析;
+            // 容器服务 的解析器也同步（打开容器视图时注入）
+            if (ServiceRegistry.已注册<容器服务>())
+                ServiceRegistry.Get<容器服务>().接线解析器(档案);
         }
 
         // 新游戏：先做开局构筑（职业/自由点/天赋），再进入游戏
@@ -206,6 +209,13 @@ using UnityEngine;
             for (int i = 0; i < 档案.背包.Count; i++)
                 if (档案.背包[i] != null && 档案.背包[i].列 < 0)
                     档案.放入网格堆叠(档案.背包[i]);
+            // 迁移：容器类物品初始化内部网格（旧档 容器物品=null → 建空容器）
+            if (ServiceRegistry.已注册<容器服务>())
+            {
+                var 容器 = ServiceRegistry.Get<容器服务>();
+                foreach (var 堆叠 in 档案.背包)
+                    if (堆叠 != null) 容器.初始化容器(堆叠);
+            }
             for (int i = 档案.装备.Count - 1; i >= 0; i--)
                 if (档案.装备[i] == null || string.IsNullOrEmpty(档案.装备[i].槽位) || string.IsNullOrEmpty(档案.装备[i].标识)) 档案.装备.RemoveAt(i);
             // 旧存档无耐久字段：有最大耐久的装备若当前耐久<=0（未记录），视为全新回满，避免旧档案全部损坏

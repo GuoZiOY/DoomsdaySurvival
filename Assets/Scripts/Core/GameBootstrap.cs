@@ -39,6 +39,11 @@ using UnityEngine;
             玩家.初始化();
             ServiceRegistry.Register(玩家);
 
+            // —— 容器（塔科夫式嵌套容器）——
+            var 容器 = new 容器服务 { 物品数据解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物) ? 物 : null };
+            容器.接线解析器(玩家.档案);   // PlayerService 已初始化，补接网格解析器
+            ServiceRegistry.Register(容器);
+
             // —— 对话引擎（剧情驱动）——
             var 对话 = new DialogueService(事件, 数据, 玩家);
             ServiceRegistry.Register(对话);

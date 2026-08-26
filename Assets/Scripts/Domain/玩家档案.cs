@@ -13,6 +13,10 @@ using System.Collections.Generic;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
+        // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
+        public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
+        public int 容器行;          // 实例网格行数
+        public List<物品堆叠> 容器物品;   // 容器内部物品（与 背包服务.背包 同构）；null = 非容器/空容器
 
         public 物品堆叠() { }
         public 物品堆叠(string 标识, int 数量) { this.标识 = 标识; this.数量 = 数量; }
@@ -272,16 +276,27 @@ using System.Collections.Generic;
             }
         }
 
-        // 负重占用（当前总重）
+        // 负重占用（当前总重）：物品重量×数量 + 容器内部物品重量（递归，2 层嵌套）
         public int 负重占用
         {
             get
             {
                 int 总 = 0;
                 foreach (var 堆叠 in 背包)
-                    if (堆叠 != null && 重量解析 != null) 总 += 重量解析(堆叠.标识) * 堆叠.数量;
+                    if (堆叠 != null) 总 += 堆叠负重(堆叠, 0);
                 return 总;
             }
+        }
+
+        // 单堆叠负重：自身 + 容器内部（深度 < 2 才继续，防套娃）
+        private int 堆叠负重(物品堆叠 堆叠, int 深度)
+        {
+            if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return 0;
+            int 总 = 重量解析 != null ? 重量解析(堆叠.标识) * 堆叠.数量 : 0;
+            if (堆叠.容器物品 != null && 深度 < 2)
+                foreach (var 内 in 堆叠.容器物品)
+                    if (内 != null) 总 += 堆叠负重(内, 深度 + 1);
+            return 总;
         }
 
         public bool 超重 => 负重占用 > 负重上限;
