@@ -477,6 +477,22 @@ using System.Collections.Generic;
             return true;
         }
 
+        // 与 可放置 相同，但可同时忽略两个堆叠（用于换位判定：两物品互换位置时双方都不算占格）
+        private bool 可放置忽略两个(string 标识, int 列, int 行, bool 旋转, 物品堆叠 排除A, 物品堆叠 排除B)
+        {
+            if (形状解析 == null) return false;
+            var 形状 = 形状解析(标识);
+            int 宽 = 旋转 ? 形状.高 : 形状.宽;
+            int 高 = 旋转 ? 形状.宽 : 形状.高;
+            if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
+            foreach (var 堆叠 in 背包)
+            {
+                if (堆叠 == null || 堆叠 == 排除A || 堆叠 == 排除B || 堆叠.列 < 0) continue;
+                if (占据(堆叠, 列, 行, 宽, 高)) return false;
+            }
+            return true;
+        }
+
         // 两物品是否重叠（占用格子相交）
         private bool 占据(物品堆叠 已有, int 列, int 行, int 宽, int 高)
         {
@@ -502,7 +518,9 @@ using System.Collections.Generic;
         {
             if (甲 == null || 乙 == null || 甲 == 乙) return false;
             if (甲.列 < 0 || 乙.列 < 0 || 形状解析 == null) return false;
-            return 可放置(乙.标识, 甲.列, 甲.行, 乙.旋转, 乙) && 可放置(甲.标识, 乙.列, 乙.行, 甲.旋转, 甲);
+            // 换位 = 两物品都离开原位互换：判定时需同时忽略 甲、乙（否则放对方格子时会与对方重叠而误判失败）
+            return 可放置忽略两个(乙.标识, 甲.列, 甲.行, 乙.旋转, 甲, 乙)
+                && 可放置忽略两个(甲.标识, 乙.列, 乙.行, 甲.旋转, 甲, 乙);
         }
 
         // 换位（交换两物品的位置与旋转）：互换后两件都必须放得下才执行
@@ -512,6 +530,185 @@ using System.Collections.Generic;
             int 列 = 甲.列; 甲.列 = 乙.列; 乙.列 = 列;
             int 行 = 甲.行; 甲.行 = 乙.行; 乙.行 = 行;
             bool 转 = 甲.旋转; 甲.旋转 = 乙.旋转; 乙.旋转 = 转;
+            return true;
+        }
+
+        // ================= 区域交换（整体换位） =================
+
+        // 收集与 (列,行,宽,高) 相交的背包物品
+        public List<物品堆叠> 区域内物品(int 列, int 行, int 宽, int 高)
+        {
+            var 结果 = new List<物品堆叠>();
+            if (形状解析 == null) return 结果;
+            foreach (var 堆叠 in 背包)
+            {
+                if (堆叠 == null || 堆叠.列 < 0) continue;
+                var 形状 = 形状解析(堆叠.标识);
+                int 物宽 = 堆叠.旋转 ? 形状.高 : 形状.宽;
+                int 物高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
+                if (列 < 堆叠.列 + 物宽 && 列 + 宽 > 堆叠.列 && 行 < 堆叠.行 + 物高 && 行 + 高 > 堆叠.行) 结果.Add(堆叠);
+            }
+            return 结果;
+        }
+
+        // 可放置，但忽略 忽略集（移走的物品）+ 忽略A（自身原位）
+        private bool 可放置忽略多个(string 标识, int 列, int 行, bool 旋转, List<物品堆叠> 忽略集, 物品堆叠 忽略A)
+        {
+            if (形状解析 == null) return false;
+            var 形状 = 形状解析(标识);
+            int 宽 = 旋转 ? 形状.高 : 形状.宽;
+            int 高 = 旋转 ? 形状.宽 : 形状.高;
+            if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
+            foreach (var 堆叠 in 背包)
+            {
+                if (堆叠 == null || 堆叠 == 忽略A || 堆叠.列 < 0) continue;
+                if (忽略集 != null && 忽略集.Contains(堆叠)) continue;
+                if (占据(堆叠, 列, 行, 宽, 高)) return false;
+            }
+            return true;
+        }
+
+        // 把 物品集 全部摆进 (区域列,区域行,区域宽,区域高) 区域：① 先试整体平移(保持相对位置) ② 放不下再回溯。返回实际位置；无解 null
+        private List<(物品堆叠, int, int)> 布局摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略)
+        {
+            if (物品集 == null || 物品集.Count == 0) return new List<(物品堆叠, int, int)>();
+            var 平移 = 平移布局(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略);
+            if (平移 != null) return 平移;   // 符合直觉：尽量保持相对位置整体平移
+            物品集.Sort((a, b) => 堆叠面积(b).CompareTo(堆叠面积(a)));   // 回溯：面积大的先放
+            var 已放 = new List<物品堆叠>();
+            var 结果 = new List<(物品堆叠, int, int)>();
+            return 递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果) ? 结果 : null;
+        }
+
+        // 整体平移：以 物品集 最小列/行为参考，把相对位置平移到 区域；全部放得下才返回，否则 null
+        private List<(物品堆叠, int, int)> 平移布局(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略)
+        {
+            int minCol = int.MaxValue, minRow = int.MaxValue;
+            foreach (var s in 物品集) { if (s.列 < minCol) minCol = s.列; if (s.行 < minRow) minRow = s.行; }
+            var 结果 = new List<(物品堆叠, int, int)>();
+            foreach (var s in 物品集)
+            {
+                int nc = 区域列 + (s.列 - minCol);
+                int nr = 区域行 + (s.行 - minRow);
+                var 形状 = 形状解析(s.标识);
+                int w = s.旋转 ? 形状.高 : 形状.宽;
+                int h = s.旋转 ? 形状.宽 : 形状.高;
+                if (nc < 区域列 || nr < 区域行 || nc + w > 区域列 + 区域宽 || nr + h > 区域行 + 区域高) return null;   // 越出原位区
+                if (与已摆重叠(s, nc, nr, 结果)) return null;   // 相对位置内部不自叠
+                结果.Add((s, nc, nr));
+            }
+            foreach (var (s, nc, nr) in 结果)
+                if (!可放置忽略多个(s.标识, nc, nr, s.旋转, 物品集, 忽略)) return null;   // 与 非目标物品 重叠
+            return 结果;
+        }
+
+        private int 堆叠面积(物品堆叠 堆叠)
+        {
+            var 形状 = 形状解析(堆叠.标识);
+            return (堆叠.旋转 ? 形状.高 : 形状.宽) * (堆叠.旋转 ? 形状.宽 : 形状.高);
+        }
+
+        private bool 递归摆进(List<物品堆叠> 物品集, int 区域列, int 区域行, int 区域宽, int 区域高, 物品堆叠 忽略, List<物品堆叠> 已放, List<(物品堆叠, int, int)> 结果)
+        {
+            if (已放.Count >= 物品集.Count) return true;
+            var 物品 = 物品集[已放.Count];   // 按 已放 计数 顺序 处理（调用前已 面积 降序）
+            var 形状 = 形状解析(物品.标识);
+            int 宽 = 物品.旋转 ? 形状.高 : 形状.宽;
+            int 高 = 物品.旋转 ? 形状.宽 : 形状.高;
+            var 未摆 = new List<物品堆叠>();   // 未摆放的目标（仍在目标区）：忽略；已摆放的按新位置占位（用 结果 检查）
+            foreach (var s in 物品集) if (!已放.Contains(s)) 未摆.Add(s);
+            for (int r = 区域行; r + 高 <= 区域行 + 区域高; r++)
+                for (int c = 区域列; c + 宽 <= 区域列 + 区域宽; c++)
+                {
+                    if (!可放置忽略多个(物品.标识, c, r, 物品.旋转, 未摆, 忽略)) continue;
+                    if (与已摆重叠(物品, c, r, 结果)) continue;   // 已摆放目标在 A 原位的新位置占位，避免互相重叠
+                    已放.Add(物品);
+                    结果.Add((物品, c, r));
+                    if (递归摆进(物品集, 区域列, 区域行, 区域宽, 区域高, 忽略, 已放, 结果)) return true;
+                    已放.RemoveAt(已放.Count - 1);
+                    结果.RemoveAt(结果.Count - 1);
+                }
+            return false;
+        }
+
+        // 新物品 (列,行) 是否与 已摆放 目标（结果里的新位置）重叠
+        private bool 与已摆重叠(物品堆叠 a, int 列, int 行, List<(物品堆叠, int, int)> 已摆)
+        {
+            var 形状a = 形状解析(a.标识);
+            int aw = a.旋转 ? 形状a.高 : 形状a.宽;
+            int ah = a.旋转 ? 形状a.宽 : 形状a.高;
+            foreach (var (b, 列b, 行b) in 已摆)
+            {
+                var 形状b = 形状解析(b.标识);
+                int bw = b.旋转 ? 形状b.高 : 形状b.宽;
+                int bh = b.旋转 ? 形状b.宽 : 形状b.高;
+                if (列 < 列b + bw && 列 + aw > 列b && 行 < 行b + bh && 行 + ah > 行b) return true;
+            }
+            return false;
+        }
+
+        // 区域交换预测：拖 A 到 (目标列,目标行)，按 目标旋转 落位——空区=移动可行；目标区物品能整体搬回 A 原位才可真换位
+        public bool 区域可互换(物品堆叠 A, int 目标列, int 目标行, bool 目标旋转)
+        {
+            if (A == null || A.列 < 0 || 形状解析 == null) return false;
+            var 形状 = 形状解析(A.标识);
+            int 宽 = 目标旋转 ? 形状.高 : 形状.宽;
+            int 高 = 目标旋转 ? 形状.宽 : 形状.高;
+            var 目标 = 区域内物品(目标列, 目标行, 宽, 高).FindAll(b => b != A);
+            if (目标.Count == 0) return 可放置(A.标识, 目标列, 目标行, 目标旋转, A);   // 空区：移动
+            if (!可放置忽略多个(A.标识, 目标列, 目标行, 目标旋转, 目标, A)) return false;   // A 能否进目标区
+            int 原宽 = A.旋转 ? 形状.高 : 形状.宽;   // A 原位区 尺寸（按 A 当前旋转）
+            int 原高 = A.旋转 ? 形状.宽 : 形状.高;
+            return 布局摆进(目标, A.列, A.行, 原宽, 原高, A) != null;   // 目标区物品能否整体搬回 A 原位
+        }
+
+        // 区域交换：A 按 目标旋转 落 目标区；原目标区物品 全部 搬回 A 原位区（不改姿态）。执行前布局，失败/不安全则回滚
+        public bool 区域互换(物品堆叠 A, int 目标列, int 目标行, bool 目标旋转)
+        {
+            if (A == null || A.列 < 0 || 形状解析 == null) return false;
+            var 形状 = 形状解析(A.标识);
+            int 宽 = 目标旋转 ? 形状.高 : 形状.宽;
+            int 高 = 目标旋转 ? 形状.宽 : 形状.高;
+            var 目标 = 区域内物品(目标列, 目标行, 宽, 高).FindAll(b => b != A);
+            if (目标.Count == 0) return 移动堆叠(A, 目标列, 目标行, 目标旋转);   // 空区：移动
+            if (!可放置忽略多个(A.标识, 目标列, 目标行, 目标旋转, 目标, A)) return false;
+            int 原宽 = A.旋转 ? 形状.高 : 形状.宽;
+            int 原高 = A.旋转 ? 形状.宽 : 形状.高;
+            var 布局 = 布局摆进(目标, A.列, A.行, 原宽, 原高, A);
+            if (布局 == null) return false;
+            // 备份 参与者(含 形状/位置) 用于回滚
+            var 备份 = new List<(物品堆叠, int, int, bool)>();
+            备份.Add((A, A.列, A.行, A.旋转));
+            foreach (var 物品 in 目标) 备份.Add((物品, 物品.列, 物品.行, 物品.旋转));
+            A.列 = 目标列; A.行 = 目标行; A.旋转 = 目标旋转;   // A 落 目标区
+            foreach (var (物品, 列, 行) in 布局) { 物品.列 = 列; 物品.行 = 行; }   // 目标物品 搬回 A 原位
+            if (布局安全()) return true;   // 全网格校验：不越界、两两不重叠
+            foreach (var (物品, 列, 行, 旋转) in 备份) { 物品.列 = 列; 物品.行 = 行; 物品.旋转 = 旋转; }   // 回滚
+            return false;
+        }
+
+        // 校验整个背包布局：所有物品不越界、两两不重叠（区域交换后安全验证）
+        public bool 布局安全()
+        {
+            if (形状解析 == null) return false;
+            var 物品 = new List<物品堆叠>();
+            foreach (var s in 背包) if (s != null && s.列 >= 0) 物品.Add(s);
+            for (int i = 0; i < 物品.Count; i++)
+            {
+                var a = 物品[i];
+                var 形状a = 形状解析(a.标识);
+                int aw = a.旋转 ? 形状a.高 : 形状a.宽;
+                int ah = a.旋转 ? 形状a.宽 : 形状a.高;
+                if (a.列 < 0 || a.行 < 0 || a.列 + aw > 网格列 || a.行 + ah > 网格行) return false;
+                for (int j = i + 1; j < 物品.Count; j++)
+                {
+                    var b = 物品[j];
+                    var 形状b = 形状解析(b.标识);
+                    int bw = b.旋转 ? 形状b.高 : 形状b.宽;
+                    int bh = b.旋转 ? 形状b.宽 : 形状b.高;
+                    if (a.列 < b.列 + bw && a.列 + aw > b.列 && a.行 < b.行 + bh && a.行 + ah > b.行) return false;   // 重叠
+                }
+            }
             return true;
         }
 
