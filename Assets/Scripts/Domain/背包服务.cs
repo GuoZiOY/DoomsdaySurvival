@@ -117,6 +117,17 @@ using System.Collections.Generic;
             return 堆叠.旋转 ? (形状.高, 形状.宽) : (形状.宽, 形状.高);
         }
 
+        // 寻找第一个可放置空格（遍历所有起点；供"拖到容器物品上自动存入"使用）。无空位返回 null
+        public (int 列, int 行)? 寻找可放置格(物品堆叠 堆叠)
+        {
+            if (堆叠 == null) return null;
+            var (宽, 高) = 物品占格(堆叠);
+            for (int 行 = 0; 行 <= 网格行 - 高; 行++)
+                for (int 列 = 0; 列 <= 网格列 - 宽; 列++)
+                    if (可放置(堆叠.标识, 列, 行, 堆叠.旋转, 堆叠)) return (列, 行);
+            return null;
+        }
+
         // 已占用格数（所有入格物品的面积和）
         public int 已用格数()
         {

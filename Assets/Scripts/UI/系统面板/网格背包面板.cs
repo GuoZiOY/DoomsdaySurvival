@@ -99,7 +99,7 @@ public sealed class 网格背包面板 : 面板基类
     private RectTransform 拖拽代理;   // 跟手物品图片（吸附格子）
     private Image 落点投影;           // 网格上的绿/红落点指示
     private GameObject 原位置影子;    // 原位置的半透明虚影
-    private bool 拖拽旋转;
+    private static bool 拖拽旋转;      // 全局拖拽预览旋转（R 键；跨面板投影共享——任意面板 Update 都按它算投影）
     private int 落点列, 落点行;        // 拖拽中最后有效投影格（放下用，不随松手重算）
     private bool 落点有效;            // 投影当前是否有效（在网格内）
 
@@ -107,7 +107,7 @@ public sealed class 网格背包面板 : 面板基类
 
     void Awake()
     {
-        if (详情文本 != null) 主背包详情文本 = 详情文本;   // 主背包面板：登记为全局详情显示目标（容器物品详情统一显示于此）
+        if (详情文本 != null) { 主背包详情文本 = 详情文本; 主背包面板 = this; }   // 主背包面板：登记详情目标 + 外观引用源（容器网格外观/线宽统一取它）
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<背包变化事件>(背包变化响应);
         事件.订阅<属性变化事件>(属性变化响应);
@@ -118,7 +118,10 @@ public sealed class 网格背包面板 : 面板基类
     // 跨面板拖拽：本面板不是发起者时，鼠标在本面板网格上 → 显示投影（绿/红/蓝），松手由 结束拖拽 转移
     void Update()
     {
-        if (拖拽中堆叠 == null || 拖拽发起面板 == this) return;
+        if (拖拽中堆叠 == null) return;
+        // R 旋转预览：放 Update 每帧检测（不受 OnDrag 需鼠标移动才触发的限制——静止按住也能按 R）
+        if (检测按R()) { 拖拽旋转 = !拖拽旋转; 更新代理尺寸(); }
+        if (拖拽发起面板 == this) return;
         确保投影();   // 懒创建本面板投影（发起面板才有，其他面板首次需要时创建）
         if (落点投影 == null) return;
         var 鼠标 = 输入鼠标位置();
@@ -126,7 +129,7 @@ public sealed class 网格背包面板 : 面板基类
         var 下方 = 事件下方面板(伪事件);
         if (下方 != this) { 落点投影.gameObject.SetActive(false); return; }
         if (!屏幕到容器相对(伪事件, out var 相对, out var 尺寸)) { 落点投影.gameObject.SetActive(false); return; }
-        var (物宽, 物高) = 服务.物品占格(拖拽中堆叠);
+        var (物宽, 物高) = 预览占格(拖拽中堆叠);   // 按 拖拽旋转（R 预览，静态共享）→ 跨面板投影随旋转同步
         float 相对顶 = 尺寸.y - 相对.y;
         int 列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
         int 行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
@@ -409,6 +412,21 @@ public sealed class 网格背包面板 : 面板基类
         var 未旋转 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);   // 内容层用未旋转宽高（旋转由 rotation 承担）
         内容矩形.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 渲染物品边距 * 2f, 未旋转.高 * 格尺寸 - 渲染物品边距 * 2f);
         内容矩形.localRotation = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);   // 图标跟随物品旋转 90°
+        // 物品名文本：居中显示（美术资源缺失时以文本标识物品；叠加在物品块中央，不随内容层旋转）
+        var 名称体 = new GameObject("名称", typeof(RectTransform), typeof(TextMeshProUGUI));
+        名称体.transform.SetParent(物体.transform, false);
+        var 名称矩 = 名称体.GetComponent<RectTransform>();
+        名称矩.anchorMin = Vector2.zero;
+        名称矩.anchorMax = Vector2.one;
+        名称矩.offsetMin = Vector2.zero;
+        名称矩.offsetMax = Vector2.zero;
+        var 名称 = 名称体.GetComponent<TextMeshProUGUI>();
+        名称.text = 物品.名称;
+        名称.fontSize = Mathf.Clamp(格尺寸 * 0.22f, 14f, 34f);   // 字号随格尺寸
+        名称.alignment = TextAlignmentOptions.Center;
+        名称.enableWordWrapping = true;
+        名称.color = Color.white;
+        名称.raycastTarget = false;
         // 耐久：有最大耐久的物品在格底显示 当前/最大；损坏变红
         int 耐久上限 = 档案.有效最大耐久(堆叠.标识);
         if (耐久上限 > 0)
@@ -450,6 +468,7 @@ public sealed class 网格背包面板 : 面板基类
         var 点击 = 物体.AddComponent<物品点击>();
         点击.堆叠 = 堆叠;
         点击.面板 = this;
+        点击.物品框 = 物体.GetComponent<RectTransform>();   // 右键菜单定位参考（物品右边界）
         点击.内容层 = 内容矩形;   // 悬停放大
         点击.高光层 = 高物体;      // 悬停显示高光
         var 拖拽 = 物体.AddComponent<物品拖拽>();
@@ -495,6 +514,7 @@ public sealed class 网格背包面板 : 面板基类
     private void 物品被点击(物品堆叠 堆叠, int 点击次数)
     {
         if (拖拽源 != null) return;   // 拖拽进行中，忽略点击（避免刷新网格销毁正在拖拽的物品框，导致 OnEndDrag 丢失）
+        右键菜单.实例?.隐藏();   // 左键点击：先关闭右键菜单
         选中 = 堆叠;
         if (点击次数 >= 2)
         {
@@ -503,6 +523,31 @@ public sealed class 网格背包面板 : 面板基类
             刷新网格();
         }
         else 刷新信息();   // 单击：只更新详情，不重建网格（否则销毁物品框会破坏双击的 clickCount 累积）
+    }
+
+    // 右键物品：选中 + 显示右键小菜单（场景手动搭建，按物品特性显示按钮；菜单定位在物品右边界外侧）
+    private void 物品右键(物品堆叠 堆叠, RectTransform 物品框)
+    {
+        if (堆叠 == null) return;
+        选中 = 堆叠;
+        刷新信息();
+        if (右键菜单.实例 != null) 右键菜单.实例.显示(堆叠, 物品框);
+    }
+
+    // ===== 右键菜单公开操作（菜单按钮点击 → 此处；作用于当前 选中） =====
+    public void 菜单使用() => 使用选中();
+    public void 菜单装备() => 装备选中();
+    public void 菜单打开() { if (选中 != null) 打开容器(选中); }
+
+    // 丢弃：移除 选中 物品（容器物品则连内容一起丢弃），发布 失去 事件
+    public void 菜单丢弃()
+    {
+        if (选中 == null || 选中.列 < 0) return;
+        var 丢 = 选中;
+        选中 = null;
+        服务.背包.Remove(丢);
+        刷新网格();
+        ServiceRegistry.Get<EventBus>().发布(new 背包变化事件(丢.标识, -丢.数量, 变化原因.失去));
     }
 
     // 悬停：内容图放大 1.05 + 高光层显示（替代选中底色）
@@ -541,6 +586,7 @@ public sealed class 网格背包面板 : 面板基类
     // 按下进入拖拽：记录源物品 + 创建视觉（代理/投影/影子），立即开始
     private void 开始拖拽(物品堆叠 堆叠, PointerEventData 事件)
     {
+        右键菜单.实例?.隐藏();   // 拖拽时关闭右键菜单
         拖拽源 = 堆叠;
         拖拽旋转 = 堆叠.旋转;
         落点有效 = false;
@@ -593,8 +639,8 @@ public sealed class 网格背包面板 : 面板基类
         影矩形.anchorMax = new Vector2(0, 1);
         影矩形.pivot = new Vector2(0, 1);
         影矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸 + 渲染物品边距, -堆叠.行 * 格尺寸 - 渲染物品边距);
-        var (影宽, 影高) = 服务.物品占格(堆叠);   // 领域规则：形状×旋转 → 占格
-        影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 渲染物品边距 * 2f, 影高 * 格尺寸 - 渲染物品边距 * 2f);   // 影子=物品实际占用的内缩块（旋转后）
+        var (影宽, 影高) = 服务.物品占格(堆叠);   // 影子 = 物品原本占格（原始旋转；旋转预览不影响它）
+        影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 渲染物品边距 * 2f, 影高 * 格尺寸 - 渲染物品边距 * 2f);
         原位置影子 = 影体;
         拖拽代理.SetAsLastSibling();   // 代理置顶渲染——否则同格的落点投影（后创建）会盖住它
     }
@@ -616,11 +662,10 @@ public sealed class 网格背包面板 : 面板基类
         return true;
     }
 
-    // 拖拽中：物品图片吸附鼠标所在格（格内锁定不移动，跨格才跳）→ 投影贴格同格；R 键旋转
+    // 拖拽中：物品图片吸附鼠标所在格（格内锁定不移动，跨格才跳）→ 投影贴格同格；R 键旋转由 Update 每帧检测
     private void 拖拽移动(PointerEventData 事件)
     {
         if (拖拽源 == null || 拖拽代理 == null) return;
-        if (检测按R()) { 拖拽旋转 = !拖拽旋转; 更新代理尺寸(); }
         // 物品图始终跟随鼠标（挂 Canvas 顶层：跨面板拖拽不消失、不被遮挡）
         拖拽代理.gameObject.SetActive(true);
         var 顶层 = GetComponentInParent<Canvas>();
@@ -646,7 +691,7 @@ public sealed class 网格背包面板 : 面板基类
             return;
         }
         // 投影格 = 物品中心对齐（四舍五入：偏差对称 ±半格内，1×1 精确——大物体不错位）
-        var (物宽, 物高) = 服务.物品占格(拖拽源);
+        var (物宽, 物高) = 预览占格(拖拽源);   // 按 拖拽旋转（R 预览）计算，旋转后投影/影子同步变化
         float 相对顶 = 尺寸.y - 相对.y;
         int 列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
         int 行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
@@ -663,6 +708,8 @@ public sealed class 网格背包面板 : 面板基类
         bool 可放;
         bool 可合并 = false;
         if (目标 != null && 目标 != 拖拽源 && 服务.可合并(目标, 拖拽源)) { 可放 = true; 可合并 = true; }
+        else if (可存入容器(目标, 拖拽源)) 可放 = true;   // 目标格是容器物品且可存入 → 绿（松手=存入而非换位）
+        else if (目标 != null && 目标 != 拖拽源 && ServiceRegistry.Get<容器服务>().是容器(目标)) 可放 = false;   // 严格：容器不做换位目标 → 红
         else 可放 = 服务.区域可互换(拖拽源, 列, 行, 拖拽旋转);   // 覆盖 移动(空区) + 整体换位(多物品/被占区)
         if (落点投影 != null)
         {
@@ -672,16 +719,24 @@ public sealed class 网格背包面板 : 面板基类
         }
     }
 
-    // 代理尺寸 = 物品内缩（跟手图片）；投影尺寸 = 完整占格（贴格指示，与格子边缘精确对齐）
+    // 代理尺寸 = 物品内缩（跟手图片）；投影尺寸 = 完整占格（贴格指示）——随 拖拽旋转（R 预览）同步；原位置影子保持原始占格不变
     private void 更新代理尺寸()
     {
         if (拖拽代理 == null || 拖拽源 == null) return;
         var 未旋转 = 服务.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
-        var (宽, 高) = 服务.物品占格(拖拽源);
+        var (宽, 高) = 预览占格(拖拽源);   // 按 拖拽旋转 计算（不写回 堆叠.旋转）
         // 代理：未旋转内缩宽高 + 随 拖拽旋转 转 90°（跟手图片跟随旋转预览）
         拖拽代理.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 渲染物品边距 * 2f, 未旋转.高 * 格尺寸 - 渲染物品边距 * 2f);
         拖拽代理.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);
         if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);   // 投影贴格（旋转后）
+        // 注：原位置影子不更新——它表示物品原本的占格（原始旋转），旋转预览只影响新位置
+    }
+
+    // 拖拽预览占格：按 拖拽旋转（R 预览）计算宽高（不写回 堆叠.旋转；拖拽开始时与物品当前旋转一致）
+    private (int 宽, int 高) 预览占格(物品堆叠 堆叠)
+    {
+        var 未旋转 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
+        return 拖拽旋转 ? (未旋转.高, 未旋转.宽) : (未旋转.宽, 未旋转.高);
     }
 
     // R 键检测（拖拽中旋转预览）：兼容新(InputSystem)/旧(Input Manager)
@@ -724,11 +779,41 @@ public sealed class 网格背包面板 : 面板基类
         // 与拖拽中一致：直接用最后投影的落格（投影在哪就放在哪，不随松手鼠标重算）
         int 列 = 落点列, 行 = 落点行;
         var 目标物品 = 该格物品(列, 行);
-        // 同标识可堆叠 → 合并；否则 区域交换（空区=移动 / 被占区=整体换位）
+        // 同标识可堆叠 → 合并；目标格是容器物品且允许+有空位 → 存入容器（而不是换位）；
+        // 目标格是容器物品但不可存入 → 严格失败（容器不做换位目标）；否则 区域交换（空区=移动 / 被占区=整体换位）
         if (服务.合并堆叠(目标物品, 源) > 0) 音效管理器.实例?.播放成功();
+        else if (存入容器(目标物品, 源)) { }   // 内部已处理 音效/刷新/事件
+        else if (目标物品 != null && 目标物品 != 源 && ServiceRegistry.Get<容器服务>().是容器(目标物品)) 音效管理器.实例?.播放失败();
         else if (服务.区域互换(源, 列, 行, 拖拽旋转)) 音效管理器.实例?.播放成功();
         else 音效管理器.实例?.播放失败();
         刷新网格();
+    }
+
+    // 判定：目标格是容器物品 且 允许该类型 且 非容器类物品 且 内部有空位 → 可存入（投影显示绿色）
+    private bool 可存入容器(物品堆叠 目标容器, 物品堆叠 堆叠)
+    {
+        if (目标容器 == null || 目标容器 == 堆叠) return false;
+        var 容器服务 = ServiceRegistry.Get<容器服务>();
+        if (!容器服务.是容器(目标容器)) return false;
+        if (!容器服务.允许放入(目标容器, 堆叠.标识)) return false;
+        if (容器服务.是容器(堆叠)) return false;   // 嵌套限制：容器类物品不自动存入（需打开后手动放入）
+        var 视图 = 容器服务.打开(目标容器);
+        return 视图.寻找可放置格(堆叠) != null;
+    }
+
+    // 拖拽源 放到 目标容器物品 上：容器允许该类型 且 内部有空位 → 存入容器（而不是换位/失败）。
+    // 跨网格转移 复用：目标=容器视图（其 背包 与 容器.容器物品 同一引用，直接写入容器内部）。
+    private bool 存入容器(物品堆叠 目标容器, 物品堆叠 堆叠)
+    {
+        if (!可存入容器(目标容器, 堆叠)) return false;
+        var 容器服务 = ServiceRegistry.Get<容器服务>();
+        var 视图 = 容器服务.打开(目标容器);
+        var 空位 = 视图.寻找可放置格(堆叠);
+        int 转移 = 容器服务.跨网格转移(服务, 堆叠, 视图, 空位.Value.列, 空位.Value.行);
+        if (转移 <= 0) return false;
+        音效管理器.实例?.播放成功();
+        ServiceRegistry.Get<EventBus>().发布(new 背包变化事件(堆叠.标识, 转移, 变化原因.获得));   // 让打开的容器面板刷新
+        return true;
     }
 
     // 鼠标下方的 网格背包面板：用矩形范围判断（不依赖 raycastTarget），返回命中面面板（含自己）。
@@ -870,11 +955,14 @@ public sealed class 网格背包面板 : 面板基类
     {
         public 物品堆叠 堆叠;
         public 网格背包面板 面板;
+        public RectTransform 物品框;    // 右键菜单定位参考（物品右边界）
         public RectTransform 内容层;   // 悬停放大
         public GameObject 高光层;      // 悬停显示高光
         public void OnPointerClick(PointerEventData 事件)
         {
-            if (堆叠 != null && 面板 != null) 面板.物品被点击(堆叠, 事件.clickCount);
+            if (堆叠 == null || 面板 == null) return;
+            if (事件.button == PointerEventData.InputButton.Right) { 面板.物品右键(堆叠, 物品框); return; }   // 右键 → 操作菜单
+            面板.物品被点击(堆叠, 事件.clickCount);
         }
         public void OnPointerEnter(PointerEventData 事件) { if (面板 != null) 面板.悬停(内容层, 高光层, true); }
         public void OnPointerExit(PointerEventData 事件) { if (面板 != null) 面板.悬停(内容层, 高光层, false); }

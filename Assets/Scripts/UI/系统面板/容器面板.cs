@@ -14,16 +14,16 @@ using UnityEngine.UI;
             = new System.Collections.Generic.Dictionary<物品堆叠, 容器面板>();
 
         // ===== 布局常量（集中调整容器面板外观：大小/格子/间距，改这里全局生效） =====
-        private const float 格尺寸 = 100f;           // 容器内单格像素（默认值；显示容器时按 目标面板宽 自动适配覆盖）
-        private const float 目标面板宽 = 560f;       // 面板目标总宽（含边距）：格尺寸 = (目标面板宽-边距×2)/容器列数，自动适配（同主背包 仓库宽/列数 思路）
-        private const float 格尺寸最小 = 90f;        // 自动适配时格子尺寸下限
-        private const float 格尺寸最大 = 150f;       // 自动适配时格子尺寸上限
+        private const float 格尺寸 = 90f;            // 容器内单格像素（固定值；90 足够普通容器使用，最多可摆约 10 列宽；面板大小随容量 列×行 自动伸缩）
         private const float 边距 = 12f;              // 网格/文本 距面板左缘
-        private const float 标题高 = 34f;            // 标题栏占位（标题 28 + 上边距 6）
-        private const float 信息条高 = 20f;          // 网格下方统计条高度（物品详情统一显示在主背包详情文本）
-        private const float 区间距 = 6f;             // 信息条 与网格/底边距
-        private const float 最小面板宽 = 400f;       // 面板宽度下限
-        private const float 最小面板高 = 360f;       // 面板高度下限（标题 + 最小网格 + 信息条）
+        private const float 标题高 = 56f;            // 顶部行占位（上边距 12 + 标题行 44）
+        private const float 信息条宽 = 180f;         // 顶部行：信息条固定宽（右段，贴按钮左侧；标题让位给它）
+        private const float 信息条高 = 30f;          // 顶部行：信息条高度（容器统计；物品详情统一显示在主背包详情文本）
+        private const float 顶行间距 = 10f;          // 顶部行：标题 与 信息条 间距
+        private const float 按钮尺寸 = 40f;          // 顶部行：关闭按钮尺寸（右上角）
+        private const float 区间距 = 6f;             // 顶部行 与网格 及底边距
+        private const float 最小面板宽 = 360f;       // 面板宽度下限（容纳顶部行：标题+信息条+按钮；小容器面板高度仍随容量伸缩）
+        private const float 最小面板高 = 250f;       // 面板高度下限（顶部行 56 + 2×2 网格 180 + 底边距）
         private const float 初始宽 = 480f, 初始高 = 420f;   // 创建时占位尺寸（显示容器时按网格覆盖）
         private const float 面板底透明 = 1f;    // 面板底座透明度（半透明，可透出下层主背包；调低更透）
         private const float 初始右偏比例 = 0.15f;    // 初始位置：主背包左上 向右偏移比例（×挂载父宽）
@@ -33,7 +33,7 @@ using UnityEngine.UI;
         private 网格背包面板 容器网格;   // 动态创建（显示容器内部）
         private RectTransform 面板根;     // 动态创建（含 Image，可拖拽）
         private RectTransform 网格容器;   // 动态创建（容器内部网格的 Content）
-        private RectTransform 信息条矩形;  // 动态创建（网格下方：容器统计；物品详情统一显示在主背包详情文本）
+        private RectTransform 信息条矩形;  // 动态创建（标题下方：容器统计；物品详情统一显示在主背包详情文本）
         private 物品堆叠 当前容器;
         private Vector2 拖拽偏移;
 
@@ -85,29 +85,30 @@ using UnityEngine.UI;
         // 构建标题/关闭按钮/网格容器（全部代码生成）
         private void 构建子结构(容器服务 服务)
         {
-            // 标题
+            // 顶部行：标题（左，拉伸自适应——右侧让位给 信息条+按钮；超宽省略号截断）——同一水平行：标题 | 信息条 | 关闭按钮
             var 标题物体 = new GameObject("标题", typeof(RectTransform), typeof(TextMeshProUGUI));
             标题物体.transform.SetParent(面板根, false);
             var 标题矩形 = 标题物体.GetComponent<RectTransform>();
             标题矩形.anchorMin = new Vector2(0, 1);
             标题矩形.anchorMax = new Vector2(1, 1);
             标题矩形.pivot = new Vector2(0.5f, 1);
-            标题矩形.anchoredPosition = new Vector2(0, -6f);
-            标题矩形.sizeDelta = new Vector2(-60f, 28f);
+            标题矩形.offsetMin = new Vector2(边距, -12f - 44f);
+            标题矩形.offsetMax = new Vector2(-(8f + 按钮尺寸 + 8f + 顶行间距 + 信息条宽), -12f);
             var 标题文本 = 标题物体.GetComponent<TextMeshProUGUI>();
-            标题文本.fontSize = 20f;
+            标题文本.fontSize = 30f;
             标题文本.alignment = TextAlignmentOptions.Left;
             标题文本.color = Color.white;
             标题文本.raycastTarget = false;
-            // 关闭按钮（右上角 "×"）
+            标题文本.overflowMode = TextOverflowModes.Ellipsis;   // 面板窄时省略号
+            // 顶部行：关闭按钮（右上角 "×"）
             var 按钮物体 = new GameObject("关闭", typeof(RectTransform), typeof(Image), typeof(Button));
             按钮物体.transform.SetParent(面板根, false);
             var 按钮矩形 = 按钮物体.GetComponent<RectTransform>();
             按钮矩形.anchorMin = new Vector2(1, 1);
             按钮矩形.anchorMax = new Vector2(1, 1);
             按钮矩形.pivot = new Vector2(1, 1);
-            按钮矩形.anchoredPosition = new Vector2(-6f, -6f);
-            按钮矩形.sizeDelta = new Vector2(28f, 28f);
+            按钮矩形.anchoredPosition = new Vector2(-8f, -12f);
+            按钮矩形.sizeDelta = new Vector2(按钮尺寸, 按钮尺寸);
             按钮物体.GetComponent<Image>().color = new Color(1f, 0.3f, 0.3f, 0.8f);
             按钮物体.GetComponent<Button>().onClick.AddListener(关闭);
             // 按钮上的 "x" 文本（撑满按钮；不拦截点击——点击落在按钮组件上）
@@ -120,7 +121,7 @@ using UnityEngine.UI;
             按钮文本矩形.offsetMax = Vector2.zero;
             var 按钮文本 = 按钮文本物体.GetComponent<TextMeshProUGUI>();
             按钮文本.text = "x";
-            按钮文本.fontSize = 18f;
+            按钮文本.fontSize = 28f;
             按钮文本.alignment = TextAlignmentOptions.Center;
             按钮文本.color = Color.white;
             按钮文本.raycastTarget = false;   // 不拦截点击（按钮在父物体上）
@@ -132,28 +133,29 @@ using UnityEngine.UI;
             网格矩形.anchorMin = new Vector2(0, 1);
             网格矩形.anchorMax = new Vector2(0, 1);
             网格矩形.pivot = new Vector2(0, 1);
-            网格矩形.anchoredPosition = new Vector2(边距, -标题高);   // 标题下方
+            网格矩形.anchoredPosition = new Vector2(边距, -标题高 - 区间距);   // 顶部行下方
             网格矩形.sizeDelta = new Vector2(格尺寸, 格尺寸);         // 占位，显示容器时按实际网格尺寸覆盖
             网格容器 = 网格矩形;
             // 动态挂 网格背包面板 组件（复用全部网格渲染/拖拽/转移逻辑）
             容器网格 = 网格物体.AddComponent<网格背包面板>();
             容器网格.绑定网格容器(网格矩形);
             容器网格.配置容器显示(格尺寸);   // 容器内格子尺寸
-            // 信息条（网格统计：已用格/负重）——动态创建，绑定给 容器网格（点击容器物品时同步显示）
+            // 顶部行：信息条（固定宽，右段贴按钮左侧，右对齐；容器统计：已用格/负重）
             var 信息条物体 = new GameObject("信息条", typeof(RectTransform), typeof(TextMeshProUGUI));
             信息条物体.transform.SetParent(面板根, false);
             信息条矩形 = 信息条物体.GetComponent<RectTransform>();
-            信息条矩形.anchorMin = new Vector2(0, 1);
-            信息条矩形.anchorMax = new Vector2(0, 1);
-            信息条矩形.pivot = new Vector2(0, 1);
-            信息条矩形.anchoredPosition = new Vector2(边距, -标题高);   // 占位，显示容器时按网格高重定位
-            信息条矩形.sizeDelta = new Vector2(最小面板宽 - 边距 * 2f, 信息条高);
+            信息条矩形.anchorMin = new Vector2(1, 1);
+            信息条矩形.anchorMax = new Vector2(1, 1);
+            信息条矩形.pivot = new Vector2(1, 1);
+            信息条矩形.anchoredPosition = new Vector2(-(8f + 按钮尺寸 + 8f), -12f);   // 按钮左侧
+            信息条矩形.sizeDelta = new Vector2(信息条宽, 信息条高);
             var 信息条文本 = 信息条物体.GetComponent<TextMeshProUGUI>();
-            信息条文本.fontSize = 15f;
-            信息条文本.alignment = TextAlignmentOptions.Left;
+            信息条文本.fontSize = 21f;
+            信息条文本.alignment = TextAlignmentOptions.Right;
             信息条文本.color = new Color(0.85f, 0.85f, 0.9f, 1f);
             信息条文本.raycastTarget = false;
-            信息条文本.enableWordWrapping = false;   // TMP 不换行即横向自然溢出（无 horizontalOverflow 属性）
+            信息条文本.enableWordWrapping = false;
+            信息条文本.overflowMode = TextOverflowModes.Ellipsis;   // 面板窄时省略号
             容器网格.绑定信息(信息条文本);   // 详情不绑：统一显示在主背包详情文本
         }
 
@@ -167,31 +169,14 @@ using UnityEngine.UI;
             容器网格.所属容器 = 容器;
             var 标题 = 面板根.Find("标题")?.GetComponent<TextMeshProUGUI>();
             if (标题 != null) 标题.text = 容器.标识;
-            容器网格.重载网格();   // ① 先确定 渲染列/行
-            自动适配格尺寸();     // ② 按 目标面板宽/列数 算格尺寸（clamp），需要时重载
-            容器网格.重载网格();   // ③ 用最终格尺寸重建（② 未变则幂等）
-            // 面板根大小 = 网格尺寸 + 边距 + 下方 信息条；保证最小可操作尺寸
+            容器网格.重载网格();   // 格尺寸固定（90），按容器 列×行 渲染
+            // 面板根大小 = 顶部行（标题|信息条|按钮） + 网格 + 底边距；随容量伸缩，保证最小可操作尺寸
             float 网格宽 = 容器网格.渲染列 * 容器网格.格子尺寸;
             float 网格高 = 容器网格.渲染行 * 容器网格.格子尺寸;
-            // 布局：标题 y=0~-标题高 → 网格 (边距,-标题高) 高 网格高 → 信息条 → 底边距
-            float 文本区高 = 区间距 + 信息条高 + 区间距;
-            信息条矩形.anchoredPosition = new Vector2(边距, -标题高 - 网格高 - 区间距);
-            float 内容宽 = Mathf.Max(最小面板宽 - 边距 * 2f, 网格宽);
-            信息条矩形.sizeDelta = new Vector2(内容宽, 信息条高);
-            面板根.sizeDelta = new Vector2(Mathf.Max(最小面板宽, 网格宽 + 边距 * 2f), Mathf.Max(最小面板高, 标题高 + 网格高 + 文本区高));
+            // 布局：顶部行 y=0~-标题高 → 网格 (边距,-标题高-区间距) 高 网格高 → 底边距（信息条用 offset 拉伸，随面板宽自适应）
+            面板根.sizeDelta = new Vector2(Mathf.Max(最小面板宽, 网格宽 + 边距 * 2f), Mathf.Max(最小面板高, 标题高 + 区间距 + 网格高 + 区间距));
             网格容器.sizeDelta = new Vector2(网格宽, 网格高);
             限制在屏幕内();   // 面板尺寸定稿后自动校正位置，确保创建出来就在屏幕内
-        }
-
-        // 自动适配格尺寸：格尺寸 = (目标面板宽-边距×2)/容器列数，clamp 到 [格尺寸最小,格尺寸最大]
-        // （与主背包 仓库宽/列数→格尺寸 同思路：格子尽量大，面板宽尽量接近目标宽）
-        private void 自动适配格尺寸()
-        {
-            int 列 = 容器网格.渲染列;
-            if (列 <= 0) return;
-            float 目标格 = Mathf.Clamp((目标面板宽 - 边距 * 2f) / 列, 格尺寸最小, 格尺寸最大);
-            if (Mathf.Abs(目标格 - 容器网格.格子尺寸) > 0.01f)
-                容器网格.配置容器显示(目标格);
         }
 
         // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏（出屏既看不见也点不到）
