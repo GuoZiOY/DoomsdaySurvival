@@ -23,18 +23,20 @@ public sealed class 右键菜单 : MonoBehaviour
     [SerializeField] private Button 分解按钮;        // 分解（系统未设计，暂隐藏）
     [SerializeField] private Button 丢弃按钮;        // 丢弃（任何入格物品均可，始终显示）
 
-    private 网格背包面板 背包面板;   // 操作目标（场景主背包面板）
+    private 网格背包面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
+    public 网格背包面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
 
     void Awake()
     {
         实例 = this;
         if (菜单根 != null) 菜单根.gameObject.SetActive(false);   // 初始隐藏
         foreach (var 面板 in FindObjectsOfType<网格背包面板>())
-            if (面板.数据源 == null) { 背包面板 = 面板; break; }   // 主背包面板 = 操作目标
-        if (使用按钮 != null) 使用按钮.onClick.AddListener(() => { 隐藏(); 背包面板?.菜单使用(); });
-        if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); 背包面板?.菜单装备(); });
-        if (打开按钮 != null) 打开按钮.onClick.AddListener(() => { 隐藏(); 背包面板?.菜单打开(); });
-        if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); 背包面板?.菜单丢弃(); });
+            if (面板.数据源 == null) { 背包面板 = 面板; break; }   // 主背包面板 = 兜底操作目标
+        if (使用按钮 != null) 使用按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单使用(); });
+        if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单装备(); });
+        if (打开按钮 != null) 打开按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开(); });
+        if (拆分按钮 != null) 拆分按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开拆分(); });
+        if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单丢弃(); });
     }
 
     // 关闭检测：点击菜单外（左键/右键按下且不在菜单矩形内）/ 滚轮 → 关闭。不拦截事件——下层物品/滚动正常响应
@@ -121,7 +123,12 @@ public sealed class 右键菜单 : MonoBehaviour
                 if (可用) 有操作 = true;
             }
         }
-        if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);   // 拆分功能未实现（预留）
+        if (拆分按钮 != null)
+        {
+            bool 可用 = 堆叠.数量 > 1;   // 可堆叠（数量>1）才显示拆分
+            拆分按钮.gameObject.SetActive(可用);
+            if (可用) 有操作 = true;
+        }
         if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);   // 分解系统未设计（预留）
         if (丢弃按钮 != null) { 丢弃按钮.gameObject.SetActive(true); 有操作 = true; }   // 丢弃始终可用（入格物品）
         if (!有操作) { 隐藏(); return; }

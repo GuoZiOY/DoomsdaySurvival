@@ -14,7 +14,7 @@ using UnityEngine.UI;
             = new System.Collections.Generic.Dictionary<物品堆叠, 容器面板>();
 
         // ===== 布局常量（集中调整容器面板外观：大小/格子/间距，改这里全局生效） =====
-        private const float 格尺寸 = 90f;            // 容器内单格像素（固定值；90 足够普通容器使用，最多可摆约 10 列宽；面板大小随容量 列×行 自动伸缩）
+        private const float 格尺寸 = 100f;            // 容器内单格像素（固定值；90 足够普通容器使用，最多可摆约 10 列宽；面板大小随容量 列×行 自动伸缩）
         private const float 边距 = 12f;              // 网格/文本 距面板左缘
         private const float 标题高 = 56f;            // 顶部行占位（上边距 12 + 标题行 44）
         private const float 信息条宽 = 180f;         // 顶部行：信息条固定宽（右段，贴按钮左侧；标题让位给它）
