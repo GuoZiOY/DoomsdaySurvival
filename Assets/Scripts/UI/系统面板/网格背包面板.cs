@@ -62,6 +62,9 @@ public sealed class 网格背包面板 : 面板基类
     private Image 落点投影;           // 网格上的绿/红落点指示
     private GameObject 原位置影子;    // 原位置的半透明虚影
     private bool 拖拽旋转;
+    private Vector2 抓取偏移;         // 抓起时 鼠标相对物品左上角的偏移（格，浮点）——物品跟随鼠标移动量（大面积物品平移一格即一格）
+    private int 落点列, 落点行;        // 拖拽中最后有效投影格（放下用，不随松手重算）
+    private bool 落点有效;            // 投影当前是否有效（在网格内）
 
     // ===== 生命周期 =====
 
@@ -239,9 +242,7 @@ public sealed class 网格背包面板 : 面板基类
     private void 创建物品(物品堆叠 堆叠)
     {
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return;
-        var 形状 = 档案.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
-        int 宽 = 堆叠.旋转 ? 形状.高 : 形状.宽;
-        int 高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
+        var (宽, 高) = 档案.物品占格(堆叠);   // 领域规则：形状×旋转 → 占格
         // ① 物品框：全尺寸贴格（品质底层色；选中 = 选中底色）
         var 物体 = new GameObject($"物品_{物品.名称}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(物品层, false);
@@ -287,7 +288,8 @@ public sealed class 网格背包面板 : 面板基类
         内容矩形.anchorMax = new Vector2(0.5f, 0.5f);
         内容矩形.pivot = new Vector2(0.5f, 0.5f);
         内容矩形.anchoredPosition = Vector2.zero;   // 居中于物品框
-        内容矩形.sizeDelta = new Vector2(形状.宽 * 格尺寸 - 物品边距 * 2f, 形状.高 * 格尺寸 - 物品边距 * 2f);   // 未旋转宽高（旋转由 rotation 承担）
+        var 未旋转 = 档案.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);   // 内容层用未旋转宽高（旋转由 rotation 承担）
+        内容矩形.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 物品边距 * 2f, 未旋转.高 * 格尺寸 - 物品边距 * 2f);
         内容矩形.localRotation = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);   // 图标跟随物品旋转 90°
         // 耐久：有最大耐久的物品在格底显示 当前/最大；损坏变红
         int 耐久上限 = 档案.有效最大耐久(堆叠.标识);
@@ -374,6 +376,7 @@ public sealed class 网格背包面板 : 面板基类
 
     private void 物品被点击(物品堆叠 堆叠, int 点击次数)
     {
+        if (拖拽源 != null) return;   // 拖拽进行中，忽略点击（避免刷新网格销毁正在拖拽的物品框，导致 OnEndDrag 丢失）
         选中 = 堆叠;
         if (点击次数 >= 2) { 快捷操作(堆叠); 选中 = null; }
         刷新网格();
@@ -398,11 +401,19 @@ public sealed class 网格背包面板 : 面板基类
 
     // ===== 拖拽交互 =====
 
-    // 按下进入拖拽：记录源物品 + 创建视觉（代理/投影/影子），立即开始
+    // 按下进入拖拽：记录源物品 + 抓取偏移（鼠标相对物品左上角）+ 创建视觉，立即开始
     private void 开始拖拽(物品堆叠 堆叠, PointerEventData 事件)
     {
         拖拽源 = 堆叠;
         拖拽旋转 = 堆叠.旋转;
+        落点有效 = false;
+        // 抓取偏移：鼠标相对物品左上角的偏移（格）——拖拽时物品保持该相对位置跟随鼠标移动量
+        if (屏幕到容器相对(事件, out var 抓取相对, out var 抓取尺寸))
+        {
+            float 抓取顶 = 抓取尺寸.y - 抓取相对.y;
+            抓取偏移 = new Vector2(抓取相对.x / 格尺寸 - 堆叠.列, 抓取顶 / 格尺寸 - 堆叠.行);
+        }
+        else 抓取偏移 = Vector2.zero;
         创建拖拽视觉(堆叠);
         拖拽移动(事件);
     }
@@ -456,9 +467,7 @@ public sealed class 网格背包面板 : 面板基类
         影矩形.anchorMax = new Vector2(0, 1);
         影矩形.pivot = new Vector2(0, 1);
         影矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸 + 物品边距, -堆叠.行 * 格尺寸 - 物品边距);
-        var 影形状 = 档案.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
-        int 影宽 = 堆叠.旋转 ? 影形状.高 : 影形状.宽;
-        int 影高 = 堆叠.旋转 ? 影形状.宽 : 影形状.高;
+        var (影宽, 影高) = 档案.物品占格(堆叠);   // 领域规则：形状×旋转 → 占格
         影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 物品边距 * 2f, 影高 * 格尺寸 - 物品边距 * 2f);   // 影子=物品实际占用的内缩块（旋转后）
         原位置影子 = 影体;
         拖拽代理.SetAsLastSibling();   // 代理置顶渲染——否则同格的落点投影（后创建）会盖住它
@@ -492,26 +501,28 @@ public sealed class 网格背包面板 : 面板基类
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
             return;
         }
-        // 投影格 = 物品中心对齐（四舍五入：偏差对称 ±半格内，1×1 精确——大物体不错位）
-        var 形状 = 档案.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
-        int 物宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
-        int 物高 = 拖拽旋转 ? 形状.宽 : 形状.高;
+        // 物品左上角格 = 鼠标位置 - 抓取偏移（物品跟随鼠标移动量，抓哪跟哪——大面积物品平移一格即一格）
+        var (物宽, 物高) = 档案.物品占格(拖拽源);
         float 相对顶 = 尺寸.y - 相对.y;
-        int 列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
-        int 行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
+        int 列 = Mathf.RoundToInt(相对.x / 格尺寸 - 抓取偏移.x);
+        int 行 = Mathf.RoundToInt(相对顶 / 格尺寸 - 抓取偏移.y);
         bool 网格内 = 列 >= 0 && 行 >= 0 && 列 < 档案.网格列 && 行 < 档案.网格行;
         if (!网格内)
         {
+            落点有效 = false;
             拖拽代理.gameObject.SetActive(false);
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
             return;   // 拖出网格：隐藏代理与落点
         }
-        // ① 物品图片：自由跟手（中心 = 鼠标位置，随鼠标连续移动）
+        落点有效 = true; 落点列 = 列; 落点行 = 行;   // 记录本次投影格（放下用）
+        // ① 物品图片：中心 = 同一物品左上角 + 半尺寸——物品图与投影同心、连续跟手
         拖拽代理.gameObject.SetActive(true);
         拖拽代理.anchorMin = new Vector2(0, 1);
         拖拽代理.anchorMax = new Vector2(0, 1);
-        拖拽代理.pivot = new Vector2(0.5f, 0.5f);   // 中心 = 鼠标
-        拖拽代理.anchoredPosition = new Vector2(相对.x, 相对.y - 尺寸.y);   // 相对左下 → 左上锚点（y 向下）
+        拖拽代理.pivot = new Vector2(0.5f, 0.5f);
+        拖拽代理.anchoredPosition = new Vector2(
+            (相对.x / 格尺寸 - 抓取偏移.x) * 格尺寸 + 物宽 * 格尺寸 / 2f,
+            -(相对顶 / 格尺寸 - 抓取偏移.y) * 格尺寸 - 物高 * 格尺寸 / 2f);
         // ② 落点投影：吸附网格贴格（鼠标在格内投影不移动，跨格才跳；绿/红/蓝指示落格合法性：可放/不可放/可合并）
         var 目标 = 该格物品(列, 行);
         bool 可放;
@@ -530,11 +541,10 @@ public sealed class 网格背包面板 : 面板基类
     private void 更新代理尺寸()
     {
         if (拖拽代理 == null || 拖拽源 == null) return;
-        var 形状 = 档案.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
-        int 宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
-        int 高 = 拖拽旋转 ? 形状.宽 : 形状.高;
+        var 未旋转 = 档案.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
+        var (宽, 高) = 档案.物品占格(拖拽源);
         // 代理：未旋转内缩宽高 + 随 拖拽旋转 转 90°（跟手图片跟随旋转预览）
-        拖拽代理.sizeDelta = new Vector2(形状.宽 * 格尺寸 - 物品边距 * 2f, 形状.高 * 格尺寸 - 物品边距 * 2f);
+        拖拽代理.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 物品边距 * 2f, 未旋转.高 * 格尺寸 - 物品边距 * 2f);
         拖拽代理.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);
         if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);   // 投影贴格（旋转后）
     }
@@ -552,7 +562,7 @@ public sealed class 网格背包面板 : 面板基类
         return 按下;
     }
 
-    // 结束拖拽：计算落格 → 空格=移动(带旋转) / 被占=换位 / 网格外=取消
+    // 结束拖拽：按拖拽中最后投影的落格 → 空格=移动(带旋转) / 被占=换位 / 网格外=取消
     private void 结束拖拽(PointerEventData 事件)
     {
         var 源 = 拖拽源;
@@ -561,19 +571,13 @@ public sealed class 网格背包面板 : 面板基类
         if (落点投影 != null) { Destroy(落点投影.gameObject); 落点投影 = null; }
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }
         if (源 == null) return;
-        if (!屏幕到容器相对(事件, out var 相对, out var 容器尺寸)) return;
-        // 与拖拽中一致：物品中心对齐（四舍五入，落格 = 拖拽时看到的投影位置）
-        var 形状 = 档案.形状解析?.Invoke(源.标识) ?? new 物品形状(1, 1);
-        int 物宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
-        int 物高 = 拖拽旋转 ? 形状.宽 : 形状.高;
-        float 相对顶 = 容器尺寸.y - 相对.y;
-        int 列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
-        int 行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
-        if (列 < 0 || 行 < 0 || 列 >= 档案.网格列 || 行 >= 档案.网格行)
+        if (!落点有效)
         {
-            音效管理器.实例?.播放失败();   // 拖出网格外 = 取消
+            音效管理器.实例?.播放失败();   // 拖出网格外（无有效投影）= 取消
             return;
         }
+        // 与拖拽中一致：直接用最后投影的落格（投影在哪就放在哪，不随松手鼠标重算）
+        int 列 = 落点列, 行 = 落点行;
         var 目标物品 = 该格物品(列, 行);
         // 同标识可堆叠 → 合并；否则 区域交换（空区=移动 / 被占区=整体换位）
         if (档案.合并堆叠(目标物品, 源) > 0) 音效管理器.实例?.播放成功();
@@ -582,20 +586,8 @@ public sealed class 网格背包面板 : 面板基类
         刷新网格();
     }
 
-    // 该格被哪个物品覆盖（左上角或身体格都算）
-    private 物品堆叠 该格物品(int 列, int 行)
-    {
-        if (档案.形状解析 == null) return null;
-        foreach (var 堆叠 in 档案.背包)
-        {
-            if (堆叠 == null || 堆叠.列 < 0) continue;
-            var 形状 = 档案.形状解析(堆叠.标识);
-            int 宽 = 堆叠.旋转 ? 形状.高 : 形状.宽;
-            int 高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
-            if (列 >= 堆叠.列 && 列 < 堆叠.列 + 宽 && 行 >= 堆叠.行 && 行 < 堆叠.行 + 高) return 堆叠;
-        }
-        return null;
-    }
+    // 该格被哪个物品覆盖（领域判定，UI 只查询不计算）
+    private 物品堆叠 该格物品(int 列, int 行) => 档案.该格物品(列, 行);
 
     // ===== 操作按钮 =====
 
@@ -622,16 +614,7 @@ public sealed class 网格背包面板 : 面板基类
     {
         if (信息条 != null)
         {
-            int 已用 = 0;
-            if (档案.形状解析 != null)
-                foreach (var 堆叠 in 档案.背包)
-                    if (堆叠 != null && 堆叠.列 >= 0)
-                    {
-                        var 形状 = 档案.形状解析(堆叠.标识);
-                        int 宽 = 堆叠.旋转 ? 形状.高 : 形状.宽;
-                        int 高 = 堆叠.旋转 ? 形状.宽 : 形状.高;
-                        已用 += 宽 * 高;
-                    }
+            int 已用 = 档案.已用格数();   // 领域统计
             设文本(信息条, $"已用 {已用}/{档案.网格列 * 档案.网格行} 格 · 负重 {档案.负重占用}/{档案.负重上限}");
         }
         刷新详情();
