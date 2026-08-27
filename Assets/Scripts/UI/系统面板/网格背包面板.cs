@@ -16,16 +16,13 @@ using UnityEngine.InputSystem;
 public sealed class 网格背包面板 : 面板基类
 {
     [SerializeField] private RectTransform 网格容器;   // 网格区域（左上锚定；代码动态生成底座与物品）。可运行时 绑定网格容器 覆盖（动态容器面板）
-    [SerializeField] private int 背包列数 = 5;         // 临时测试：背包网格列数（>0 时覆盖 档案.网格列）
+    [SerializeField] private int 背包列数 = 6;         // 临时测试：背包网格列数（>0 时覆盖 档案.网格列）
     [SerializeField] private int 背包行数 = 10;        // 临时测试：背包网格行数（>0 时覆盖 档案.网格行）
-    [SerializeField] private float 仓库宽 = 900f;      // 仓库容器 UI 宽；>0 时 格尺寸 自动 = 仓库宽/背包列数（填满仓库宽）
-    [SerializeField] private float 格尺寸 = 150f;      // 单格像素（仓库宽=0 时手动；>0 时被 仓库宽/列数 覆盖）
-    [SerializeField] private float 格尺寸最小 = 60f;    // 格子尺寸下限（太小看不清/点不中）
-    [SerializeField] private float 格尺寸最大 = 180f;    // 格子尺寸上限
+    [SerializeField] private float 格尺寸 = 100f;      // 单格像素（Inspector 手动配置，统一规格；容器/装备槽与其一致）
     [SerializeField] private int 背包列数最小 = 1;       // 背包列数（格子宽）下限
-    [SerializeField] private int 背包列数最大 = 14;      // 背包列数上限（另受 仓库宽/格尺寸最小 约束）
+    [SerializeField] private int 背包列数最大 = 100;      // 背包列数上限
     [SerializeField] private int 背包行数最小 = 1;       // 背包行数下限
-    [SerializeField] private int 背包行数最大 = 20;      // 背包行数上限
+    [SerializeField] private int 背包行数最大 = 100;      // 背包行数上限
     [SerializeField] private Color 底座色 = new Color(0f, 0f, 0f, 0.35f);          // 空格底图
     [SerializeField] private Color 物品边界色 = new Color(1f, 1f, 1f, 0.75f);       // 物品边界线（较亮）
     [SerializeField] private Color 线条色 = new Color(1f, 1f, 1f, 0.12f);           // 物品内部/空格 线（较淡）
@@ -56,9 +53,6 @@ public sealed class 网格背包面板 : 面板基类
     private static 网格背包面板 拖拽发起面板;
     private static 背包服务 拖拽源服务;
     private static 物品堆叠 拖拽中堆叠;
-    // 全局详情显示目标：主背包面板的 详情文本（主背包 Awake 自动登记）。
-    // 容器网格不绑自己的详情 → 点击容器物品时 刷新详情 转发到这里，与主背包物品信息显示统一。
-    public static TMP_Text 主背包详情文本;
     // 主背包面板实例（Awake 自动登记）：容器网格外观直接引用主背包的颜色（改主背包 Inspector 即时生效，视觉统一）
     public static 网格背包面板 主背包面板;
 
@@ -107,7 +101,7 @@ public sealed class 网格背包面板 : 面板基类
 
     void Awake()
     {
-        if (详情文本 != null) { 主背包详情文本 = 详情文本; 主背包面板 = this; }   // 主背包面板：登记详情目标 + 外观引用源（容器网格外观/线宽统一取它）
+        if (数据源 == null && 网格容器 != null) 主背包面板 = this;   // 主背包面板：外观引用源（容器网格视觉统一取它；动态容器网格 AddComponent 时 网格容器 尚未绑定）
         var 事件 = ServiceRegistry.Get<EventBus>();
         事件.订阅<背包变化事件>(背包变化响应);
         事件.订阅<属性变化事件>(属性变化响应);
@@ -213,8 +207,7 @@ public sealed class 网格背包面板 : 面板基类
     private void 刷新网格()
     {
         if (网格容器 == null) return;
-        // 临时测试：背包宽/高 上下限 clamp；格子尺寸 上下限 clamp（都来自 仓库宽/列数，避免溢出/过小）
-        // 容器视图（数据源非空）：用容器自身尺寸，格尺寸固定小格（容器面板已设置），不走主背包测试参数
+        // 容器视图（数据源非空）：用容器自身尺寸（容器面板已设置格尺寸）
         int 有效列, 有效行;
         if (数据源 != null)
         {
@@ -225,13 +218,10 @@ public sealed class 网格背包面板 : 面板基类
         {
             有效列 = 背包列数 > 0 ? 背包列数 : 服务.网格列;
             有效列 = Mathf.Clamp(有效列, 背包列数最小, 背包列数最大);
-            if (仓库宽 > 0 && 格尺寸最小 > 0) 有效列 = Mathf.Min(有效列, Mathf.FloorToInt(仓库宽 / 格尺寸最小));   // 宽上限：保证格尺寸不小于最小
             有效行 = Mathf.Clamp(背包行数 > 0 ? 背包行数 : 服务.网格行, 背包行数最小, 背包行数最大);
-            // 主背包：测试参数写回 服务 网格（判定/放置 与渲染一致）
+            // 主背包：测试参数写回 服务 网格（判定/放置 与渲染一致）；格尺寸 由 Inspector 手动配置（统一规格）
             服务.网格列 = 有效列;
             服务.网格行 = 有效行;
-            if (仓库宽 > 0 && 有效列 > 0)
-                格尺寸 = Mathf.Clamp(Mathf.FloorToInt(仓库宽 / 有效列), 格尺寸最小, 格尺寸最大);   // 格尺寸=仓库宽/列数（取整）再夹在 [最小,最大]
         }
         当前列 = 有效列; 当前行 = 有效行;   // 渲染基准（层/线/格/物品统一用它）
         准备层();
@@ -378,6 +368,7 @@ public sealed class 网格背包面板 : 面板基类
         矩形.pivot = new Vector2(0, 1);
         矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸, -堆叠.行 * 格尺寸);
         矩形.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
+        物体.AddComponent<RectMask2D>();   // 裁剪 cover 图标溢出（物品图片填满格子，超出部分裁掉）
         // ② 高光层：品质底 与 内容 之间（白色半透明，悬停时显示）
         var 高物体 = new GameObject("高光", typeof(RectTransform), typeof(Image));
         高物体.transform.SetParent(物体.transform, false);
@@ -397,20 +388,27 @@ public sealed class 网格背包面板 : 面板基类
         内容图.color = 渲染物品底色;
         内容图.raycastTarget = false;   // 不挡底层交互（点击/拖拽挂在物品框上）
         // 手动挂图：items.json 的 "图片" 引用 → 内容层显示精灵；无图/未挂 = 保持色块（品质色环在物品框层不受影响）
+        var 未旋转 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);   // 内容层用未旋转宽高（旋转由 rotation 承担）
+        float 内容宽 = 未旋转.宽 * 格尺寸 - 渲染物品边距 * 2f;
+        float 内容高 = 未旋转.高 * 格尺寸 - 渲染物品边距 * 2f;
         var 图标 = 物品图标服务.获取(物品.图片);
         if (图标 != null)
         {
             内容图.sprite = 图标;
             内容图.color = Color.white;          // 有图时不再用色底染色
-            内容图.preserveAspect = true;        // 按比例居中，避免拉伸（武器横向图标在格内等比缩放）
+            // 纯 cover：按 sprite 宽高比 等比放大至覆盖整个物品框（保持长宽比不变形；超出部分被 RectMask2D 居中裁剪）
+            内容图.preserveAspect = false;
+            float 图比 = 图标.bounds.size.x / 图标.bounds.size.y;
+            float 框比 = 内容宽 / 内容高;
+            if (图比 > 框比) 内容宽 = 内容高 * 图比;   // 图更宽扁：撑满高，宽超出（裁左右）
+            else 内容高 = 内容宽 / 图比;               // 图更高瘦：撑满宽，高超出（裁上下）
         }
         var 内容矩形 = 内容物体.GetComponent<RectTransform>();
         内容矩形.anchorMin = new Vector2(0.5f, 0.5f);
         内容矩形.anchorMax = new Vector2(0.5f, 0.5f);
         内容矩形.pivot = new Vector2(0.5f, 0.5f);
         内容矩形.anchoredPosition = Vector2.zero;   // 居中于物品框
-        var 未旋转 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);   // 内容层用未旋转宽高（旋转由 rotation 承担）
-        内容矩形.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 渲染物品边距 * 2f, 未旋转.高 * 格尺寸 - 渲染物品边距 * 2f);
+        内容矩形.sizeDelta = new Vector2(内容宽, 内容高);
         内容矩形.localRotation = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);   // 图标跟随物品旋转 90°
         // 物品名文本：居中显示（美术资源缺失时以文本标识物品；叠加在物品块中央，不随内容层旋转）
         var 名称体 = new GameObject("名称", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -422,7 +420,7 @@ public sealed class 网格背包面板 : 面板基类
         名称矩.offsetMax = Vector2.zero;
         var 名称 = 名称体.GetComponent<TextMeshProUGUI>();
         名称.text = 物品.名称;
-        名称.fontSize = Mathf.Clamp(格尺寸 * 0.22f, 14f, 34f);   // 字号随格尺寸
+        名称.fontSize = Mathf.Clamp(格尺寸 * 0.22f, 14f, 44f);   // 字号随格尺寸（2K 基准）
         名称.alignment = TextAlignmentOptions.Center;
         名称.enableWordWrapping = true;
         名称.color = Color.white;
@@ -435,7 +433,7 @@ public sealed class 网格背包面板 : 面板基类
             耐体.transform.SetParent(物体.transform, false);
             var 耐 = 耐体.GetComponent<TextMeshProUGUI>();
             耐.text = 堆叠.当前耐久 <= 0 ? "损坏" : $"{堆叠.当前耐久}/{耐久上限}";
-            耐.fontSize = 22f;
+            耐.fontSize = 29f;
             耐.alignment = TextAlignmentOptions.Bottom;
             耐.color = 堆叠.当前耐久 <= 0 ? new Color(1f, 0.5f, 0.4f) : new Color(0.92f, 0.92f, 0.92f);
             耐.raycastTarget = false;
@@ -453,7 +451,7 @@ public sealed class 网格背包面板 : 面板基类
             数体.transform.SetParent(物体.transform, false);
             var 数 = 数体.GetComponent<TextMeshProUGUI>();
             数.text = 堆叠.数量.ToString();
-            数.fontSize = 30f;
+            数.fontSize = 40f;
             数.alignment = TextAlignmentOptions.BottomRight;
             数.color = Color.white;
             数.raycastTarget = false;
@@ -743,6 +741,16 @@ public sealed class 网格背包面板 : 面板基类
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
             return;
         }
+        // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影
+        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名))
+        {
+            落点有效 = false;
+            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+            bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
+            装备面板.实例.高亮槽位(槽位名, 匹配);
+            return;
+        }
+        装备面板.实例?.清除全部高亮();
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸))
         {
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
@@ -816,6 +824,7 @@ public sealed class 网格背包面板 : 面板基类
         var 源 = 拖拽源;
         拖拽源 = null;
         清理所有面板投影();   // 隐藏其他面板（容器）跨面板显示的投影
+        装备面板.实例?.清除全部高亮();   // 装备槽高亮（背包↔装备区拖拽提示）
         if (拖拽代理 != null) { Destroy(拖拽代理.gameObject); 拖拽代理 = null; }
         if (落点投影 != null) { Destroy(落点投影.gameObject); 落点投影 = null; }
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }
@@ -829,6 +838,17 @@ public sealed class 网格背包面板 : 面板基类
             return;
         }
         拖拽发起面板 = null; 拖拽源服务 = null; 拖拽中堆叠 = null;
+        // 拖到装备槽位（装备面板）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"，旧件回背包/回滚已处理）
+        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
+        {
+            if (数据.物品.TryGetValue(源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名))
+            {
+                if (面板操作.换装堆叠(档案, 源, 槽位名, 服务)) { 音效管理器.实例?.播放成功(); 刷新网格(); }   // 指定目标槽 + 源服务（穿戴容器/主背包）
+                else 音效管理器.实例?.播放失败();
+            }
+            else 音效管理器.实例?.播放失败();
+            return;
+        }
         if (!落点有效)
         {
             音效管理器.实例?.播放失败();   // 拖出网格外（无有效投影）= 取消
@@ -938,19 +958,75 @@ public sealed class 网格背包面板 : 面板基类
         底座层 = 线层 = 物品层 = null;   // 强制下次 准备层 在新容器下重建
     }
 
-    // 容器视图显示配置：小格 + 不用主背包测试参数（容器尺寸由 服务.网格列/行 决定）
+    // 容器视图显示配置：格尺寸 由 容器面板 传入（与主背包统一规格）；尺寸由 服务.网格列/行 决定
     public void 配置容器显示(float 小格尺寸)
     {
         格尺寸 = 小格尺寸;
-        仓库宽 = 0f;      // 不用 仓库宽 推导
         背包列数 = 0;     // 用 服务.网格列
         背包行数 = 0;     // 用 服务.网格行
     }
 
-    // 动态容器面板：绑定 信息条（网格统计）。详情不绑——刷新详情自动转发到 主背包详情文本（与主背包物品信息统一）
+    // 动态容器面板：绑定 信息条（网格统计）。详情不绑——由右键菜单「详情」呼出 信息面板 统一展示（与主背包物品信息一致）
     public void 绑定信息(TMP_Text 新信息条)
     {
         信息条 = 新信息条;
+    }
+
+    // 屏幕点 是否在本面板网格矩形内（装备槽拖拽落点判断用）
+    public bool 屏幕命中(Vector2 屏幕点)
+    {
+        var 矩形 = 网格容器;
+        if (矩形 == null) return false;
+        var 画布 = 矩形.GetComponentInParent<Canvas>();
+        var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
+        return RectTransformUtility.RectangleContainsScreenPoint(矩形, 屏幕点, 相机);
+    }
+
+    // 屏幕点 → 网格格坐标（装备拖拽落点用；物品中心对齐，同背包内拖拽判定）
+    public bool 屏幕到格(Vector2 屏幕点, 物品堆叠 堆叠, out int 列, out int 行)
+    {
+        列 = 行 = -1;
+        if (堆叠 == null) return false;
+        var 伪事件 = new PointerEventData(EventSystem.current) { position = 屏幕点 };
+        if (!屏幕到容器相对(伪事件, out var 相对, out var 尺寸)) return false;
+        var (物宽, 物高) = 服务.物品占格(堆叠);
+        float 相对顶 = 尺寸.y - 相对.y;
+        列 = Mathf.RoundToInt((相对.x - 物宽 * 格尺寸 / 2f) / 格尺寸);
+        行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
+        return 列 >= 0 && 行 >= 0 && 列 < 当前列 && 行 < 当前行;
+    }
+
+    // 当前面板网格服务（装备拖拽放置用：主背包=档案背包服务 / 容器=容器视图）
+    public 背包服务 视图服务 => 服务;
+
+    // —— 装备拖拽投影（装备区拖装备 → 背包网格：落格投影，可放绿/不可放红，同背包内拖拽）——
+    public void 显示装备拖拽投影(物品堆叠 堆叠, Vector2 屏幕点, bool 强制禁 = false)
+    {
+        确保投影();
+        if (落点投影 == null) return;
+        if (强制禁)   // 保护（如"穿戴容器不能放进自己容器"）→ 全网格红框
+        {
+            落点投影.gameObject.SetActive(true);
+            落点投影.rectTransform.anchoredPosition = Vector2.zero;
+            落点投影.rectTransform.sizeDelta = new Vector2(当前列 * 格尺寸, 当前行 * 格尺寸);
+            落点投影.color = 渲染放置禁色;
+            return;
+        }
+        if (堆叠 == null || !屏幕到格(屏幕点, 堆叠, out var 列, out var 行))
+        {
+            落点投影.gameObject.SetActive(false);
+            return;
+        }
+        var (宽, 高) = 服务.物品占格(堆叠);
+        落点投影.gameObject.SetActive(true);
+        落点投影.rectTransform.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);
+        落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
+        落点投影.color = 服务.可放置(堆叠.标识, 列, 行, 堆叠.旋转) ? 渲染放置可色 : 渲染放置禁色;
+    }
+
+    public void 隐藏装备拖拽投影()
+    {
+        if (落点投影 != null) 落点投影.gameObject.SetActive(false);
     }
 
     // ===== 操作按钮 =====
@@ -968,7 +1044,7 @@ public sealed class 网格背包面板 : 面板基类
     {
         if (选中 == null) return;
         if (!数据.物品.TryGetValue(选中.标识, out var 物品) || string.IsNullOrEmpty(物品.槽位)) { 音效管理器.实例?.播放失败(); return; }
-        if (面板操作.换装(档案, 物品)) 选中 = null;   // 换装成功物品已扣
+        if (面板操作.换装堆叠(档案, 选中, null, 服务)) 选中 = null;   // 实例级换装（源服务 = 本面板：穿戴容器/主背包）
         刷新网格();
     }
 
@@ -981,30 +1057,14 @@ public sealed class 网格背包面板 : 面板基类
             int 已用 = 服务.已用格数();   // 领域统计
             设文本(信息条, $"已用 {已用}/{当前列 * 当前行} 格 · 负重 {档案.负重占用}/{档案.负重上限}");
         }
-        刷新详情();
+        // 注：详情不再显示在网格面板文本上——由右键菜单「详情」呼出 信息面板（物品工具.构建详情）
     }
 
-    private void 刷新详情()
+    // 右键菜单「详情」：呼出 信息面板 显示 选中 物品完整信息
+    public void 菜单查看详情()
     {
-        // 详情统一显示在主背包详情文本：主背包用自己绑定的文本，容器网格（未绑）转发到 主背包详情文本
-        var 目标 = 详情文本 != null ? 详情文本 : 主背包详情文本;
-        if (目标 == null) return;
-        if (选中 == null) { 设文本(目标, ""); return; }
-        if (!数据.物品.TryGetValue(选中.标识, out var 物品)) { 设文本(目标, 选中.标识); return; }
-        var 形状 = 服务.形状解析?.Invoke(选中.标识) ?? new 物品形状(1, 1);
-        string 数值 = "";
-        if (物品.攻击加成 > 0) 数值 += $"攻击 {物品.攻击加成}  ";
-        if (物品.防御加成 > 0) 数值 += $"防御 {物品.防御加成}  ";
-        if (物品.生命加成 > 0) 数值 += $"生命 {物品.生命加成}  ";
-        if (物品.恢复量 > 0) 数值 += $"恢复 {物品.恢复量}（{物品.恢复目标}）";
-        string 操作提示 = 物品.恢复量 > 0 ? "双击使用" : (!string.IsNullOrEmpty(物品.槽位) ? "双击装备" : "");
-        int 上限 = 服务.堆叠上限(选中.标识);
-        string 堆叠文本 = 上限 > 1 ? $"堆叠 {选中.数量}/{上限}" : $"数量 {选中.数量}";
-        int 耐上 = 档案.有效最大耐久(选中.标识);
-        string 耐文本 = 耐上 > 0 ? $" · 耐久 {选中.当前耐久}/{耐上}" : "";
-        string 品质名称行 = 物品工具.品质名称(有效品质(选中, 物品), 物品.名称);
-        设文本(目标,
-            $"<b>{品质名称行}</b>（{物品.类型}）\n{物品.描述}\n{数值}\n形状 {形状.宽}×{形状.高} · 重量 {物品.重量} · 价值 {物品.价值} · {堆叠文本}{耐文本}\n{操作提示}");
+        if (选中 == null) return;
+        if (信息面板.实例 != null) 信息面板.实例.显示(选中, 服务);
     }
 
     // ===== 内部组件：非按钮点击 + 拖拽 =====

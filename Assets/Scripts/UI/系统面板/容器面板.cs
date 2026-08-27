@@ -14,7 +14,7 @@ using UnityEngine.UI;
             = new System.Collections.Generic.Dictionary<物品堆叠, 容器面板>();
 
         // ===== 布局常量（集中调整容器面板外观：大小/格子/间距，改这里全局生效） =====
-        private const float 格尺寸 = 100f;            // 容器内单格像素（固定值；90 足够普通容器使用，最多可摆约 10 列宽；面板大小随容量 列×行 自动伸缩）
+        private const float 格尺寸 = 133f;            // 容器内单格像素（兜底值，2K 基准 = 100×4/3；实际跟随 主背包面板.格子尺寸）
         private const float 边距 = 12f;              // 网格/文本 距面板左缘
         private const float 标题高 = 56f;            // 顶部行占位（上边距 12 + 标题行 44）
         private const float 信息条宽 = 180f;         // 顶部行：信息条固定宽（右段，贴按钮左侧；标题让位给它）
@@ -95,7 +95,7 @@ using UnityEngine.UI;
             标题矩形.offsetMin = new Vector2(边距, -12f - 44f);
             标题矩形.offsetMax = new Vector2(-(8f + 按钮尺寸 + 8f + 顶行间距 + 信息条宽), -12f);
             var 标题文本 = 标题物体.GetComponent<TextMeshProUGUI>();
-            标题文本.fontSize = 30f;
+            标题文本.fontSize = 40f;
             标题文本.alignment = TextAlignmentOptions.Left;
             标题文本.color = Color.white;
             标题文本.raycastTarget = false;
@@ -121,7 +121,7 @@ using UnityEngine.UI;
             按钮文本矩形.offsetMax = Vector2.zero;
             var 按钮文本 = 按钮文本物体.GetComponent<TextMeshProUGUI>();
             按钮文本.text = "x";
-            按钮文本.fontSize = 28f;
+            按钮文本.fontSize = 37f;
             按钮文本.alignment = TextAlignmentOptions.Center;
             按钮文本.color = Color.white;
             按钮文本.raycastTarget = false;   // 不拦截点击（按钮在父物体上）
@@ -139,7 +139,7 @@ using UnityEngine.UI;
             // 动态挂 网格背包面板 组件（复用全部网格渲染/拖拽/转移逻辑）
             容器网格 = 网格物体.AddComponent<网格背包面板>();
             容器网格.绑定网格容器(网格矩形);
-            容器网格.配置容器显示(格尺寸);   // 容器内格子尺寸
+            容器网格.配置容器显示(网格背包面板.主背包面板 != null ? 网格背包面板.主背包面板.格子尺寸 : 格尺寸);   // 与主背包格尺寸统一规格（默认 90 兜底）
             // 顶部行：信息条（固定宽，右段贴按钮左侧，右对齐；容器统计：已用格/负重）
             var 信息条物体 = new GameObject("信息条", typeof(RectTransform), typeof(TextMeshProUGUI));
             信息条物体.transform.SetParent(面板根, false);
@@ -150,7 +150,7 @@ using UnityEngine.UI;
             信息条矩形.anchoredPosition = new Vector2(-(8f + 按钮尺寸 + 8f), -12f);   // 按钮左侧
             信息条矩形.sizeDelta = new Vector2(信息条宽, 信息条高);
             var 信息条文本 = 信息条物体.GetComponent<TextMeshProUGUI>();
-            信息条文本.fontSize = 21f;
+            信息条文本.fontSize = 28f;
             信息条文本.alignment = TextAlignmentOptions.Right;
             信息条文本.color = new Color(0.85f, 0.85f, 0.9f, 1f);
             信息条文本.raycastTarget = false;

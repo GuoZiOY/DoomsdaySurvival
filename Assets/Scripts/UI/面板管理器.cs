@@ -20,7 +20,7 @@ public sealed class 面板管理器 : MonoBehaviour
     // 末日新建面板（阶段 B 逐个补，先声明引用位）
     [SerializeField] private 面板基类 城市地图;    // 城市三级地图（待建）
     [SerializeField] private 面板基类 营地;        // 营地面板（待建）
-    [SerializeField] private 面板基类 背包;        // 网格背包面板（待建）
+    [SerializeField] private 装备背包面板 背包;    // 装备与背包面板（装备区 + 背包区 子节点；F1 打开/返回）
     [SerializeField] private 面板基类 交易;        // 交易面板（待建）
     [SerializeField] private 面板基类 任务;        // 委托面板（待建）
 

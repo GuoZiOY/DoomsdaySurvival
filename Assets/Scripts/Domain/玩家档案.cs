@@ -53,7 +53,7 @@ using System.Collections.Generic;
         public 物品形状(int 宽, int 高) { this.宽 = 宽; this.高 = 高; }
     }
 
-    // 装备记录：已装备物品（槽位 + 标识）。存档结构（8 槽：主手/副手/头部/胸部/腿部/脚部/手部/背包）
+    // 装备记录：已装备物品（槽位 + 标识）。存档结构（槽位：主手/副手/头部/胸部/腿部/脚部/手部 + 容器位 弹挂/腰封/背包）
     [Serializable]
     public class 装备记录
     {
@@ -62,6 +62,11 @@ using System.Collections.Generic;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
+
+        // —— 穿戴容器（弹挂/腰封/背包）：穿戴后内部网格与物品（随档存档；非容器装备 = 默认 0/null）——
+        public int 容器列;                   // 实例网格列数（缺省用模板）
+        public int 容器行;                   // 实例网格行数
+        public List<物品堆叠> 容器物品;      // 容器内部物品（与 背包服务.背包 同构）；null = 非容器/空容器
 
         public 装备记录() { }
         public 装备记录(string 槽位, string 标识) { this.槽位 = 槽位; this.标识 = 标识; }
@@ -94,6 +99,7 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量——接背包服务
         [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限——接背包服务
         [NonSerialized] public Func<string, int> 最大耐久解析;        // 标识 -> 最大耐久（0 = 无耐久，不损坏）
+        [NonSerialized] public Func<string, (int 列, int 行)> 容器尺寸解析;   // 标识 -> 容器模板网格尺寸（弹挂/腰封/背包 穿戴时初始化）
         [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板
 
         // —— 身份：职业与天赋 ——
@@ -420,18 +426,47 @@ using System.Collections.Generic;
             return "";
         }
 
-        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null, int? 当前耐久 = null)
+        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null, int? 当前耐久 = null, 物品堆叠 容器源 = null)
         {
+            bool 容器位 = 槽位 == "弹挂" || 槽位 == "腰封" || 槽位 == "背包";   // 穿戴容器：内部有网格
             foreach (var e in 装备)
                 if (e.槽位 == 槽位)
                 {
-                    var 旧 = new 装备记录(槽位, e.标识) { 词缀 = e.词缀, 当前耐久 = e.当前耐久 };
+                    var 旧 = new 装备记录(槽位, e.标识) { 词缀 = e.词缀, 当前耐久 = e.当前耐久, 容器列 = e.容器列, 容器行 = e.容器行, 容器物品 = e.容器物品 };
                     e.标识 = 标识; e.词缀 = 词缀;
                     e.当前耐久 = 当前耐久 ?? 有效最大耐久(标识);   // 透传实例耐久；无则按模板初始化
+                    if (容器位) 应用容器(e, 标识, 容器源);   // 容器位：携带容器源数据（内部物品保留）或按模板初始化
                     return 旧;
                 }
-            装备.Add(new 装备记录(槽位, 标识) { 词缀 = 词缀, 当前耐久 = 当前耐久 ?? 有效最大耐久(标识) });
+            var 新 = new 装备记录(槽位, 标识) { 词缀 = 词缀, 当前耐久 = 当前耐久 ?? 有效最大耐久(标识) };
+            if (容器位) 应用容器(新, 标识, 容器源);
+            装备.Add(新);
             return null;
+        }
+
+        // 容器位：容器源 提供容器数据（卸下再穿上时内部物品保留）→ 直接用；否则 新空容器 + 模板尺寸
+        private void 应用容器(装备记录 记录, string 标识, 物品堆叠 容器源)
+        {
+            if (容器源 != null && 容器源.容器列 > 0)
+            {
+                记录.容器列 = 容器源.容器列;
+                记录.容器行 = 容器源.容器行;
+                记录.容器物品 = 容器源.容器物品;
+                return;
+            }
+            记录.容器物品 = 记录.容器物品 ?? new List<物品堆叠>();
+            应用容器尺寸(记录, 标识);
+        }
+
+        // 容器位：按模板（注入的 容器尺寸解析）设置实例网格尺寸
+        private void 应用容器尺寸(装备记录 记录, string 标识)
+        {
+            if (容器尺寸解析 != null)
+            {
+                var (列, 行) = 容器尺寸解析(标识);
+                记录.容器列 = 列;
+                记录.容器行 = 行;
+            }
         }
 
         public 装备记录 卸下装备(string 槽位)

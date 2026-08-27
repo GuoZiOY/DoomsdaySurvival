@@ -25,6 +25,8 @@ public sealed class 玩家输入系统 : MonoBehaviour
         if (检测按下(KeyCode.F1)) 打开背包面板();
         if (检测按下(KeyCode.F2)) 测试加随机物品();
         if (检测按下(KeyCode.F3)) 测试加容器();
+        if (检测按下(KeyCode.F4)) 测试清空背包();
+        if (检测按下(KeyCode.F5)) 测试随机穿戴容器();
         // 左键 = 确认：由各 UI 按钮的 onClick 原生处理，这里不拦截
         // 右键 = 物品操作菜单：由 网格背包面板 的物品点击组件处理（此处不再做全局回退）
     }
@@ -39,6 +41,8 @@ public sealed class 玩家输入系统 : MonoBehaviour
             if (键 == KeyCode.F1 && Keyboard.current.f1Key.wasPressedThisFrame) 按下 = true;
             if (键 == KeyCode.F2 && Keyboard.current.f2Key.wasPressedThisFrame) 按下 = true;
             if (键 == KeyCode.F3 && Keyboard.current.f3Key.wasPressedThisFrame) 按下 = true;
+            if (键 == KeyCode.F4 && Keyboard.current.f4Key.wasPressedThisFrame) 按下 = true;
+            if (键 == KeyCode.F5 && Keyboard.current.f5Key.wasPressedThisFrame) 按下 = true;
         }
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -47,7 +51,20 @@ public sealed class 玩家输入系统 : MonoBehaviour
         return 按下;
     }
 
-    // F1：打开网格背包面板（需在 面板管理器 的「背包」引用位接线）
+    // F4：一键清空背包网格物品（测试用；装备槽保留），发布事件刷新所有面板
+    private void 测试清空背包()
+    {
+        var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        if (玩家 == null) return;
+        int 数量 = 玩家.背包.Count;
+        if (数量 <= 0) { 事件?.发布(new 日志事件(日志类型.反馈, "[测试] 背包已空，无需清空。")); return; }
+        玩家.背包.Clear();
+        事件?.发布(new 背包变化事件("", 0, 变化原因.失去));   // 触发网格/面板刷新
+        事件?.发布(new 日志事件(日志类型.反馈, $"[测试] 已清空背包（{数量} 件）。"));
+    }
+
+    // F1：打开/关闭 装备与背包面板（含 装备区 + 背包区 子面板；需在 面板管理器 的「背包」引用位接线 装备背包面板）
     private void 打开背包面板()
     {
         if (面板 == null)
@@ -55,9 +72,10 @@ public sealed class 玩家输入系统 : MonoBehaviour
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[测试] 场景缺少 面板管理器。"));
             return;
         }
-        面板.显示面板类型<网格背包面板>();
-        if (面板.当前显示面板 is not 网格背包面板)
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[测试] 背包面板未接线到 面板管理器.背包 引用位。"));
+        if (面板.当前显示面板 is 装备背包面板) { 面板.返回上一面板(); return; }   // 再按 F1 → 关闭（返回上一面板）
+        面板.显示面板类型<装备背包面板>();
+        if (面板.当前显示面板 is not 装备背包面板)
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[测试] 装备与背包面板未接线到 面板管理器.背包 引用位。"));
     }
 
     // F2：背包加入随机物品（数量 1~3，自动找空位；放不下提示）
@@ -75,12 +93,51 @@ public sealed class 玩家输入系统 : MonoBehaviour
         var 表 = new List<string>(数据.物品.Keys);
         var 标识 = 表[Random.Range(0, 表.Count)];
         int 数量 = Random.Range(1, 4);
-        int 实际 = 玩家.档案.放入网格(标识, 数量);
+        var 目标 = 第一个穿戴容器();   // 塔科夫式：物品放穿戴容器（弹挂/腰封/背包），无独立主背包
+        if (目标 == null)
+        {
+            事件.发布(new 日志事件(日志类型.反馈坏, "[测试] 未穿戴任何容器（弹挂/腰封/背包），无处放置。"));
+            return;
+        }
+        int 实际 = 目标.放入网格(标识, 数量);
         事件.发布(new 背包变化事件(标识, 实际, 变化原因.获得));
         string 名称 = 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
-        if (实际 <= 0) 事件.发布(new 日志事件(日志类型.反馈坏, $"[测试] 背包已满，{名称} 放不下了！"));
-        else if (实际 < 数量) 事件.发布(new 日志事件(日志类型.反馈坏, $"[测试] 背包空间不足，只放入了 {名称} ×{实际}/{数量}。"));
+        if (实际 <= 0) 事件.发布(new 日志事件(日志类型.反馈坏, $"[测试] 容器已满，{名称} 放不下了！"));
+        else if (实际 < 数量) 事件.发布(new 日志事件(日志类型.反馈坏, $"[测试] 容器空间不足，只放入了 {名称} ×{实际}/{数量}。"));
         else 事件.发布(new 日志事件(日志类型.反馈, $"[测试] 获得 {名称} ×{实际}"));
+    }
+
+    // 第一个穿戴容器（弹挂/腰封/背包 按序）；没穿返回 null
+    private 背包服务 第一个穿戴容器()
+    {
+        var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
+        var 容器服务 = ServiceRegistry.Get<容器服务>();
+        if (档案 == null || 容器服务 == null) return null;
+        foreach (var 槽 in new[] { "弹挂", "腰封", "背包" })
+        {
+            var 记录 = 档案.装备.Find(e => e.槽位 == 槽);
+            if (记录 != null && !string.IsNullOrEmpty(记录.标识)) return 容器服务.穿戴容器视图(记录);
+        }
+        return null;
+    }
+
+    // F5：随机装备 3 个容器槽（弹挂/腰封/背包）——测试穿戴容器用（凭空穿戴，不占背包物品）
+    private void 测试随机穿戴容器()
+    {
+        var 数据 = ServiceRegistry.Get<DataService>();
+        var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        if (数据 == null || 玩家 == null || 事件 == null) return;
+        foreach (var 槽 in new[] { "弹挂", "腰封", "背包" })
+        {
+            var 候选 = new List<物品数据>();
+            foreach (var 物 in 数据.物品.Values)
+                if (物.槽位 == 槽 && 物.是容器) 候选.Add(物);
+            if (候选.Count == 0) continue;
+            玩家.装备到槽(槽, 候选[Random.Range(0, 候选.Count)].标识);   // 装备到槽 自动初始化容器
+        }
+        事件.发布(new 属性变化事件(玩家.体质, 玩家.力量, 玩家.智慧, 玩家.敏捷, 玩家.意志, 玩家.自由属性点));   // 触发 中区/装备面板 刷新
+        事件.发布(new 日志事件(日志类型.反馈, "[测试] 已随机穿戴 弹挂/腰封/背包。"));
     }
 
     // F3：一键添加容器 + 配套物品（测试容器系统用）

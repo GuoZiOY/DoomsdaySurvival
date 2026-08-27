@@ -151,6 +151,17 @@ using System.Collections.Generic;
             return 新;
         }
 
+        // 放入已有堆叠实例到 指定格（装备卸下/拖拽放置用；目标格被占或不可放返回 false，不改变堆叠）
+        public bool 放入指定格(物品堆叠 堆叠, int 列, int 行)
+        {
+            if (堆叠 == null) return false;
+            if (!可放置(堆叠.标识, 列, 行, 堆叠.旋转)) return false;
+            堆叠.列 = 列;
+            堆叠.行 = 行;
+            背包.Add(堆叠);
+            return true;
+        }
+
         // 已占用格数（所有入格物品的面积和）
         public int 已用格数()
         {

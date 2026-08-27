@@ -19,12 +19,15 @@ public sealed class 右键菜单 : MonoBehaviour
     [SerializeField] private Button 使用按钮;        // 恢复品：使用
     [SerializeField] private Button 装备按钮;        // 槽位物品：装备
     [SerializeField] private Button 打开按钮;        // 容器：打开
-    [SerializeField] private Button 拆分按钮;        // 数量>1：拆分（功能未实现，暂隐藏）
+    [SerializeField] private Button 拆分按钮;        // 数量>1：拆分（数量>1 才显示）
     [SerializeField] private Button 分解按钮;        // 分解（系统未设计，暂隐藏）
     [SerializeField] private Button 丢弃按钮;        // 丢弃（任何入格物品均可，始终显示）
+    [SerializeField] private Button 详情按钮;        // 信息展示面板（任何物品/装备槽均显示）
+    [SerializeField] private Button 卸下按钮;        // 卸下（仅 装备槽模式 显示：已装备物品卸下回背包）
 
     private 网格背包面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
     public 网格背包面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
+    private string 目标槽位;          // 非空 = 装备槽模式（菜单显示 详情/卸下，操作对象是槽位而非堆叠）
 
     void Awake()
     {
@@ -37,6 +40,25 @@ public sealed class 右键菜单 : MonoBehaviour
         if (打开按钮 != null) 打开按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开(); });
         if (拆分按钮 != null) 拆分按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开拆分(); });
         if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单丢弃(); });
+        if (详情按钮 != null) 详情按钮.onClick.AddListener(() => { 隐藏(); 查看详情(); });
+        if (卸下按钮 != null) 卸下按钮.onClick.AddListener(() => { 隐藏(); 卸下装备(); });
+    }
+
+    // 详情：装备槽模式 → 信息面板.显示槽位；物品模式 → 目标面板.菜单查看详情
+    private void 查看详情()
+    {
+        if (!string.IsNullOrEmpty(目标槽位)) { if (信息面板.实例 != null) 信息面板.实例.显示槽位(目标槽位); return; }
+        (目标面板 ?? 背包面板)?.菜单查看详情();
+    }
+
+    // 卸下：仅装备槽模式（已装备物品回背包，面板操作.卸下 已发事件）
+    private void 卸下装备()
+    {
+        if (string.IsNullOrEmpty(目标槽位)) return;
+        var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
+        if (档案 == null) return;
+        面板操作.卸下(档案, 目标槽位);
+        if (装备面板.实例 != null) 装备面板.实例.刷新();
     }
 
     // 关闭检测：点击菜单外（左键/右键按下且不在菜单矩形内）/ 滚轮 → 关闭。不拦截事件——下层物品/滚动正常响应
@@ -131,10 +153,31 @@ public sealed class 右键菜单 : MonoBehaviour
         }
         if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);   // 分解系统未设计（预留）
         if (丢弃按钮 != null) { 丢弃按钮.gameObject.SetActive(true); 有操作 = true; }   // 丢弃始终可用（入格物品）
+        if (详情按钮 != null) { 详情按钮.gameObject.SetActive(true); 有操作 = true; }   // 详情始终可用
+        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(false);   // 物品模式无卸下
         if (!有操作) { 隐藏(); return; }
+        目标槽位 = null;   // 物品模式
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();   // 置顶（不被其他面板遮挡）
         定位到物品右侧(物品框);
+    }
+
+    // 装备槽模式：菜单只显示 详情/卸下，操作对象 = 槽位（已装备物品）；定位到槽位框右侧
+    public void 显示装备槽(string 槽位, RectTransform 框)
+    {
+        if (菜单根 == null) return;
+        目标槽位 = 槽位;
+        if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);
+        if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
+        if (打开按钮 != null) 打开按钮.gameObject.SetActive(false);
+        if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);
+        if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);
+        if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
+        if (详情按钮 != null) 详情按钮.gameObject.SetActive(true);
+        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(true);
+        菜单根.gameObject.SetActive(true);
+        菜单根.SetAsLastSibling();
+        定位到物品右侧(框);
     }
 
     // 隐藏菜单（点击菜单外/滚轮/左键点物品/拖拽/执行操作 均走这里）
