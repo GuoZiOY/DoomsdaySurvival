@@ -64,10 +64,10 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         else 面板基类.设文本(耐久, "");
     }
 
-    // 点击本槽：有装备 → 呼出右键菜单（详情/卸下）
+    // 点击本槽：有装备 → 右键呼出小菜单（详情/卸下）
     public void OnPointerClick(PointerEventData 事件)
     {
-        if (事件.button != PointerEventData.InputButton.Left) return;
+        if (事件.button != PointerEventData.InputButton.Right) return;
         var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (玩家 == null || string.IsNullOrEmpty(玩家.装备标识(槽位名))) return;   // 空槽：无操作
         if (右键菜单.实例 != null) 右键菜单.实例.显示装备槽(槽位名, 框);

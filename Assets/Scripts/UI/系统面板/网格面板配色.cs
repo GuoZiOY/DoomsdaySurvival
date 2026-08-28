@@ -6,7 +6,7 @@ using UnityEngine;
 public static class 网格面板配色
 {
     // 十六进制 RGB + 透明度 0~255
-    public static readonly Color 底座色 = new Color(0f, 0f, 0.0784f, 0.3922f);              // 空格底图（#000014 A100）
+    public static readonly Color 底座色 = new Color(1f, 1f, 1f, 0.95f);                         // 空格底图：纯白 A255（网格底层精灵 原样着色）
     public static readonly Color 物品边界色 = new Color(1f, 1f, 1f, 0.2745f);                     // 物品边界线（较亮，#FFFFFF）
     public static readonly Color 线条色 = new Color(1f, 1f, 1f, 0.1176f);                   // 物品内部/空格 线（较淡，#FFFFFF A30）
     public static readonly float 线宽 = 2f;                                                  // 分隔线宽（px）

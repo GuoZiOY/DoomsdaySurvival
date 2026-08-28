@@ -456,15 +456,24 @@ public sealed class 网格面板 : 面板基类
         return r;
     }
 
-    // 底座一格（底图；由 GridLayoutGroup 自动铺格/对齐——不再手动定位）
+    // 底座一格（底图；用 网格底层 精灵 + 底座色（纯白 A255）原样着色；不描边——分隔线由 画分隔线 统一绘制，格子在线内）
     private void 创建底格(int 列, int 行)
     {
         var 物体 = new GameObject($"底格_{行}_{列}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(底座层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = 网格面板配色.底座色;
-        图.raycastTarget = false;   // 纯底图（不描边——分隔线由 画分隔线 统一绘制，格子在线内）
+        图.sprite = 网格底层精灵();
+        图.color = 网格面板配色.底座色;   // 纯白 A255：精灵 原样 显示（无精灵时退化为纯色底）
+        图.raycastTarget = false;
         定位(物体.GetComponent<RectTransform>(), 列, 行, 1, 1);   // 手动铺格（相对 底座层 左上）
+    }
+
+    // 网格底层精灵（Resources/Art/网格底层.png；导入需为 Sprite 类型；缓存 一次 加载）
+    private static Sprite 网格底层精灵缓存;
+    private static Sprite 网格底层精灵()
+    {
+        if (网格底层精灵缓存 == null) 网格底层精灵缓存 = Resources.Load<Sprite>("Art/网格底层");
+        return 网格底层精灵缓存;
     }
 
     // 画网格分隔线（按物品覆盖分段）：物品边界线亮；物品内部线与空格线一样淡
