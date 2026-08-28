@@ -29,6 +29,9 @@ public sealed class 装备面板 : MonoBehaviour
     // 背包变化（装备/卸下/丢弃/获得…）→ 脏标记，Update 合并刷新（避免同帧多次重建）
     private bool 待刷新;
 
+    // 外部请求刷新（装备槽/右键菜单 拖拽操作后）：设脏标记，Update 帧末合并刷新（与事件驱动合并，避免重复全量刷新）
+    public void 请求刷新() => 待刷新 = true;
+
     void Update()
     {
         if (!待刷新) return;

@@ -105,7 +105,7 @@ public sealed class 镶缀服务
     private static 物品堆叠 找单件(玩家档案 玩家, string 装备标识)
     {
         物品堆叠 数量一 = null;
-        foreach (var 堆叠 in 玩家.背包)
+        foreach (var 堆叠 in 玩家.所有持有物品())
             if (堆叠.标识 == 装备标识 && 堆叠.数量 > 0)
             {
                 if (堆叠.词缀 != null && 堆叠.词缀.Count > 0 && 堆叠.数量 == 1) return 堆叠;

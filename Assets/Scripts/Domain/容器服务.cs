@@ -66,6 +66,25 @@ using System.Collections.Generic;
             return 入 != null && 入.类型 == 模板.容器允许类型;
         }
 
+        // 允许放入（按 容器标识 查模板；穿戴容器块 校验用——装备记录 非 物品堆叠）
+        public bool 允许放入(string 容器标识, string 入标识)
+        {
+            if (string.IsNullOrEmpty(容器标识) || string.IsNullOrEmpty(入标识)) return false;
+            var 容器模板 = 物品数据解析?.Invoke(容器标识);
+            if (容器模板 == null || !容器模板.是容器) return false;
+            if (string.IsNullOrEmpty(容器模板.容器允许类型)) return true;
+            var 入 = 物品数据解析?.Invoke(入标识);
+            return 入 != null && 入.类型 == 容器模板.容器允许类型;
+        }
+
+        // 按 标识 判断 是否容器（穿戴容器块 嵌套校验用）
+        public bool 是容器(string 标识)
+        {
+            if (string.IsNullOrEmpty(标识)) return false;
+            var 模板 = 物品数据解析?.Invoke(标识);
+            return 模板 != null && 模板.是容器;
+        }
+
         // 打开容器：把 容器物品 包成 背包服务 视图（复用全部网格逻辑），并注入网格解析器
         public 背包服务 打开(物品堆叠 容器)
         {

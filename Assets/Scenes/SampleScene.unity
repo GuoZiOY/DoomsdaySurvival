@@ -5789,7 +5789,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -8, y: 0}
+  m_SizeDelta: {x: 0, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &154703273
 MonoBehaviour:
@@ -11721,7 +11721,7 @@ MonoBehaviour:
   - {fileID: 2080053478}
   - {fileID: 1696850273}
   - {fileID: 1007093638}
-  "\u5E03\u5C40\u7236": {fileID: 398708996}
+  "\u5E03\u5C40\u7236": {fileID: 1621357659}
 --- !u!1 &403552224
 GameObject:
   m_ObjectHideFlags: 0
@@ -15314,7 +15314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 734179f5fc38ebe4fb7f38ed0090013e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u4ED3\u5E93\u533A"
-  "\u9762\u677F": {fileID: 0}
+  "\u9762\u677F": {fileID: 517200508}
 --- !u!114 &517200506
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15328,7 +15328,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.084905684, g: 0.084905684, b: 0.084905684, a: 0.6627451}
+  m_Color: {r: 0.084905684, g: 0.084905684, b: 0.084905684, a: 0.78431374}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -15366,28 +15366,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u7F51\u683C\u80CC\u5305\u9762\u677F"
   "\u7F51\u683C\u5BB9\u5668": {fileID: 1268403316}
-  "\u80CC\u5305\u5217\u6570": 10
-  "\u80CC\u5305\u884C\u6570": 10
-  "\u683C\u5C3A\u5BF8": 100
-  "\u80CC\u5305\u5217\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u5217\u6570\u6700\u5927": 10
-  "\u80CC\u5305\u884C\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u884C\u6570\u6700\u5927": 100
-  "\u5E95\u5EA7\u8272": {r: 0, g: 0, b: 0.15686275, a: 0.3137255}
-  "\u7269\u54C1\u8FB9\u754C\u8272": {r: 1, g: 1, b: 1, a: 0.27450982}
-  "\u7EBF\u6761\u8272": {r: 1, g: 1, b: 1, a: 0.11764706}
-  "\u7EBF\u5BBD": 2
-  "\u7269\u54C1\u8FB9\u8DDD": 4
-  "\u7269\u54C1\u5E95\u8272": {r: 0.28, g: 0.3, b: 0.36, a: 0.95}
-  "\u9AD8\u5149\u8272": {r: 1, g: 1, b: 1, a: 0.039215688}
-  "\u54C1\u8D28\u5E95\u8272\u900F\u660E": 0.3
-  "\u653E\u7F6E\u53EF\u8272": {r: 0.49261302, g: 0.7735849, b: 0.53092736, a: 0.39215687}
-  "\u653E\u7F6E\u7981\u8272": {r: 0.754717, g: 0.40939838, b: 0.40939838, a: 0.39215687}
-  "\u5408\u5E76\u8272": {r: 0.45, g: 0.75, b: 1, a: 0.4}
-  "\u4FE1\u606F\u6761": {fileID: 0}
-  "\u8BE6\u60C5\u6587\u672C": {fileID: 0}
-  "\u4F7F\u7528\u6309\u94AE": {fileID: 0}
-  "\u88C5\u5907\u6309\u94AE": {fileID: 0}
+  "\u56FA\u5B9A\u5217\u6570": 10
+  "\u56FA\u5B9A\u884C\u6570": 10
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5927": 100
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5927": 100
 --- !u!1 &517739404
 GameObject:
   m_ObjectHideFlags: 0
@@ -21254,7 +21238,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 727.47, y: 100}
+  m_SizeDelta: {x: 658.67, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &726889744
 MonoBehaviour:
@@ -21269,28 +21253,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u7F51\u683C\u80CC\u5305\u9762\u677F"
   "\u7F51\u683C\u5BB9\u5668": {fileID: 726889743}
-  "\u80CC\u5305\u5217\u6570": 6
-  "\u80CC\u5305\u884C\u6570": 10
-  "\u683C\u5C3A\u5BF8": 100
-  "\u80CC\u5305\u5217\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u5217\u6570\u6700\u5927": 10
-  "\u80CC\u5305\u884C\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u884C\u6570\u6700\u5927": 100
-  "\u5E95\u5EA7\u8272": {r: 0, g: 0, b: 0.15686275, a: 0.3137255}
-  "\u7269\u54C1\u8FB9\u754C\u8272": {r: 1, g: 1, b: 1, a: 0.27450982}
-  "\u7EBF\u6761\u8272": {r: 1, g: 1, b: 1, a: 0.11764706}
-  "\u7EBF\u5BBD": 2
-  "\u7269\u54C1\u8FB9\u8DDD": 4
-  "\u7269\u54C1\u5E95\u8272": {r: 0.28, g: 0.3, b: 0.36, a: 0.95}
-  "\u9AD8\u5149\u8272": {r: 1, g: 1, b: 1, a: 0.039215688}
-  "\u54C1\u8D28\u5E95\u8272\u900F\u660E": 0.3
-  "\u653E\u7F6E\u53EF\u8272": {r: 0.49261302, g: 0.7735849, b: 0.53092736, a: 0.39215687}
-  "\u653E\u7F6E\u7981\u8272": {r: 0.754717, g: 0.40939838, b: 0.40939838, a: 0.39215687}
-  "\u5408\u5E76\u8272": {r: 0.45, g: 0.75, b: 1, a: 0.4}
-  "\u4FE1\u606F\u6761": {fileID: 0}
-  "\u8BE6\u60C5\u6587\u672C": {fileID: 0}
-  "\u4F7F\u7528\u6309\u94AE": {fileID: 0}
-  "\u88C5\u5907\u6309\u94AE": {fileID: 0}
+  "\u56FA\u5B9A\u5217\u6570": 6
+  "\u56FA\u5B9A\u884C\u6570": 10
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5927": 100
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5927": 100
 --- !u!1 &728716028
 GameObject:
   m_ObjectHideFlags: 0
@@ -24113,8 +24081,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 363.735, y: -1050}
-  m_SizeDelta: {x: 727.47, y: 0}
+  m_AnchoredPosition: {x: 334.335, y: -1050}
+  m_SizeDelta: {x: 658.67, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &837429099
 MonoBehaviour:
@@ -25837,7 +25805,7 @@ MonoBehaviour:
   "\u6309\u94AE\u9519\u8BEF\u97F3\u6548": {fileID: 8300000, guid: 6bb378061b712414e93d92c645c88cf3, type: 3}
   "\u62FF\u8D77\u97F3\u6548": {fileID: 8300000, guid: 578e8ec6ded592f4ab75fcd46b316bc1, type: 3}
   "\u653E\u4E0B\u97F3\u6548": {fileID: 8300000, guid: e781895dbfc146a44b7308e2eb4734c8, type: 3}
-  "\u80CC\u666F\u97F3\u4E50\u97F3\u91CF": 3
+  "\u80CC\u666F\u97F3\u4E50\u97F3\u91CF": 1
   "\u6309\u94AE\u6210\u529F\u97F3\u91CF": 10
   "\u6309\u94AE\u9519\u8BEF\u97F3\u91CF": 10
   "\u901A\u7528\u97F3\u6548\u97F3\u91CF": 10
@@ -28017,11 +27985,11 @@ MonoBehaviour:
   m_Content: {fileID: 2060070594}
   m_Horizontal: 0
   m_Vertical: 1
-  m_MovementType: 1
+  m_MovementType: 2
   m_Elasticity: 0.05
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 10
+  m_ScrollSensitivity: 15
   m_Viewport: {fileID: 2128766404}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 1694677145}
@@ -33858,7 +33826,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 727.47, y: 100}
+  m_SizeDelta: {x: 658.67, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1248686380
 MonoBehaviour:
@@ -33873,28 +33841,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u7F51\u683C\u80CC\u5305\u9762\u677F"
   "\u7F51\u683C\u5BB9\u5668": {fileID: 1248686379}
-  "\u80CC\u5305\u5217\u6570": 6
-  "\u80CC\u5305\u884C\u6570": 10
-  "\u683C\u5C3A\u5BF8": 100
-  "\u80CC\u5305\u5217\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u5217\u6570\u6700\u5927": 10
-  "\u80CC\u5305\u884C\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u884C\u6570\u6700\u5927": 100
-  "\u5E95\u5EA7\u8272": {r: 0, g: 0, b: 0.15686275, a: 0.3137255}
-  "\u7269\u54C1\u8FB9\u754C\u8272": {r: 1, g: 1, b: 1, a: 0.27450982}
-  "\u7EBF\u6761\u8272": {r: 1, g: 1, b: 1, a: 0.11764706}
-  "\u7EBF\u5BBD": 2
-  "\u7269\u54C1\u8FB9\u8DDD": 4
-  "\u7269\u54C1\u5E95\u8272": {r: 0.28, g: 0.3, b: 0.36, a: 0.95}
-  "\u9AD8\u5149\u8272": {r: 1, g: 1, b: 1, a: 0.039215688}
-  "\u54C1\u8D28\u5E95\u8272\u900F\u660E": 0.3
-  "\u653E\u7F6E\u53EF\u8272": {r: 0.49261302, g: 0.7735849, b: 0.53092736, a: 0.39215687}
-  "\u653E\u7F6E\u7981\u8272": {r: 0.754717, g: 0.40939838, b: 0.40939838, a: 0.39215687}
-  "\u5408\u5E76\u8272": {r: 0.45, g: 0.75, b: 1, a: 0.4}
-  "\u4FE1\u606F\u6761": {fileID: 0}
-  "\u8BE6\u60C5\u6587\u672C": {fileID: 0}
-  "\u4F7F\u7528\u6309\u94AE": {fileID: 0}
-  "\u88C5\u5907\u6309\u94AE": {fileID: 0}
+  "\u56FA\u5B9A\u5217\u6570": 6
+  "\u56FA\u5B9A\u884C\u6570": 10
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5927": 100
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5927": 100
 --- !u!1 &1248998312
 GameObject:
   m_ObjectHideFlags: 0
@@ -34206,7 +34158,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1268403316}
-  - component: {fileID: 1268403319}
   m_Layer: 0
   m_Name: "\u5185\u5BB9"
   m_TagString: Untagged
@@ -34228,25 +34179,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 154703272}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 1}
---- !u!114 &1268403319
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1268403315}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
-  m_HorizontalFit: 0
-  m_VerticalFit: 2
 --- !u!1 &1273508316
 GameObject:
   m_ObjectHideFlags: 0
@@ -37565,8 +37502,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 363.735, y: -640}
-  m_SizeDelta: {x: 727.47, y: 0}
+  m_AnchoredPosition: {x: 334.335, y: -640}
+  m_SizeDelta: {x: 658.67, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1398480949
 MonoBehaviour:
@@ -37718,8 +37655,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 8.114868}
-  m_SizeDelta: {x: 0, y: -16.228535}
+  m_AnchoredPosition: {x: 0, y: 0.00030517578}
+  m_SizeDelta: {x: 0, y: 0.00061035}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1404613068
 MonoBehaviour:
@@ -37736,11 +37673,11 @@ MonoBehaviour:
   m_Content: {fileID: 1268403316}
   m_Horizontal: 0
   m_Vertical: 1
-  m_MovementType: 1
+  m_MovementType: 2
   m_Elasticity: 0.05
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 10
+  m_ScrollSensitivity: 15
   m_Viewport: {fileID: 154703272}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 954117903}
@@ -39971,8 +39908,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 363.735, y: -230}
-  m_SizeDelta: {x: 727.47, y: 0}
+  m_AnchoredPosition: {x: 334.335, y: -230}
+  m_SizeDelta: {x: 658.67, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1474569981
 MonoBehaviour:
@@ -50364,7 +50301,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 727.47, y: 100}
+  m_SizeDelta: {x: 658.67, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1861327107
 MonoBehaviour:
@@ -50379,28 +50316,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u7F51\u683C\u80CC\u5305\u9762\u677F"
   "\u7F51\u683C\u5BB9\u5668": {fileID: 1861327106}
-  "\u80CC\u5305\u5217\u6570": 6
-  "\u80CC\u5305\u884C\u6570": 10
-  "\u683C\u5C3A\u5BF8": 100
-  "\u80CC\u5305\u5217\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u5217\u6570\u6700\u5927": 10
-  "\u80CC\u5305\u884C\u6570\u6700\u5C0F": 1
-  "\u80CC\u5305\u884C\u6570\u6700\u5927": 100
-  "\u5E95\u5EA7\u8272": {r: 0, g: 0, b: 0.15686275, a: 0.3137255}
-  "\u7269\u54C1\u8FB9\u754C\u8272": {r: 1, g: 1, b: 1, a: 0.27450982}
-  "\u7EBF\u6761\u8272": {r: 1, g: 1, b: 1, a: 0.11764706}
-  "\u7EBF\u5BBD": 2
-  "\u7269\u54C1\u8FB9\u8DDD": 4
-  "\u7269\u54C1\u5E95\u8272": {r: 0.28, g: 0.3, b: 0.36, a: 0.95}
-  "\u9AD8\u5149\u8272": {r: 1, g: 1, b: 1, a: 0.039215688}
-  "\u54C1\u8D28\u5E95\u8272\u900F\u660E": 0.3
-  "\u653E\u7F6E\u53EF\u8272": {r: 0.49261302, g: 0.7735849, b: 0.53092736, a: 0.39215687}
-  "\u653E\u7F6E\u7981\u8272": {r: 0.754717, g: 0.40939838, b: 0.40939838, a: 0.39215687}
-  "\u5408\u5E76\u8272": {r: 0.45, g: 0.75, b: 1, a: 0.4}
-  "\u4FE1\u606F\u6761": {fileID: 0}
-  "\u8BE6\u60C5\u6587\u672C": {fileID: 0}
-  "\u4F7F\u7528\u6309\u94AE": {fileID: 0}
-  "\u88C5\u5907\u6309\u94AE": {fileID: 0}
+  "\u56FA\u5B9A\u5217\u6570": 6
+  "\u56FA\u5B9A\u884C\u6570": 10
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u5217\u6570\u6700\u5927": 100
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5C0F": 1
+  "\u56FA\u5B9A\u884C\u6570\u6700\u5927": 100
 --- !u!1 &1861607747
 GameObject:
   m_ObjectHideFlags: 0
@@ -57352,7 +57273,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
   m_Padding:
-    m_Left: 0
+    m_Left: 5
     m_Right: 0
     m_Top: 50
     m_Bottom: 0

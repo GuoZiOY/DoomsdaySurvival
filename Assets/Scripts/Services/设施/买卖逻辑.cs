@@ -50,7 +50,7 @@ public sealed class 买卖逻辑
     public 物品堆叠[] 可卖物品(System.Predicate<物品数据> 判定)
     {
         var 列表 = new List<物品堆叠>();
-        foreach (var 堆叠 in 玩家.背包)
+        foreach (var 堆叠 in 玩家.所有持有物品())
             if (数据.物品.TryGetValue(堆叠.标识, out var 物品) && 物品.价值 > 0 && (判定 == null || 判定(物品))) 列表.Add(堆叠);
         return 列表.ToArray();
     }
@@ -70,7 +70,7 @@ public sealed class 买卖逻辑
     private int 背包总价值()
     {
         int 总 = 交易额度;
-        foreach (var 堆叠 in 玩家.背包)
+        foreach (var 堆叠 in 玩家.所有持有物品())
             if (数据.物品.TryGetValue(堆叠.标识, out var 物品)) 总 += 物品.价值 * 堆叠.数量;
         return 总;
     }
@@ -82,7 +82,7 @@ public sealed class 买卖逻辑
         if (交易额度 >= 剩余) { 交易额度 -= 剩余; return true; }
         剩余 -= 交易额度; 交易额度 = 0;
         var 可扣 = new List<(物品堆叠 堆叠, int 单位价值)>();
-        foreach (var 堆叠 in 玩家.背包)
+        foreach (var 堆叠 in 玩家.所有持有物品())
             if (数据.物品.TryGetValue(堆叠.标识, out var 物品) && 物品.价值 > 0 && 堆叠.数量 > 0)
                 可扣.Add((堆叠, 物品.价值));
         可扣.Sort((a, b) => b.单位价值.CompareTo(a.单位价值));

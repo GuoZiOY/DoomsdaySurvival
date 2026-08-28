@@ -80,6 +80,7 @@
 
     // —— 背包 ——
 
+    // 背包变化：物品增删移/数量变化。物品标识 空串 = 通用刷新（不关心具体物品，如清空背包/换装整体刷新）；非空 = 具体物品变化。
     public readonly struct 背包变化事件
     {
         public readonly string 物品标识; public readonly int 数量; public readonly 变化原因 原因;

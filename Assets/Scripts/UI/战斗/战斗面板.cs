@@ -266,7 +266,7 @@ public sealed partial class 战斗面板 : 面板基类
         }
         else
         {
-            foreach (var 堆叠 in ServiceRegistry.Get<PlayerService>().档案.背包)
+            foreach (var 堆叠 in ServiceRegistry.Get<PlayerService>().档案.所有持有物品())
             {
                 if (!数据.物品.TryGetValue(堆叠.标识, out var 物品) || !物品.战斗内使用) continue;
                 var 标识 = 堆叠.标识;

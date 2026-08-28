@@ -25,6 +25,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     private bool 拖拽中;
     private 装备记录 拖拽记录;
     private GameObject 拖拽代理;   // 跟手物品图（挂 Canvas 顶层）
+    private 物品堆叠 拖拽堆叠;     // 拖拽期间的临时堆叠（缓存一次，避免 OnDrag 每帧 new 产生 GC）
 
     // 刷新本槽显示（装备面板 遍历调用）
     public void 设置(玩家档案 玩家, DataService 数据)
@@ -76,7 +77,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     public void 显示高亮(bool 可放)
     {
         if (高亮图 == null) return;
-        高亮图.color = 可放 ? new Color(0.45f, 1f, 0.5f, 0.35f) : new Color(1f, 0.4f, 0.4f, 0.35f);
+        高亮图.color = 可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色;   // 与网格拖拽投影同款配色（统一规范）
         高亮图.gameObject.SetActive(true);
     }
 
@@ -94,6 +95,8 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         if (记录 == null || string.IsNullOrEmpty(记录.标识)) return;   // 空槽不可拖
         拖拽中 = true;
         拖拽记录 = 记录;
+        拖拽堆叠 = new 物品堆叠(记录.标识, 1) { 词缀 = 记录.词缀, 当前耐久 = 记录.当前耐久 };   // 缓存本次拖拽的临时堆叠（投影/卸下用）
+        音效管理器.实例?.播放拿起();   // 拿起音效（与网格内拖拽同流程）
         清除拖拽投影();
         创建拖拽代理(记录.标识);
     }
@@ -112,64 +115,53 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         if (拖拽代理 != null) { Destroy(拖拽代理); 拖拽代理 = null; }
         var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (玩家 == null) return;
-        // ① 拖到 背包网格（任一 网格背包面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）
-        var 临时堆叠 = new 物品堆叠(拖拽记录.标识, 1) { 词缀 = 拖拽记录.词缀, 当前耐久 = 拖拽记录.当前耐久 };
-        foreach (var 面板 in FindObjectsOfType<网格背包面板>())
+        // ① 拖到 背包网格（任一 网格面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）——登记表遍历（替代 FindObjectsOfType）
+        foreach (var 面板 in 网格面板.面板登记表)
         {
             if (!面板.gameObject.activeInHierarchy || !面板.屏幕命中(事件.position)) continue;
             // 保护：穿戴容器不能放进自己的容器里（目标网格的背包列表 == 本槽穿戴容器的 容器物品 同一引用 = 自己装自己）
             if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品)
             {
                 音效管理器.实例?.播放失败();
-                if (装备面板.实例 != null) 装备面板.实例.刷新();
+                if (装备面板.实例 != null) 装备面板.实例.请求刷新();   // 脏标记合并（事件驱动 Update 统一刷新）
+                拖拽记录 = null; 拖拽堆叠 = null;
                 return;
             }
             bool 成功;
-            if (槽位名 == "背包")   // 背包槽卸下影响网格尺寸，走原自动逻辑（含缩容校验/回滚）
-            {
-                面板操作.卸下(玩家, 槽位名);
-                成功 = 玩家.装备标识(槽位名) == null;
-            }
-            else if (面板.屏幕到格(事件.position, 临时堆叠, out var 列, out var 行))
+            // 背包槽卸下也走 卸下到格（到哪放哪；卸下到格 内部处理 背包缩容校验/网格尺寸还原）——不再特例回主背包
+            if (面板.屏幕到格(事件.position, 拖拽堆叠, out var 列, out var 行))
                 成功 = 面板操作.卸下到格(玩家, 槽位名, 面板.视图服务, 列, 行);
             else 成功 = false;   // 落点在网格外/格坐标无效
-            if (成功) 音效管理器.实例?.播放成功();
+            if (成功) 音效管理器.实例?.播放放下();
             else 音效管理器.实例?.播放失败();
-            if (装备面板.实例 != null) 装备面板.实例.刷新();
+            if (装备面板.实例 != null) 装备面板.实例.请求刷新();
+            拖拽记录 = null; 拖拽堆叠 = null;
             return;
         }
-        // ② 拖到 其他装备槽 → 换槽（槽位兼容：主副手互通，其余严格；实例级：保留词缀/耐久，不按标识取件）
+        // ② 拖到 其他装备槽 → 换槽（槽位兼容：主副手互通，其余严格；互换：源槽 ↔ 目标槽 交换，旧件不回背包）
         if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 目标槽) && 目标槽 != 槽位名)
         {
             var 数据 = ServiceRegistry.Get<DataService>();
             if (数据.物品.TryGetValue(拖拽记录.标识, out var 物品) && 面板操作.槽位匹配(物品.槽位, 目标槽))
             {
                 var 事件总线 = ServiceRegistry.Get<EventBus>();
-                var 记录 = 玩家.卸下装备(槽位名);   // 源槽取出（拖拽的"这一件"）
-                if (记录 == null) { 音效管理器.实例?.播放失败(); return; }
-                var 容器源 = 记录.容器列 > 0 ? new 物品堆叠(记录.标识, 1) { 容器列 = 记录.容器列, 容器行 = 记录.容器行, 容器物品 = 记录.容器物品 } : null;   // 容器位换槽：内部物品保留
-                var 旧 = 玩家.装备到槽(目标槽, 记录.标识, 记录.词缀, 记录.当前耐久, 容器源);   // 装入目标槽（旧件被替换返回）
-                if (旧 != null && !string.IsNullOrEmpty(旧.标识) && 旧.标识 != 记录.标识)
-                {
-                    if (!玩家.放入网格堆叠(new 物品堆叠(旧.标识, 1) { 词缀 = 旧.词缀, 当前耐久 = 旧.当前耐久, 容器物品 = 旧.容器物品, 容器列 = 旧.容器列, 容器行 = 旧.容器行 }))
-                    {
-                        // 回滚：旧件回目标槽 + 拖拽装备回源槽
-                        玩家.装备到槽(目标槽, 旧.标识, 旧.词缀, 旧.当前耐久, 旧.容器列 > 0 ? new 物品堆叠(旧.标识, 1) { 容器列 = 旧.容器列, 容器行 = 旧.容器行, 容器物品 = 旧.容器物品 } : null);
-                        玩家.装备到槽(槽位名, 记录.标识, 记录.词缀, 记录.当前耐久, 容器源);
-                        音效管理器.实例?.播放失败();
-                        if (装备面板.实例 != null) 装备面板.实例.刷新();
-                        return;
-                    }
-                    事件总线?.发布(new 背包变化事件(旧.标识, 1, 变化原因.获得));
-                }
-                事件总线?.发布(new 背包变化事件(记录.标识, -1, 变化原因.消耗));
+                var 源记录 = 玩家.卸下装备(槽位名);   // 源槽取出（拖拽的"这一件"）
+                if (源记录 == null) { 音效管理器.实例?.播放失败(); 拖拽记录 = null; 拖拽堆叠 = null; return; }
+                var 目标记录 = 玩家.卸下装备(目标槽);   // 目标槽取出（将被替换的旧件）
+                // 互换：源 → 目标槽；目标 → 源槽（主副手互通 已由 进入条件 保证——目标 槽位 与 源槽 同类）
+                玩家.装备到槽(目标槽, 源记录);
+                if (目标记录 != null && !string.IsNullOrEmpty(目标记录.标识))
+                    玩家.装备到槽(槽位名, 目标记录);
+                事件总线?.发布(new 背包变化事件(源记录.标识, -1, 变化原因.消耗));
                 事件总线?.发布(new 属性变化事件(玩家.体质, 玩家.力量, 玩家.智慧, 玩家.敏捷, 玩家.意志, 玩家.自由属性点));
-                音效管理器.实例?.播放成功();
-                if (装备面板.实例 != null) 装备面板.实例.刷新();
+                音效管理器.实例?.播放放下();
+                if (装备面板.实例 != null) 装备面板.实例.请求刷新();
+                拖拽记录 = null; 拖拽堆叠 = null;
                 return;
             }
         }
         音效管理器.实例?.播放失败();   // 无效落点：回原位（槽位未变）
+        拖拽记录 = null; 拖拽堆叠 = null;
     }
 
     // 拖拽中 更新落点投影：装备槽（绿/红）或 背包网格（绿框）；每帧先清后显
@@ -185,22 +177,22 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             装备面板.实例.高亮槽位(目标槽, 匹配);
             return;
         }
-        // ② 背包网格 → 落格投影（可放绿/不可放红，同背包内拖拽；自己容器 → 强制红）
-        var 堆叠 = new 物品堆叠(拖拽记录.标识, 1);
-        foreach (var 面板 in FindObjectsOfType<网格背包面板>())
+        // ② 背包网格 → 落格投影（可放绿/不可放红，同背包内拖拽；自己容器 → 强制红）——登记表遍历（替代 FindObjectsOfType）
+        if (拖拽堆叠 == null) return;
+        foreach (var 面板 in 网格面板.面板登记表)
             if (面板.gameObject.activeInHierarchy && 面板.屏幕命中(事件.position))
             {
                 bool 自己容器 = 拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品;
-                面板.显示装备拖拽投影(堆叠, 事件.position, 自己容器);
+                面板.显示装备拖拽投影(拖拽堆叠, 事件.position, 自己容器);
                 return;
             }
     }
 
-    // 清除全部拖拽投影（装备槽高亮 + 网格绿框）
+    // 清除全部拖拽投影（装备槽高亮 + 网格绿框）——登记表遍历（替代 FindObjectsOfType）
     private void 清除拖拽投影()
     {
         if (装备面板.实例 != null) 装备面板.实例.清除全部高亮();
-        foreach (var 面板 in FindObjectsOfType<网格背包面板>())
+        foreach (var 面板 in 网格面板.面板登记表)
             面板.隐藏装备拖拽投影();
     }
 
@@ -214,13 +206,13 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         物体.transform.SetParent(画布.transform, false);
         物体.transform.SetAsLastSibling();
         var 图 = 物体.GetComponent<Image>();
+        图.raycastTarget = false;   // 关键：不拦截 滚轮/点击（否则 Canvas 顶层大代理 挡住 下层 ScrollRect 滚动）
         var 图标 = 物品图标服务.获取(物品.图片);
         图.sprite = 图标;
         图.preserveAspect = true;   // 保持图标宽高比，不被压扁/拉伸
         图.color = 图标 != null ? new Color(1f, 1f, 1f, 0.7f) : new Color(0.6f, 0.6f, 0.7f, 0.7f);
-        // 统一规格：代理 = 物品占格 × 主背包格尺寸（与背包内拖拽同规格）
-        var 主面板 = 网格背包面板.主背包面板;
-        float 格 = 主面板 != null ? 主面板.格子尺寸 : 90f;
+        // 统一规格：代理 = 物品占格 × 统一格尺寸（网格面板.格尺寸=100，与网格内拖拽同规格）
+        float 格 = 网格面板.格尺寸;
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         var 形状 = 档案?.背包服务?.形状解析?.Invoke(标识) ?? new 物品形状(1, 1);
         var 矩 = 物体.GetComponent<RectTransform>();

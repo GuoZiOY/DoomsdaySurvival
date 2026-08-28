@@ -25,15 +25,15 @@ public sealed class 右键菜单 : MonoBehaviour
     [SerializeField] private Button 详情按钮;        // 信息展示面板（任何物品/装备槽均显示）
     [SerializeField] private Button 卸下按钮;        // 卸下（仅 装备槽模式 显示：已装备物品卸下回背包）
 
-    private 网格背包面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
-    public 网格背包面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
+    private 网格面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
+    public 网格面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
     private string 目标槽位;          // 非空 = 装备槽模式（菜单显示 详情/卸下，操作对象是槽位而非堆叠）
 
     void Awake()
     {
         实例 = this;
         if (菜单根 != null) 菜单根.gameObject.SetActive(false);   // 初始隐藏
-        foreach (var 面板 in FindObjectsOfType<网格背包面板>())
+        foreach (var 面板 in FindObjectsOfType<网格面板>())
             if (面板.数据源 == null) { 背包面板 = 面板; break; }   // 主背包面板 = 兜底操作目标
         if (使用按钮 != null) 使用按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单使用(); });
         if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单装备(); });
@@ -47,7 +47,12 @@ public sealed class 右键菜单 : MonoBehaviour
     // 详情：装备槽模式 → 信息面板.显示槽位；物品模式 → 目标面板.菜单查看详情
     private void 查看详情()
     {
-        if (!string.IsNullOrEmpty(目标槽位)) { if (信息面板.实例 != null) 信息面板.实例.显示槽位(目标槽位); return; }
+        if (!string.IsNullOrEmpty(目标槽位))
+        {
+            音效管理器.实例?.播放成功();   // 详情 → 按钮成功音效
+            if (信息面板.实例 != null) 信息面板.实例.显示槽位(目标槽位);
+            return;
+        }
         (目标面板 ?? 背包面板)?.菜单查看详情();
     }
 
@@ -58,7 +63,7 @@ public sealed class 右键菜单 : MonoBehaviour
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (档案 == null) return;
         面板操作.卸下(档案, 目标槽位);
-        if (装备面板.实例 != null) 装备面板.实例.刷新();
+        if (装备面板.实例 != null) 装备面板.实例.请求刷新();   // 脏标记合并（卸下已发事件，Update 统一刷新）
     }
 
     // 关闭检测：点击菜单外（左键/右键按下且不在菜单矩形内）/ 滚轮 → 关闭。不拦截事件——下层物品/滚动正常响应
@@ -190,7 +195,10 @@ public sealed class 右键菜单 : MonoBehaviour
     // 纵向：菜单顶 与 物品顶 平齐（略下移），并 clamp 屏幕内。坐标统一用 世界（与 Canvas 缩放无关）。
     private void 定位到物品右侧(RectTransform 物品框)
     {
-        if (物品框 == null) return;
+        if (物品框 == null || 菜单根 == null) return;
+        // 强制 布局 重建：菜单 首次 激活 时 布局系统 尚未刷新 尺寸（rect 还是 旧值/0）→ 边界修正 用错 尺寸 → 位置 不准。
+        // 激活后 ForceRebuild 立即 生效，尺寸 才 正确（第二次 起 布局 已 稳定，重复 重建 无 副作用）。
+        LayoutRebuilder.ForceRebuildLayoutImmediate(菜单根);
         var 画布 = 菜单根.GetComponentInParent<Canvas>();
         var 画布根 = 画布 != null ? (RectTransform)画布.transform : null;
         if (画布根 == null) return;

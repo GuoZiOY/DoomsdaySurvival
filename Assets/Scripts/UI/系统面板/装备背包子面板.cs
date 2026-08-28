@@ -119,7 +119,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
         面板基类.清空(列表容器);
         var 数据 = ServiceRegistry.Get<DataService>();
         var 列表 = new List<物品堆叠>();
-        foreach (var 堆叠 in 玩家.背包)
+        foreach (var 堆叠 in 玩家.所有持有物品())
             if (堆叠.数量 > 0 && 数据.物品.TryGetValue(堆叠.标识, out var 物品) && 匹配分类(物品.类型, 当前分类))
                 列表.Add(堆叠);
         列表.Sort((a, b) =>
@@ -178,7 +178,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
             显示未选中();
             return;
         }
-        bool 在背包 = 玩家.背包.Exists(s => s.标识 == 选中标识);
+        bool 在背包 = 玩家.所有持有物品().Exists(s => s.标识 == 选中标识);
         bool 已装备 = 玩家.已装备(选中标识);
         if (!在背包 && !已装备)
         {
