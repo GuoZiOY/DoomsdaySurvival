@@ -17,11 +17,14 @@ public class 穿戴容器块
 //   场景手动预搭 3 块（各挂 网格背包面板），本组件只做：穿戴变化 → 网格显隐 + 刷新数据源。
 public sealed class 穿戴容器区 : MonoBehaviour
 {
+    public static 穿戴容器区 实例;   // 场景挂载自动登记（装备背包面板打开时强制重建用）
+
     [SerializeField] private 穿戴容器块[] 容器块;   // 3 个预搭块（弹挂/腰封/背包，顺序随布局）
     [SerializeField] private RectTransform 布局父;   // Layout Group 所在容器（如 Content）；重建后强制刷新布局
 
     void Awake()
     {
+        实例 = this;
         var 事件 = ServiceRegistry.Get<EventBus>();
         if (事件 != null)
         {
@@ -46,8 +49,17 @@ public sealed class 穿戴容器区 : MonoBehaviour
         }
     }
 
-    private void 背包变化响应(背包变化事件 _) => 重建();
-    private void 属性变化响应(属性变化事件 _) => 重建();
+    private bool 待重建;   // 脏标记：事件 → 标记，Update 合并重建（避免同帧多次全量重建，优化装备卡顿）
+
+    void Update()
+    {
+        if (!待重建) return;
+        待重建 = false;
+        重建();
+    }
+
+    private void 背包变化响应(背包变化事件 _) => 待重建 = true;
+    private void 属性变化响应(属性变化事件 _) => 待重建 = true;
 
     // 重建：遍历预搭块——有穿戴 → 网格显示 + 注入容器视图 + 重载；没穿 → 网格隐藏（为空，无需占位元素）
     public void 重建()

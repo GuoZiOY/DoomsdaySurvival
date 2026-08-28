@@ -13,10 +13,32 @@ public sealed class 音效管理器 : MonoBehaviour
     [SerializeField] private AudioClip 背景音乐;
     [SerializeField] private AudioClip 按钮成功音效;
     [SerializeField] private AudioClip 按钮错误音效;
+    [SerializeField] private AudioClip 拿起音效;   // 物品拖拽拿起
+    [SerializeField] private AudioClip 放下音效;   // 物品拖拽放下
+
+    // —— 各音效独立音量（0~10 整数，默认 10=满；全局音量仍由 AudioListener.volume 控制）——
+    [SerializeField, Range(0, 10)] private int 背景音乐音量 = 10;
+    [SerializeField, Range(0, 10)] private int 按钮成功音量 = 10;
+    [SerializeField, Range(0, 10)] private int 按钮错误音量 = 10;
+    [SerializeField, Range(0, 10)] private int 通用音效音量 = 10;
+    [SerializeField, Range(0, 10)] private int 拿起音量 = 10;
+    [SerializeField, Range(0, 10)] private int 放下音量 = 10;
 
     private AudioSource 音乐源;
     private AudioSource 音效源;
     private bool 本帧失败;   // 防重：本帧已判失败，成功音效跳过（失败点击只响错误音）
+
+    // Inspector 改动即时生效：修改 背景音乐音量 立即同步到音乐源（音效为逐次读取，天然即时）
+    void OnValidate()
+    {
+        背景音乐音量 = Mathf.Clamp(背景音乐音量, 0, 10);
+        按钮成功音量 = Mathf.Clamp(按钮成功音量, 0, 10);
+        按钮错误音量 = Mathf.Clamp(按钮错误音量, 0, 10);
+        通用音效音量 = Mathf.Clamp(通用音效音量, 0, 10);
+        拿起音量 = Mathf.Clamp(拿起音量, 0, 10);
+        放下音量 = Mathf.Clamp(放下音量, 0, 10);
+        if (音乐源 != null) 音乐源.volume = 换算(背景音乐音量);
+    }
 
     // —— 音量/静音（AudioListener.volume 全局缩放；设置面板滑条 + 侧边栏音量开关）——
     public static float 当前音量 { get; private set; } = 1f;
@@ -38,6 +60,7 @@ public sealed class 音效管理器 : MonoBehaviour
         {
             音乐源.clip = 背景音乐;
             音乐源.loop = true;
+            音乐源.volume = 换算(背景音乐音量);
             音乐源.Play();
         }
         // 自动给场景里所有现有按钮挂成功音效
@@ -80,7 +103,7 @@ public sealed class 音效管理器 : MonoBehaviour
     {
         if (本帧失败) return;
         if (按钮成功音效 == null || 音效源 == null) return;
-        音效源.PlayOneShot(按钮成功音效);
+        音效源.PlayOneShot(按钮成功音效, 换算(按钮成功音量));
     }
 
     // 按钮错误音效：点击失败时播放（服务失败点调用）
@@ -88,14 +111,27 @@ public sealed class 音效管理器 : MonoBehaviour
     {
         本帧失败 = true;
         if (按钮错误音效 == null || 音效源 == null) return;
-        音效源.PlayOneShot(按钮错误音效);
+        音效源.PlayOneShot(按钮错误音效, 换算(按钮错误音量));
     }
 
     // 通用音效：后续扩展（技能/战斗/事件音效等）用
     public void 播放音效(AudioClip 片段)
     {
         if (片段 == null || 音效源 == null) return;
-        音效源.PlayOneShot(片段);
+        音效源.PlayOneShot(片段, 换算(通用音效音量));
+    }
+
+    // 物品拖拽：拿起 / 放下音效
+    public void 播放拿起()
+    {
+        if (拿起音效 == null || 音效源 == null) return;
+        音效源.PlayOneShot(拿起音效, 换算(拿起音量));
+    }
+
+    public void 播放放下()
+    {
+        if (放下音效 == null || 音效源 == null) return;
+        音效源.PlayOneShot(放下音效, 换算(放下音量));
     }
 
     // 音量开关：静音/恢复（侧边栏 音量按钮）
@@ -111,4 +147,20 @@ public sealed class 音效管理器 : MonoBehaviour
         当前音量 = Mathf.Clamp01(音量);
         if (!已静音) AudioListener.volume = 当前音量;
     }
+
+    // 整数 0~10 → 音量 0~1（各音效独立音量换算）
+    private static float 换算(int 整数值) => Mathf.Clamp(整数值, 0, 10) / 10f;
+
+    // —— 各音效独立音量设置（0~10 整数），供设置面板等运行时调整 ——
+    public void 设置背景音乐音量(int 音量)
+    {
+        背景音乐音量 = Mathf.Clamp(音量, 0, 10);
+        if (音乐源 != null) 音乐源.volume = 换算(背景音乐音量);
+    }
+
+    public void 设置按钮成功音量(int 音量) { 按钮成功音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置按钮错误音量(int 音量) { 按钮错误音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置通用音效音量(int 音量) { 通用音效音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置拿起音量(int 音量) { 拿起音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置放下音量(int 音量) { 放下音量 = Mathf.Clamp(音量, 0, 10); }
 }

@@ -26,8 +26,17 @@ public sealed class 装备面板 : MonoBehaviour
             ServiceRegistry.Get<EventBus>()?.取消订阅<背包变化事件>(背包变化响应);
     }
 
-    // 背包变化（装备/卸下/丢弃/获得…）→ 刷新装备槽显示
-    private void 背包变化响应(背包变化事件 _) => 刷新();
+    // 背包变化（装备/卸下/丢弃/获得…）→ 脏标记，Update 合并刷新（避免同帧多次重建）
+    private bool 待刷新;
+
+    void Update()
+    {
+        if (!待刷新) return;
+        待刷新 = false;
+        刷新();
+    }
+
+    private void 背包变化响应(背包变化事件 _) => 待刷新 = true;
 
     // 刷新所有槽位显示（物品名/品质图/物品图/耐久）+ 强制 Layout 重建
     public void 刷新()
