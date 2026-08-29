@@ -44,6 +44,11 @@ using UnityEngine;
             容器.接线解析器(玩家.档案);   // PlayerService 已初始化，补接网格解析器
             ServiceRegistry.Register(容器);
 
+            // —— 搜索容器（塔科夫式搜刮：随机生成 + 会话缓存）——
+            var 搜索 = new 搜索服务(数据, 容器);
+            搜索.接线解析器(玩家.档案);
+            ServiceRegistry.Register(搜索);
+
             // —— 对话引擎（剧情驱动）——
             var 对话 = new DialogueService(事件, 数据, 玩家);
             ServiceRegistry.Register(对话);

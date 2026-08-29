@@ -28,6 +28,7 @@ using UnityEngine;
         public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
         public Dictionary<string, 天气数据> 天气 { get; private set; } = new Dictionary<string, 天气数据>();
         public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
+        public Dictionary<string, 搜索地图类型> 搜索地图类型 { get; private set; } = new Dictionary<string, 搜索地图类型>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -58,6 +59,7 @@ using UnityEngine;
             加载("天赋", 天赋, (天赋根 根) => 根.天赋);       // 允许缺失（天赋系统）
             加载("天气", 天气, (天气根 根) => 根.天气);       // 允许缺失（天气系统）
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
+            加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
             加载助战组与区域剧情();
         }
 
@@ -253,6 +255,42 @@ using UnityEngine;
                     校验错误.Add($"配方[{标识}] → 图纸[{配方.图纸}] 不存在");
                 if (配方.类型 != "装备" && 配方.类型 != "食物" && 配方.类型 != "药剂")
                     校验错误.Add($"配方[{标识}] → 类型[{配方.类型}] 非法（装备/食物/药剂）");
+            }
+
+            // —— 搜索容器：地图类型 → 房间 → 容器（尺寸合法 + 搜索表物品存在 + 形状块合法）——
+            foreach (var (类型标识, 地图类型) in 搜索地图类型)
+            {
+                if (地图类型.房间 == null) { 校验错误.Add($"搜索容器[{类型标识}] 缺少 房间 定义"); continue; }
+                foreach (var 房间 in 地图类型.房间)
+                {
+                    string 房名 = $"搜索容器[{类型标识}]·房间[{房间.标识}]";
+                    if (房间.容器 == null || 房间.容器.Length == 0)
+                    { 校验错误.Add($"{房名} 缺少 容器 定义"); continue; }
+                    foreach (var 容器 in 房间.容器)
+                    {
+                        string 容名 = $"{房名}·容器[{容器.标识}]";
+                        if (容器.容器列 <= 0 || 容器.容器行 <= 0)
+                        { 校验错误.Add($"{容名} 尺寸非法（列×行）"); continue; }
+                        if (容器.容器形状 != null && 容器.容器形状.Length > 0)
+                            foreach (var 块 in 容器.容器形状)
+                                if (块 == null || 块.宽 <= 0 || 块.高 <= 0 || 块.列 < 0 || 块.行 < 0
+                                    || 块.列 + 块.宽 > 容器.容器列 || 块.行 + 块.高 > 容器.容器行)
+                                { 校验错误.Add($"{容名} 形状块越界/非法"); break; }
+                        if (容器.搜索表 != null)
+                            foreach (var 条目 in 容器.搜索表)
+                            {
+                                if (条目 == null || string.IsNullOrEmpty(条目.物品标识)) continue;
+                                if (!物品.ContainsKey(条目.物品标识))
+                                    校验错误.Add($"{容名} → 物品[{条目.物品标识}] 不存在");
+                                else if (!string.IsNullOrEmpty(容器.容器允许类型))
+                                {
+                                    var 模板 = 物品[条目.物品标识];
+                                    if (模板.类型 != 容器.容器允许类型)
+                                        校验错误.Add($"{容名} → 物品[{条目.物品标识}] 类型[{模板.类型}] 与 允许类型[{容器.容器允许类型}] 不符");
+                                }
+                            }
+                    }
+                }
             }
         }
     }

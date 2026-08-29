@@ -27,6 +27,7 @@ public sealed partial class 网格面板 : 面板基类
     private 玩家档案 档案 => ServiceRegistry.Get<PlayerService>().档案;
     private DataService 数据 => ServiceRegistry.Get<DataService>();
     private 物品堆叠 选中;
+    private RectTransform 底盘;                   // 网格整体 衬底（整块 底盘图，比 网格层 四周 各大 1px）
     private RectTransform 底座层, 线层, 物品层;   // 网格分层（底座 / 分隔线 / 物品），Content 滚动容器
 
     // 网格数据源：由 容器面板/仓库区/穿戴容器区 注入（容器/仓库/穿戴容器 视图）。
@@ -167,6 +168,7 @@ public sealed partial class 网格面板 : 面板基类
     // 强制全量重建（配色修改后应用用）：清分层缓存 → 网格结构 全量重绘（底格/线/物品 用新配色）
     public void 强制重建()
     {
+        if (底盘 != null) { Destroy(底盘.gameObject); 底盘 = null; }
         底座层 = 线层 = 物品层 = null;   // 强制 下次 刷新 重建 分层
         当前列 = 当前行 = 0;             // 强制 尺寸 检测 触发 重建网格结构
         上次格尺寸 = 0f;
@@ -205,6 +207,7 @@ public sealed partial class 网格面板 : 面板基类
     public void 绑定网格容器(RectTransform 容器)
     {
         网格容器 = 容器;
+        if (底盘 != null) { Destroy(底盘.gameObject); 底盘 = null; }
         底座层 = 线层 = 物品层 = null;   // 强制下次 准备层 在新容器下重建
     }
 
@@ -224,6 +227,16 @@ public sealed partial class 网格面板 : 面板基类
         var 画布 = 矩形.GetComponentInParent<Canvas>();
         var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
         return RectTransformUtility.RectangleContainsScreenPoint(矩形, 屏幕点, 相机);
+    }
+
+    // 网格区域（搜索黑布 挂载点；搜索面板 用）
+    public RectTransform 网格区域 => 网格容器;
+
+    // 物品框矩形（搜索黑块 挂载点；按 堆叠 实例 查 当前框，未渲染/不存在 = null）
+    public RectTransform 物品框矩形(物品堆叠 堆叠)
+    {
+        if (堆叠 == null) return null;
+        return 物品框表.TryGetValue(堆叠, out var 框) ? 框.根 : null;
     }
 
     // ===== 内部组件：非按钮点击 + 拖拽 =====

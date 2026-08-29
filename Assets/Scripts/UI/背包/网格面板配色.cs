@@ -7,12 +7,14 @@ public static class 网格面板配色
 {
     // 十六进制 RGB + 透明度 0~255
     public static readonly Color 底座色 = new Color(1f, 1f, 1f, 0.95f);                         // 空格底图：纯白 A255（网格底层精灵 原样着色）
+    public static readonly Color 底盘色 = new Color(0.05f, 0.05f, 0.07f, 1f);                   // 网格底盘（整块衬底——网格 边框/托盘 感）
+    public static readonly float 底盘外扩 = 3f;                                                   // 底盘 比 网格 大 的 像素（四周 合计；中心对称）
     // 三色线条：纯白，仅透明度不同——物品边界 150 / 形状边界 70 / 线条 30（0~255）
     public static readonly Color 物品边界色 = new Color(1f, 1f, 1f, 120f / 255f);   // 物品边界线（最亮 A150）
     public static readonly Color 形状边界色 = new Color(1f, 1f, 1f, 70f / 255f);    // 容器形状边界线（口袋轮廓框，A70）
     public static readonly Color 线条色 = new Color(1f, 1f, 1f, 30f / 255f);        // 物品内部/空格 线（最淡 A30）
     public static readonly float 线宽 = 2f;                                                  // 分隔线宽（px：内部/空格/形状框）
-    public static readonly float 物品边界线宽 = 2.5f;                                           // 物品边界线宽（px：有物品的 网格边界/口袋 边界——比 普通 线 粗）
+    public static readonly float 物品边界线宽 = 2f;                                           // 物品边界线宽（px：有物品的 网格边界/口袋 边界——比 普通 线 粗）
     public static readonly float 物品边距 = 4f;                                              // 物品块四周内缩（不压网格线/不重叠）
     public static readonly Color 物品底色 = new Color(0.2784f, 0.298f, 0.3608f, 0.7843f);   // 物品内容层底色（#474C5C A200）
     public static readonly Color 高光色 = new Color(1f, 1f, 1f, 0.0392f);                    // 悬停高光层（#FFFFFF A10）

@@ -93,7 +93,7 @@ public sealed partial class 网格面板
         // 注：不 改动 Content 的 锚点/位置（场景 手动 配置 为准）——只 设置 尺寸。
         // 单点锚 下 sizeDelta 生效；拉伸锚 请 在 场景 配好 Content 尺寸（offset 拉伸 时 sizeDelta 无效）。
         if (数据源 != null)
-            网格容器.sizeDelta = new Vector2(网格宽, 网格高);   // 容器/仓库/穿戴容器 视图：网格精确尺寸（不滚动/不撑宽）
+            网格容器.sizeDelta = new Vector2(网格宽 + 网格面板配色.底盘外扩 * 2f, 网格高 + 网格面板配色.底盘外扩 * 2f);   // 容器 = 网格 + 底盘外框（四周 各 外扩；黑布/底盘 铺满 容器）
         else
         {
             float 视口宽 = 网格容器.parent != null ? ((RectTransform)网格容器.parent).rect.width : 网格宽;
@@ -102,6 +102,10 @@ public sealed partial class 网格面板
         底座层.sizeDelta = new Vector2(网格宽, 网格高);   // 三层都以 网格 为基准：顶部 + 水平居中 于 Content
         线层.sizeDelta = new Vector2(网格宽, 网格高);
         物品层.sizeDelta = new Vector2(网格宽, 网格高);
+        // 底盘：数据源非空 = stretch 铺满容器（offset 恒 0，容器 = 网格 + 底盘外框，自动跟随，勿设 sizeDelta——会重算 offset 出现数字）；
+        // 主背包（数据源 null）= 手算 sizeDelta（容器 = 视口宽，不铺满）
+        if (数据源 == null && 底盘 != null)
+            底盘.sizeDelta = new Vector2(网格宽 + 网格面板配色.底盘外扩 * 2f, 网格高 + 网格面板配色.底盘外扩 * 2f);
         清空层(底座层); 清空层(线层); 清空层(物品层);
         for (int 行 = 0; 行 < 当前行; 行++)
             for (int 列 = 0; 列 < 当前列; 列++)
@@ -179,10 +183,11 @@ public sealed partial class 网格面板
         画分隔线();
     }
 
-    // 首次准备网格分层：Content(网格容器) 下 底座层 / 线层 / 物品层；手动定位（不挂 GridLayoutGroup）
+    // 首次准备网格分层：Content(网格容器) 下 底盘 / 底座层 / 线层 / 物品层；手动定位（不挂 GridLayoutGroup）
     private void 准备层()
     {
         if (底座层 != null) return;
+        创建底盘();   // 整块 衬底（垫底：底格/线/物品 之下）——比 网格层 四周 各大 1px
         底座层 = 创建网格层("底座层");
         线层 = 创建网格层("线层");
         物品层 = 创建网格层("物品层");
@@ -190,7 +195,42 @@ public sealed partial class 网格面板
         //     避免 GridLayoutGroup 的 LayoutRebuilder 在销毁格后访问已销毁实例的 MissingReference 报错。
     }
 
+    // 网格底盘：一张完整的 衬底图（Image），比 网格层 四周 各大 底盘外扩——网格 整体 的 托盘/边框 感。
+    // 外部视图（数据源非空）：容器 = 网格 + 外扩×2 → 底盘 stretch 铺满容器（= 网格 + 四周各 外扩，均匀）；
+    // 主背包（数据源 null）：容器 = 视口宽（不含外扩）→ 底盘 按 网格 手算（顶部对齐 + 上移 外扩 补偿）。
+    // 穿戴容器块（所属槽位 非空，中区 三块）不需要 底盘——纯代码判定，无需手动配置。
+    private void 创建底盘()
+    {
+        if (网格容器 == null || !string.IsNullOrEmpty(所属槽位)) return;
+        var 物体 = new GameObject("底盘", typeof(RectTransform), typeof(Image));
+        物体.transform.SetParent(网格容器, false);
+        物体.transform.SetAsFirstSibling();   // 垫底（底格/线/物品 全部 之上）
+        var 图 = 物体.GetComponent<Image>();
+        图.color = 网格面板配色.底盘色;
+        图.raycastTarget = false;   // 纯衬底，不挡交互
+        var 矩形 = 物体.GetComponent<RectTransform>();
+        if (数据源 != null)
+        {
+            // 容器 = 网格 + 外扩×2：底盘 铺满 容器（四周 均匀 各 外扩）
+            矩形.anchorMin = Vector2.zero;
+            矩形.anchorMax = Vector2.one;
+            矩形.offsetMin = Vector2.zero;
+            矩形.offsetMax = Vector2.zero;
+        }
+        else
+        {
+            // 主背包：容器 = 视口宽 → 底盘 按 网格 手算（顶部对齐，上移 外扩 使 四周 均匀）
+            矩形.anchorMin = new Vector2(0.5f, 1f);
+            矩形.anchorMax = new Vector2(0.5f, 1f);
+            矩形.pivot = new Vector2(0.5f, 1f);
+            矩形.anchoredPosition = new Vector2(0f, 网格面板配色.底盘外扩);
+            矩形.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移() + 网格面板配色.底盘外扩 * 2f, 当前行 * 格尺寸 + 网格面板配色.底盘外扩 * 2f);
+        }
+        底盘 = 矩形;
+    }
+
     // 创建网格层（在 网格容器 下）：撑满 Content、pivot 左上——物品/线 以 网格 左上为原点绝对定位
+    // 外部视图（数据源非空）：容器 = 网格 + 底盘外扩×2 → 层 下移 外扩（网格内容 在 容器内 垂直居中，四周 均匀 露出 底盘）
     private RectTransform 创建网格层(string 名字)
     {
         var 物体 = new GameObject(名字, typeof(RectTransform));
@@ -199,7 +239,7 @@ public sealed partial class 网格面板
         r.anchorMin = new Vector2(0.5f, 1f);
         r.anchorMax = new Vector2(0.5f, 1f);
         r.pivot = new Vector2(0.5f, 1f);
-        r.anchoredPosition = Vector2.zero;
+        r.anchoredPosition = new Vector2(0f, 数据源 != null ? -网格面板配色.底盘外扩 : 0f);
         r.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸);   // 层 = 网格尺寸（含块偏移），顶部 + 水平居中 于 Content
         return r;
     }
@@ -479,26 +519,25 @@ public sealed partial class 网格面板
             框.耐久 = 耐;
             框.上次耐久 = 耐.text;
         }
-        // 数量角标：可堆叠且数量>1 时，在右下角显示数字
-        if (堆叠.数量 > 1)
-        {
-            var 数体 = new GameObject("数量", typeof(RectTransform), typeof(TextMeshProUGUI));
-            数体.transform.SetParent(物体.transform, false);
-            var 数 = 数体.GetComponent<TextMeshProUGUI>();
-            数.text = 堆叠.数量.ToString();
-            数.fontSize = 40f;
-            数.alignment = TextAlignmentOptions.BottomRight;
-            数.color = Color.white;
-            数.raycastTarget = false;
-            var 数矩 = 数体.GetComponent<RectTransform>();
-            数矩.anchorMin = new Vector2(1, 0);
-            数矩.anchorMax = new Vector2(1, 0);
-            数矩.pivot = new Vector2(1, 0);
-            数矩.anchoredPosition = new Vector2(-14f, -2f);
-            数矩.sizeDelta = new Vector2(70f, 34f);
-            框.数量 = 数;
-            框.上次数量 = 堆叠.数量;
-        }
+        // 数量角标：**总是创建**（数量 ≤1 时隐藏、>1 显示）——若创建时 数量≤1 不建，框.数量 为 null，
+        // 之后 合并/拆回 数量>1 也无法补显（bug：拆分 5→4+1 再合并回 5，目标框 数量文本 永远不出现）
+        var 数体 = new GameObject("数量", typeof(RectTransform), typeof(TextMeshProUGUI));
+        数体.transform.SetParent(物体.transform, false);
+        var 数 = 数体.GetComponent<TextMeshProUGUI>();
+        数.text = 堆叠.数量.ToString();
+        数.fontSize = 40f;
+        数.alignment = TextAlignmentOptions.TopRight;   // 居顶（数量 从 角标 顶部 排布）
+        数.color = Color.white;
+        数.raycastTarget = false;
+        var 数矩 = 数体.GetComponent<RectTransform>();
+        数矩.anchorMin = new Vector2(1, 0);
+        数矩.anchorMax = new Vector2(1, 0);
+        数矩.pivot = new Vector2(1, 0);
+        数矩.anchoredPosition = new Vector2(-5f, -2f);   // 右下顶角
+        数矩.sizeDelta = new Vector2(70f, 34f);
+        数体.SetActive(堆叠.数量 > 1);   // 初始：>1 显示（≤1 隐藏，更新 时 自动 切换）
+        框.数量 = 数;
+        框.上次数量 = 堆叠.数量;
         // ④ 点击（非按钮） + 拖拽（挂在物品框上）
         var 点击 = 物体.AddComponent<物品点击>();
         点击.堆叠 = 堆叠;

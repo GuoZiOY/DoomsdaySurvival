@@ -66,6 +66,19 @@ public sealed class 角色创建面板 : 面板基类
         渲染();
     }
 
+    // 背景 模糊（塔科夫式）：显示时 模糊 背景，隐藏时 恢复（与 背包 等 面板 一致）
+    public override void 显示面板(object 上下文 = null, bool 上下互切 = false, bool 返回方向 = false)
+    {
+        背景模糊层.显示模糊();
+        base.显示面板(上下文, 上下互切, 返回方向);
+    }
+
+    public override void 隐藏面板(bool 上下互切 = false, bool 返回方向 = false)
+    {
+        背景模糊层.隐藏模糊();
+        base.隐藏面板(上下互切, 返回方向);
+    }
+
     public override bool 回退()
     {
         if (面板管理器.实例 != null) 面板管理器.实例.回主菜单();

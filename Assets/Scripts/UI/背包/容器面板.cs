@@ -103,10 +103,11 @@ public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         // 面板根尺寸 = 预留 + 网格 内容 尺寸；网格容器 居中锚 → 水平 居中、垂直 按 预留 定位。
         float 网格宽 = 容器网格.渲染网格宽;
         float 网格高 = 容器网格.渲染网格高;
+        float 外扩 = 网格面板配色.底盘外扩;   // 容器 = 网格 + 底盘外框（四周 各 外扩）
         面板根.sizeDelta = new Vector2(
-            Mathf.Max(最小面板宽, 网格宽 + 左右留白 * 2f),
-            Mathf.Max(最小面板高, 顶部预留 + 网格高 + 底边距));
-        网格容器.sizeDelta = new Vector2(网格宽, 网格高);
+            Mathf.Max(最小面板宽, 网格宽 + 外扩 * 2f + 左右留白 * 2f),
+            Mathf.Max(最小面板高, 顶部预留 + 网格高 + 外扩 * 2f + 底边距));
+        网格容器.sizeDelta = new Vector2(网格宽 + 外扩 * 2f, 网格高 + 外扩 * 2f);
         // 居中锚 定位：网格 底部 距 面板 底缘 = 底边距（则 顶部 距 面板 顶 = 顶部预留，标题/按钮 区）
         网格容器.anchoredPosition = new Vector2(0f, (底边距 - 顶部预留) / 2f);
         限制在屏幕内();   // 面板尺寸定稿后自动校正位置，确保创建出来就在屏幕内

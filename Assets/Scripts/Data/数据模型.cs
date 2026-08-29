@@ -129,6 +129,7 @@ using System;
         public string 名称;
         public string 描述;
         public string 类型;       // 末日：武器/防具/食物/水/医疗品/弹药/材料/技能书/任务品
+        public string 种类;       // 材料细分（塔科夫式，仅 类型=材料 时使用）：其他/医疗用品/建筑材料/日常用品/工具/易燃物品/电子产品/能源物品/贵重物品/情报物品
         public int 恢复量;        // 食物/水/医疗品 的恢复值（食物→饱食、水→水分、医疗→生命）
         public string 恢复目标;   // "饱食"/"水分"/"生命"/"疲劳"/"中毒"/"感冒"/"流血"/"骨折"/"发烧"
         public int 攻击加成;      // 类型=武器（近战吃力量；远程固定伤害即此值）
@@ -664,3 +665,52 @@ using System;
 
     [Serializable]
     public class 家具根 { public 家具数据[] 家具; }
+
+    // ================= 搜索容器（塔科夫式搜刮） =================
+    // 层级：地图类型（居民房）→ 房间（玄关/客厅/厨房…）→ 容器（鞋柜/冰箱…）。
+    // 搜刮 = 打开 容器：首次打开按 搜索表 权重随机生成物品（复用 背包服务 网格算法）；
+    // 容器级 搜索时间（黑布倒计时）+ 物品级 搜索时间（每件物品的黑块倒计时；0 = 按价值推导）。
+
+    [Serializable]
+    public class 搜索地图类型
+    {
+        public string 标识;   // "居民房"
+        public string 名称;
+        public 搜索房间[] 房间;
+    }
+
+    [Serializable]
+    public class 搜索房间
+    {
+        public string 标识;   // "玄关"
+        public string 名称;
+        public 搜索容器[] 容器;
+    }
+
+    [Serializable]
+    public class 搜索容器
+    {
+        public string 标识;        // "鞋柜"
+        public string 名称;
+        public string 描述;
+        public int 容器列 = 3;     // 网格宽（格）
+        public int 容器行 = 3;     // 网格高（格）
+        public 容器形状块[] 容器形状;  // 可选：拼合形状（空 = 整矩形）
+        public string 容器允许类型;    // 可选：仅允许该类型物品进入（如 "医疗品"）；空 = 任意
+        public float 搜索时间 = 5f;    // 容器级 搜索秒数（整体黑布倒计时）
+        public 搜索条目[] 搜索表;      // 随机生成表
+    }
+
+    [Serializable]
+    public class 搜索条目
+    {
+        public string 物品标识;
+        public int 权重 = 1;       // 出现权重（越大越常见）
+        public int 数量最小 = 1;
+        public int 数量最大 = 1;
+        public float 搜索时间;     // 物品级 搜索秒数（0 = 按价值推导）
+    }
+
+    [Serializable]
+    public class 搜索地图类型根 { public 搜索地图类型[] 地图类型; }
+
