@@ -19,7 +19,7 @@ public sealed class 网格面板 : 面板基类
     [SerializeField] private RectTransform 网格容器;   // 网格区域（左上锚定；代码动态生成底座与物品）。可运行时 绑定网格容器 覆盖（动态容器面板）
     [SerializeField] private int 固定列数 = 6;         // Inspector 固定覆盖 服务.网格列（0 = 用服务尺寸；主背包测试参数）
     [SerializeField] private int 固定行数 = 10;        // Inspector 固定覆盖 服务.网格行（0 = 用服务尺寸；主背包测试参数）
-    public const float 格尺寸 = 100f;                  // 单格像素：全项目统一 100（主背包/仓库/容器/穿戴容器 一致，2K 基准）
+    public const float 格尺寸 = 90f;                   // 单格像素：全项目统一 90（主背包/仓库/容器/穿戴容器 一致，2K 基准，90 兼顾格内文字可读性）
     [SerializeField] private int 固定列数最小 = 1;       // 固定列数（格子宽）下限
     [SerializeField] private int 固定列数最大 = 100;      // 固定列数上限
     [SerializeField] private int 固定行数最小 = 1;       // 固定行数下限
@@ -61,8 +61,6 @@ public sealed class 网格面板 : 面板基类
         public bool 存活;              // 本帧刷新命中标记（未命中 = 从网格移除 → 销毁）
         public int 上次数量;           // 数量文本去重
         public string 上次耐久;        // 耐久文本去重
-        public int 上次列, 上次行;     // 上次位置（布局变化检测：移动/旋转 才重画 分隔线）
-        public bool 上次旋转;
     }
     private readonly Dictionary<物品堆叠, 物品框> 物品框表 = new Dictionary<物品堆叠, 物品框>();
 
@@ -76,6 +74,48 @@ public sealed class 网格面板 : 面板基类
     // 公开只读（容器面板 按容器网格尺寸调整面板大小用）
     public int 渲染列 => 当前列;
     public int 渲染行 => 当前行;
+
+    // 容器形状 块偏移：每个块 整体向右 偏移（左侧 并排块 的 缝隙 累计）——块间 真实 空隙，格子 尺寸 不变。
+    // 例：弹挂 4 块 1×2 并排，块偏移 = 0, 6, 12, 18（每块间 6px 缝隙）；无形状/无并排 = 全 0。
+    private const float 块缝隙宽 = 10f;   // 口袋 间 空隙（px）：块偏移 后 自然 露出，不 填色
+    private float[] 块偏移;
+
+    // 格 (列,行) 的 视觉 x：列×格尺寸 + 所属块的累计偏移（空洞格/无形状 = 列×格尺寸）
+    private float 格x(int 列, int 行)
+    {
+        if (块偏移 == null) return 列 * 格尺寸;
+        int 块 = 服务.该格块(列, 行);
+        return 列 * 格尺寸 + (块 >= 0 && 块 < 块偏移.Length ? 块偏移[块] : 0f);
+    }
+
+    // 重建网格结构时 计算块偏移：对每对 (左块 A, 右块 B) 且 A 右边界 == B 左边界（并排贴邻）且 行范围重叠
+    // → B 偏移 = A 偏移 + 缝隙宽（累计；无形状 或 无 并排 贴邻 = 全 0）
+    private void 计算块偏移()
+    {
+        块偏移 = null;
+        var 块们 = 服务.形状块;
+        if (块们 == null || 块们.Count == 0) return;
+        块偏移 = new float[块们.Count];
+        for (int i = 0; i < 块们.Count; i++)
+            for (int j = 0; j < 块们.Count; j++)
+            {
+                if (i == j) continue;
+                var A = 块们[j]; var B = 块们[i];
+                if (A.列 + A.宽 == B.列 && A.行 < B.行 + B.高 && B.行 < A.行 + A.高)   // A 在 B 左侧 且 贴邻 且 行重叠
+                    块偏移[i] = Mathf.Max(块偏移[i], 块偏移[j] + 块缝隙宽);
+            }
+    }
+
+    // 最右侧块 的 累计偏移（网格 宽度 补偿用；弹挂 4 块 = 3×缝隙）
+    private float 最右偏移()
+    {
+        if (块偏移 == null || 服务.形状块 == null || 服务.形状块.Count == 0) return 0f;
+        float 最右 = 0f;
+        for (int i = 0; i < 服务.形状块.Count; i++)
+            if (服务.形状块[i].列 + 服务.形状块[i].宽 == 当前列)   // 块 贴 网格 右边缘
+                最右 = Mathf.Max(最右, 块偏移[i]);
+        return 最右;
+    }
 
     // 清空某网格层的子物体：先脱离父（避免 GridLayoutGroup 的 LayoutRebuilder 访问已销毁的格），再销毁
     private void 清空层(RectTransform 层)
@@ -117,17 +157,23 @@ public sealed class 网格面板 : 面板基类
             { 待刷新物品 = false; 刷新物品(); }
         if (拖拽中堆叠 == null) 
             return;
-        // R 旋转预览：放 Update 每帧检测（不受 OnDrag 需鼠标移动才触发的限制——静止按住也能按 R）
-        if (检测按R()) 
-            { 拖拽旋转 = !拖拽旋转; 更新代理尺寸(); }
+        Vector2 鼠标 = 输入鼠标位置();   // 方法级：R 旋转 与 跨面板投影 共用（避免 CS0136 重名）
+        var 伪事件 = new PointerEventData(EventSystem.current) { position = 鼠标 };
+        // R 旋转预览：放 Update 每帧检测（不受 OnDrag 需鼠标移动才触发的限制——静止按住也能按 R）。
+        // 仅 发起面板 检测（避免多个激活面板同帧重复翻转 = 转两次等于没转）。
+        if (拖拽发起面板 == this && 检测按R()) 
+        {
+            拖拽旋转 = !拖拽旋转; 
+            更新代理尺寸();
+            // 静止按 R 不触发 OnDrag → 手动触发一次完整投影刷新（旋转后 落格/尺寸/颜色 立即同步，否则投影停在旧格位）
+            拖拽移动(伪事件);
+        }
         if (拖拽发起面板 == this) 
             return;
         确保投影();   // 懒创建本面板投影（发起面板才有，其他面板首次需要时创建）
         if (落点投影 == null) 
             return;
 
-        var 鼠标 = 输入鼠标位置();
-        var 伪事件 = new PointerEventData(EventSystem.current) { position = 鼠标 };
         var 下方 = 事件下方面板(伪事件);
 
         if (下方 != this) 
@@ -141,7 +187,7 @@ public sealed class 网格面板 : 面板基类
             { 落点投影.gameObject.SetActive(false); return; }
 
         落点投影.gameObject.SetActive(true);
-        落点投影.rectTransform.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);
+        落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
         落点投影.rectTransform.sizeDelta = new Vector2(物宽 * 格尺寸, 物高 * 格尺寸);   // 投影贴格（占格大小）
         // 目标面板校验：允许放入（容器类型限制）+ 嵌套防护（自己套自己/循环/套娃上限）+ 落点格 占位（可放置/可合并/快捷收入容器）
         bool 可放 = 目标允许放入(拖拽中堆叠.标识) && !目标禁放入(拖拽中堆叠);
@@ -210,6 +256,14 @@ public sealed class 网格面板 : 面板基类
     public void 请求刷新() => 待刷新网格 = true;
     // 立即刷新（穿戴容器区 装备/卸下 后强制显隐生效用）：直接执行（低频结构变化，不走脏标记）
     public void 立即刷新() => 刷新网格();
+    // 强制全量重建（配色修改后应用用）：清分层缓存 → 网格结构 全量重绘（底格/线/物品 用新配色）
+    public void 强制重建()
+    {
+        底座层 = 线层 = 物品层 = null;   // 强制 下次 刷新 重建 分层
+        当前列 = 当前行 = 0;             // 强制 尺寸 检测 触发 重建网格结构
+        上次格尺寸 = 0f;
+        刷新网格();
+    }
 
     // —— 目标容器校验（跨面板拖拽）：所属容器（容器面板）或 所属槽位（穿戴容器块）——
     // 允许放入：容器允许类型 校验（弹挂/腰封 只装弹药；仓库/主背包 无限制）
@@ -351,9 +405,11 @@ public sealed class 网格面板 : 面板基类
     private void 重建网格结构()
     {
         准备层();
+        计算块偏移();   // 有形状（独立口袋）：块间 偏移 缝隙——视觉 空隙，格子 尺寸 不变
         var cf = 网格容器.GetComponent<ContentSizeFitter>();
         if (cf != null) cf.enabled = false;   // 禁用可能残留的 ContentSizeFitter，避免按子对象 preferred 把 Content 撑成 0（尺寸由本方法设置）
-        float 网格宽 = 当前列 * 格尺寸, 网格高 = 当前行 * 格尺寸;
+        // 网格宽 含 最右侧块 的 累计偏移（块间 缝隙 占用 的 宽度）
+        float 网格宽 = 当前列 * 格尺寸 + 最右偏移(), 网格高 = 当前行 * 格尺寸;
         // 注：不 改动 Content 的 锚点/位置（场景 手动 配置 为准）——只 设置 尺寸。
         // 单点锚 下 sizeDelta 生效；拉伸锚 请 在 场景 配好 Content 尺寸（offset 拉伸 时 sizeDelta 无效）。
         if (数据源 != null)
@@ -371,6 +427,7 @@ public sealed class 网格面板 : 面板基类
             for (int 列 = 0; 列 < 当前列; 列++)
                 创建底格(列, 行);
         画分隔线();   // 线在格子之间（格子在线内）
+        更新布局快照();   // 全量重建：布局快照 与 网格 同步（物品框 由 下次 刷新物品 全建）
         清空物品框表();   // 网格结构变化 → 旧物品框全部失效（下次 刷新物品 全建）
     }
 
@@ -382,48 +439,59 @@ public sealed class 网格面板 : 面板基类
         物品框表.Clear();
     }
 
-    // 增量刷新物品：遍历 服务.背包 —— 新增创建 / 已有更新（位置/旋转/品质/数量/耐久）/ 移除销毁；不重建底格与分隔线。
-    // 布局变化（物品 增删/移动/旋转）→ 重画 分隔线（边界 亮/内部 淡 跟随 物品——否则 增量 放入 的 物品 边界 线 不 亮）。
+    // 增量刷新物品：遍历 服务.背包 —— 新增创建 / 已有更新（位置/旋转/品质/数量/耐久）/ 移除销毁；不重建底格。
+    // 物品 布局（增删/移动/旋转）变化 → 重画 分隔线（物品边界线 亮/内部 淡 跟随 物品 覆盖）。
     private void 刷新物品()
     {
         if (物品层 == null) return;
         // 兜底：尺寸/格尺寸 可能已变（换包/外部注入新尺寸）→ 走全量重建
         if (当前列 != 服务.网格列 || 当前行 != 服务.网格行 || Mathf.Abs(上次格尺寸 - 格尺寸) > 0.01f) { 刷新网格(); return; }
+        // 布局快照 对比：任一 堆叠 的 列/行/旋转 变化（含 增删）→ 重画 分隔线
+        bool 布局变化 = false;
+        if (上次布局.Count != 服务.背包.Count) 布局变化 = true;
+        else
+        {
+            for (int i = 0; i < 服务.背包.Count && !布局变化; i++)
+            {
+                var s = 服务.背包[i];
+                if (s == null) continue;
+                if (!上次布局.TryGetValue(s, out var 上次)) { 布局变化 = true; break; }
+                if (上次.列 != s.列 || 上次.行 != s.行 || 上次.旋转 != s.旋转) 布局变化 = true;
+            }
+        }
+        if (布局变化) { 重画分隔线(); 更新布局快照(); }
         // 先复位全部存活标记：上一帧命中的框 存活=true，本帧必须从 false 起算——
         // 否则"本帧被移除的物品"的框 存活 沿用 true → 不销毁 → 物品图片残留（装备成功但图片还在 的 bug）
         foreach (var kv in 物品框表) kv.Value.存活 = false;
-        bool 布局变 = false;
         foreach (var 堆叠 in 服务.背包)
         {
             if (堆叠 == null || 堆叠.列 < 0) continue;
-            if (物品框表.TryGetValue(堆叠, out var 框))
-            {
-                if (框.上次列 != 堆叠.列 || 框.上次行 != 堆叠.行 || 框.上次旋转 != 堆叠.旋转) 布局变 = true;
-                框.存活 = true;
-                更新物品框(框, 堆叠);
-            }
-            else { 布局变 = true; var 新框 = 创建物品(堆叠); if (新框 != null) { 新框.存活 = true; 物品框表[堆叠] = 新框; } }
+            if (物品框表.TryGetValue(堆叠, out var 框)) { 框.存活 = true; 更新物品框(框, 堆叠); }
+            else { var 新框 = 创建物品(堆叠); if (新框 != null) { 新框.存活 = true; 物品框表[堆叠] = 新框; } }
         }
         // 未命中的框（存活=false：物品已从网格移除）→ 销毁并从表移除
-        if (物品框表.Count > 0)
-        {
-            List<物品堆叠> 待删 = null;
-            foreach (var kv in 物品框表)
-                if (!kv.Value.存活) (待删 ??= new List<物品堆叠>()).Add(kv.Key);
-            if (待删 != null)
+        if (物品框表.Count == 0) return;
+        List<物品堆叠> 待删 = null;
+        foreach (var kv in 物品框表)
+            if (!kv.Value.存活) (待删 ??= new List<物品堆叠>()).Add(kv.Key);
+        if (待删 != null)
+            foreach (var 堆叠 in 待删)
             {
-                布局变 = true;
-                foreach (var 堆叠 in 待删)
-                {
-                    if (物品框表.TryGetValue(堆叠, out var 框) && 框.根 != null) Destroy(框.根.gameObject);
-                    物品框表.Remove(堆叠);
-                }
+                if (物品框表.TryGetValue(堆叠, out var 框) && 框.根 != null) Destroy(框.根.gameObject);
+                物品框表.Remove(堆叠);
             }
-        }
-        if (布局变) 重画分隔线();   // 物品 布局 变化 → 分隔线 重画（边界 线 跟随 物品）
     }
 
-    // 重画分隔线：清 线层 + 重建（增量刷新 布局变化 后调用——物品边界 亮/内部淡 跟随当前布局）
+    // —— 物品 布局 快照（分隔线 重画 判定）——
+    private readonly Dictionary<物品堆叠, (int 列, int 行, bool 旋转)> 上次布局 = new Dictionary<物品堆叠, (int, int, bool)>();
+    private void 更新布局快照()
+    {
+        上次布局.Clear();
+        foreach (var s in 服务.背包)
+            if (s != null) 上次布局[s] = (s.列, s.行, s.旋转);
+    }
+
+    // 只 重画 分隔线（线层 全清 重画；底格/物品 不动）——物品 边界线 跟随 物品 覆盖
     private void 重画分隔线()
     {
         if (线层 == null) return;
@@ -452,33 +520,43 @@ public sealed class 网格面板 : 面板基类
         r.anchorMax = new Vector2(0.5f, 1f);
         r.pivot = new Vector2(0.5f, 1f);
         r.anchoredPosition = Vector2.zero;
-        r.sizeDelta = new Vector2(当前列 * 格尺寸, 当前行 * 格尺寸);   // 层 = 网格尺寸，顶部 + 水平居中 于 Content
+        r.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸);   // 层 = 网格尺寸（含块偏移），顶部 + 水平居中 于 Content
         return r;
     }
 
-    // 底座一格（底图；用 网格底层 精灵 + 底座色（纯白 A255）原样着色；不描边——分隔线由 画分隔线 统一绘制，格子在线内）
+    // 底座一格（底图；由 GridLayoutGroup 自动铺格/对齐——不再手动定位）
+    // 容器内部形状：空洞格（服务.该格可用=false）不画底图——空洞区 与 块间缝隙（画在 线层）区分
     private void 创建底格(int 列, int 行)
     {
+        if (!服务.该格可用(列, 行)) return;   // 空洞格：不创建底图
         var 物体 = new GameObject($"底格_{行}_{列}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(底座层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.sprite = 网格底层精灵();
-        图.color = 网格面板配色.底座色;   // 纯白 A255：精灵 原样 显示（无精灵时退化为纯色底）
-        图.raycastTarget = false;
+        图.sprite = 网格底层精灵();   // 网格底层纹理（Resources/Art/网格底层.png；加载失败 = null → 纯色兜底）
+        图.color = 网格面板配色.底座色;   // 纯白：精灵 原样 着色
+        图.raycastTarget = false;   // 纯底图（不描边——分隔线由 画分隔线 统一绘制，格子在线内）
         定位(物体.GetComponent<RectTransform>(), 列, 行, 1, 1);   // 手动铺格（相对 底座层 左上）
     }
 
-    // 网格底层精灵（Resources/Art/网格底层.png；导入需为 Sprite 类型；缓存 一次 加载）
-    private static Sprite 网格底层精灵缓存;
+    // 网格底层精灵：缓存加载 Resources/Art/网格底层.png（Single 模式 → Resources.Load 直接取精灵）
+    private static Sprite 网格底层缓存;
     private static Sprite 网格底层精灵()
     {
-        if (网格底层精灵缓存 == null) 网格底层精灵缓存 = Resources.Load<Sprite>("Art/网格底层");
-        return 网格底层精灵缓存;
+        if (网格底层缓存 == null)
+            网格底层缓存 = Resources.Load<Sprite>("Art/网格底层");
+        return 网格底层缓存;
     }
 
     // 画网格分隔线（按物品覆盖分段）：物品边界线亮；物品内部线与空格线一样淡
+    // 画分隔线：无形状（整矩形）→ 原全网格连续线；
+    // 有形状（独立口袋）→ 格子尺寸不变，块间画深色缝隙条（分离感），每个块四边画亮轮廓框（独立闭合）
     private void 画分隔线()
     {
+        if (服务.形状块 != null && 服务.形状块.Count > 0)
+        {
+            画块网格线();
+            return;
+        }
         for (int i = 0; i <= 当前列; i++)
             for (int j = 0; j < 当前行; j++)
                 画竖线段(i, j, 竖线边界(i, j));
@@ -486,6 +564,61 @@ public sealed class 网格面板 : 面板基类
             for (int i = 0; i < 当前列; i++)
                 画横线段(i, j, 横线边界(i, j));
     }
+
+    // 有形状网格的分隔线：逐格线判定——同块内 = 按物品边界（边缘亮/同物品内部淡）；不同块相邻 = 两条形状框线；
+    // 块外边界 = 形状 轮廓 框（形状边界色；块内 有 物品 → 加粗）
+    private void 画块网格线()
+    {
+        // 竖线：分隔 左格(列-1,行) 与 右格(列,行)
+        for (int 列 = 0; 列 <= 当前列; 列++)
+            for (int 行 = 0; 行 < 当前行; 行++)
+            {
+                int 左块 = 列 > 0 ? 服务.该格块(列 - 1, 行) : -1;
+                int 右块 = 列 < 当前列 ? 服务.该格块(列, 行) : -1;
+                if (左块 < 0 && 右块 < 0) continue;   // 两侧都空洞 → 不画
+                if (左块 >= 0 && 右块 >= 0 && 左块 != 右块)
+                {
+                    // 不同口袋 相邻：两块 各画 一条 形状框线（左块右缘 + 右块左缘）——中间 空隙 自然 露出；有 物品 的 口袋 加粗
+                    画竖线段(列, 行, true, false, true, 块内有物品(左块));
+                    画竖线段(列, 行, true, true, true, 块内有物品(右块));
+                    continue;
+                }
+                if (左块 >= 0 && 右块 >= 0) { 画竖线段(列, 行, 竖线边界(列, 行)); continue; }   // 同口袋内部 → 按 物品 边界（边缘亮/同物品淡）
+                画竖线段(列, 行, true, false, true, 块内有物品(左块 >= 0 ? 左块 : 右块));      // 口袋外边界 → 形状 轮廓 框（有物品加粗）
+            }
+        // 横线：分隔 上格(列,行-1) 与 下格(列,行)
+        for (int 行 = 0; 行 <= 当前行; 行++)
+            for (int 列 = 0; 列 < 当前列; 列++)
+            {
+                int 上块 = 行 > 0 ? 服务.该格块(列, 行 - 1) : -1;
+                int 下块 = 行 < 当前行 ? 服务.该格块(列, 行) : -1;
+                if (上块 < 0 && 下块 < 0) continue;
+                if (上块 >= 0 && 下块 >= 0 && 上块 != 下块) { 画横缝隙(列, 行); continue; }
+                if (上块 >= 0 && 下块 >= 0) { 画横线段(列, 行, 横线边界(列, 行)); continue; }   // 同口袋内部 → 按 物品 边界
+                画横线段(列, 行, true, true, 块内有物品(上块 >= 0 ? 上块 : 下块));              // 口袋外边界 → 形状 轮廓 框（有物品加粗）
+            }
+    }
+
+    // 该块（口袋）内 是否 有 物品（有 → 口袋 边界 加粗）
+    private bool 块内有物品(int 块索引)
+    {
+        var 块们 = 服务.形状块;
+        if (块们 == null || 块索引 < 0 || 块索引 >= 块们.Count) return false;
+        var 块 = 块们[块索引];
+        foreach (var s in 服务.背包)
+        {
+            if (s == null || s.列 < 0) continue;
+            var (宽, 高) = 服务.物品占格(s);
+            if (s.列 < 块.列 + 块.宽 && s.列 + 宽 > 块.列 && s.行 < 块.行 + 块.高 && s.行 + 高 > 块.行) return true;
+        }
+        return false;
+    }
+
+    // 竖缝隙条：已废弃——块间空隙 由 块偏移 自然 露出（缝隙 不 填色），本方法 不再 使用
+    private void 画竖缝隙(int 列, int 行) { }
+
+    // 横缝隙条：已废弃——块间空隙 由 块偏移 自然 露出（缝隙 不 填色），本方法 不再 使用
+    private void 画横缝隙(int 列, int 行) { }
 
     // 竖线段的"物品边界"判定：两侧都是空格 → 淡；同一物品内部 → 淡；否则（一侧有物品/不同物品）→ 亮
     private bool 竖线边界(int i, int j)
@@ -508,35 +641,55 @@ public sealed class 网格面板 : 面板基类
     }
 
     // 竖线 | 格边界：列 i 与 行 j 交点的一段（向下 格尺寸 高）；亮=物品边界，否则内部/空格（淡）
-    private void 画竖线段(int 列, int 行, bool 亮)
+    // 空洞格（容器形状外）不画线——空洞区保持干净背景。
+    // 竖线在 (列,行) 分隔 左格(列-1,行) 与 右格(列,行)：任一侧可用才画（最左/最右边界线不因越界被跳过）；x 含块偏移
+    // 贴右 = true：画在 右格 左缘（并排块 的 左框线）；false = 左格 右缘（左框线 或 单侧）
+    // 形状线 = true：用 形状边界色（口袋 轮廓 框 专属 色）；加粗 = true：用 物品边界线宽（口袋 有 物品 时 边界 加粗）
+    private void 画竖线段(int 列, int 行, bool 亮, bool 贴右 = false, bool 形状线 = false, bool 加粗 = false)
     {
+        bool 左可用 = 列 > 0 && 服务.该格可用(列 - 1, 行);
+        bool 右可用 = 列 < 当前列 && 服务.该格可用(列, 行);
+        if (!左可用 && !右可用) return;   // 两侧都空洞 → 不画
+        float x = 贴右 ? 格x(列, 行) : (左可用 ? 格x(列 - 1, 行) + 格尺寸 : 格x(列, 行));
         var 物体 = new GameObject($"竖线_{列}_{行}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(线层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = 亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色;
+        图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
         矩形.anchorMin = new Vector2(0, 1);
         矩形.anchorMax = new Vector2(0, 1);
         矩形.pivot = new Vector2(0.5f, 0.5f);
-        矩形.anchoredPosition = new Vector2(列 * 格尺寸, -(行 + 0.5f) * 格尺寸);
-        矩形.sizeDelta = new Vector2(网格面板配色.线宽, 格尺寸);
+        矩形.anchoredPosition = new Vector2(x, -(行 + 0.5f) * 格尺寸);
+        // 线宽：物品边界（亮且非形状线）或 口袋 加粗（有物品）→ 物品边界线宽；否则 普通线宽
+        float 线宽 = ((亮 && !形状线) || 加粗) ? 网格面板配色.物品边界线宽 : 网格面板配色.线宽;
+        矩形.sizeDelta = new Vector2(线宽, 格尺寸);
     }
 
-    // 横线 ─ 格边界：行 j 与 列 i 交点的一段（向右 格尺寸 宽）
-    private void 画横线段(int 列, int 行, bool 亮)
+    // 横线 ─ 格边界：行 j 与 列 i 交点的一段（向右 格尺寸 宽）；亮=物品边界，否则内部/空格（淡）
+    // 空洞格（容器形状外）不画线——空洞区保持干净背景。
+    // 横线在 (列,行) 分隔 上格(列,行-1) 与 下格(列,行)：任一侧可用才画（最上/最下边界线不因越界被跳过）；x 含块偏移
+    // 注：下边界（行 == 当前行，越界）x 偏移 取 上格（行-1）的块——否则 偏移 丢失，下边界线 错位 连成 一条
+    // 形状线 = true：用 形状边界色（口袋 轮廓 框 专属 色）
+    private void 画横线段(int 列, int 行, bool 亮, bool 形状线 = false, bool 加粗 = false)
     {
+        bool 上可用 = 行 > 0 && 服务.该格可用(列, 行 - 1);
+        bool 下可用 = 行 < 当前行 && 服务.该格可用(列, 行);
+        if (!上可用 && !下可用) return;   // 两侧都空洞 → 不画
+        int 参考行 = 行 < 当前行 ? 行 : 行 - 1;   // 下边界：用 上格 的 行（取 块偏移）
         var 物体 = new GameObject($"横线_{行}_{列}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(线层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = 亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色;
+        图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
         矩形.anchorMin = new Vector2(0, 1);
         矩形.anchorMax = new Vector2(0, 1);
         矩形.pivot = new Vector2(0.5f, 0.5f);
-        矩形.anchoredPosition = new Vector2((列 + 0.5f) * 格尺寸, -行 * 格尺寸);
-        矩形.sizeDelta = new Vector2(格尺寸, 网格面板配色.线宽);
+        矩形.anchoredPosition = new Vector2(格x(列, 参考行) + 格尺寸 / 2f, -行 * 格尺寸);
+        // 线宽：物品边界（亮且非形状线）或 口袋 加粗（有物品）→ 物品边界线宽；否则 普通线宽
+        float 线宽 = ((亮 && !形状线) || 加粗) ? 网格面板配色.物品边界线宽 : 网格面板配色.线宽;
+        矩形.sizeDelta = new Vector2(格尺寸, 线宽);
     }
 
     // 物品：两层结构 —— ① 物品框（全尺寸 Image = 品质底层色 + 黑描边，点击/拖拽挂这里）→ ② 内容层（内缩 Image = 深色占位块，将来贴美术图）。
@@ -559,7 +712,7 @@ public sealed class 网格面板 : 面板基类
         框.根.anchorMin = new Vector2(0, 1);
         框.根.anchorMax = new Vector2(0, 1);
         框.根.pivot = new Vector2(0, 1);
-        框.根.anchoredPosition = new Vector2(堆叠.列 * 格尺寸, -堆叠.行 * 格尺寸);
+        框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -堆叠.行 * 格尺寸);
         框.根.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
         物体.AddComponent<RectMask2D>();   // 裁剪 cover 图标溢出（物品图片填满格子，超出部分裁掉）
         // ② 高光层：品质底 与 内容 之间（白色半透明，悬停时显示）
@@ -586,21 +739,26 @@ public sealed class 网格面板 : 面板基类
         float 内容宽 = 未旋转.宽 * 格尺寸 - 网格面板配色.物品边距 * 2f;
         float 内容高 = 未旋转.高 * 格尺寸 - 网格面板配色.物品边距 * 2f;
         var 图标 = 物品图标服务.获取(物品.图片);
+        Vector2 内容中心 = new Vector2(0.5f, 0.5f);   // 内容 pivot（默认画布中心；trim 后 = 内容包围盒中心）
         if (图标 != null)
         {
             内容图.sprite = 图标;
             内容图.color = Color.white;          // 有图时不再用色底染色
-            // 纯 cover：按 sprite 宽高比 等比放大至覆盖整个物品框（保持长宽比不变形；超出部分被 RectMask2D 居中裁剪）
+            // 智能 cover：先 trim 透明留白（内容包围盒）→ 按 实际内容 等比放大至覆盖整个物品框
+            // （保持长宽比不变形；超出部分被 RectMask2D 居中裁剪；小物品 图标 不再 大片 空白）
             内容图.preserveAspect = false;
-            float 图比 = 图标.bounds.size.x / 图标.bounds.size.y;
-            float 框比 = 内容宽 / 内容高;
-            if (图比 > 框比) 内容宽 = 内容高 * 图比;   // 图更宽扁：撑满高，宽超出（裁左右）
-            else 内容高 = 内容宽 / 图比;               // 图更高瘦：撑满宽，高超出（裁上下）
+            var 盒 = 精灵内容包围盒.获取(图标);   // position=内容中心(归一化)，size=内容占比(归一化)
+            float 画布宽 = 图标.bounds.size.x, 画布高 = 图标.bounds.size.y;   // 整张画布（含透明边）
+            float 内容宽盒 = 画布宽 * 盒.width, 内容高盒 = 画布高 * 盒.height;   // 实际内容尺寸
+            float 放大 = Mathf.Max(内容宽 / 内容宽盒, 内容高 / 内容高盒);       // 内容 cover 撑满框
+            内容宽 = 画布宽 * 放大;   // 画布整体按同倍率放大（内容部分恰好覆盖框）
+            内容高 = 画布高 * 放大;
+            内容中心 = new Vector2(盒.x, 盒.y);   // pivot 移到 内容中心：放大后 内容 居中于框
         }
         var 内容矩形 = 内容物体.GetComponent<RectTransform>();
         内容矩形.anchorMin = new Vector2(0.5f, 0.5f);
         内容矩形.anchorMax = new Vector2(0.5f, 0.5f);
-        内容矩形.pivot = new Vector2(0.5f, 0.5f);
+        内容矩形.pivot = 内容中心;
         内容矩形.anchoredPosition = Vector2.zero;   // 居中于物品框
         内容矩形.sizeDelta = new Vector2(内容宽, 内容高);
         内容矩形.localRotation = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);   // 图标跟随物品旋转 90°
@@ -672,7 +830,6 @@ public sealed class 网格面板 : 面板基类
         var 拖拽 = 物体.AddComponent<物品拖拽>();
         拖拽.堆叠 = 堆叠;
         拖拽.面板 = this;
-        框.上次列 = 堆叠.列; 框.上次行 = 堆叠.行; 框.上次旋转 = 堆叠.旋转;   // 布局变化检测基准
         return 框;
     }
 
@@ -681,7 +838,7 @@ public sealed class 网格面板 : 面板基类
     {
         if (框 == null || 框.根 == null) return;
         var (宽, 高) = 服务.物品占格(堆叠);
-        框.根.anchoredPosition = new Vector2(堆叠.列 * 格尺寸, -堆叠.行 * 格尺寸);
+        框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -堆叠.行 * 格尺寸);
         float 新宽 = 宽 * 格尺寸, 新高 = 高 * 格尺寸;
         if (Mathf.Abs(框.根.sizeDelta.x - 新宽) > 0.01f || Mathf.Abs(框.根.sizeDelta.y - 新高) > 0.01f)
             框.根.sizeDelta = new Vector2(新宽, 新高);
@@ -718,36 +875,35 @@ public sealed class 网格面板 : 面板基类
             }
             else if (框.耐久.gameObject.activeSelf) { 框.耐久.gameObject.SetActive(false); 框.上次耐久 = null; }
         }
-        框.上次列 = 堆叠.列; 框.上次行 = 堆叠.行; 框.上次旋转 = 堆叠.旋转;   // 更新布局基准（下一次 检测 是否 变化）
     }
 
-    // 左上锚定定位：列/行 起点 + 宽×高 跨格
+    // 左上锚定定位：列/行 起点 + 宽×高 跨格（x 含 块偏移——块间 缝隙）
     private void 定位(RectTransform 矩形, int 列, int 行, int 宽, int 高)
     {
         矩形.anchorMin = new Vector2(0, 1);
         矩形.anchorMax = new Vector2(0, 1);
         矩形.pivot = new Vector2(0, 1);
-        矩形.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);
+        矩形.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
         矩形.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
     }
 
-    // 品质底层色（物品框）：全部物品按有效品质整块着色（半透明）；普通 = 全透明，优秀~传奇 = 品质色混合。
+    // 品质底层色（物品框）：全部物品按有效品质整块着色（半透明）；普通 = 纯白 A20（微亮底）；优秀~传奇 = 品质色混合。
     // 架构约定：品质色永远属于"物品框层"（全尺寸底层）——将来内容层换成美术图片后，四周仍露出品质色环。
     private Color 品质底层色(物品堆叠 堆叠)
     {
         if (堆叠 == null || !数据.物品.TryGetValue(堆叠.标识, out var 物品)) return new Color(0f, 0f, 0f, 0f);
         品质 档 = 有效品质(堆叠, 物品);
-        if (档 == 品质.普通) return new Color(0f, 0f, 0f, 0f);   // 普通：全透明（无色块）
+        if (档 == 品质.普通) return new Color(0f, 0f, 0f, 0f);   // 普通：纯白 A20
         var 色 = Color.Lerp(网格面板配色.物品底色, 品质工具.颜色(档), 0.55f);
         色.a = 网格面板配色.品质底色透明;   // 半透明（能看到底座格/分隔线，品质色仍是区分度）
         return 色;
     }
 
-    // 拖拽代理底色：非普通 = 品质底层色；普通（全透明）→ 内容层色（不透明，跟手可见）
+    // 拖拽代理底色：非普通 = 品质底层色；普通（纯白 A20 太淡）→ 内容层色（不透明，跟手可见）
     private Color 物品品质底(物品堆叠 堆叠)
     {
         var 层色 = 品质底层色(堆叠);
-        return 层色.a <= 0f ? 网格面板配色.物品底色 : 层色;
+        return 层色.a <= 0.1f ? 网格面板配色.物品底色 : 层色;
     }
 
     // 有效品质：堆叠品质覆盖（合成提升）优先，否则取物品模板品质
@@ -910,10 +1066,13 @@ public sealed class 网格面板 : 面板基类
     private void 创建拖拽视觉(物品堆叠 堆叠)
     {
         // ① 跟手代理：挂 Canvas 顶层（不被 Viewport 裁剪、不被任何面板覆盖——跨面板拖拽可见）
-        var 物体 = new GameObject("拖拽代理", typeof(RectTransform), typeof(Image));
+        // 结构：根 = RectMask2D（裁剪 cover 溢出）+ 子 Image 内容图（等比放大铺满占格）——与 物品框 显示一致
+        var 物体 = new GameObject("拖拽代理", typeof(RectTransform), typeof(RectMask2D));
         var 顶层 = GetComponentInParent<Canvas>();
         物体.transform.SetParent(顶层 != null ? 顶层.transform : transform.root, false);
-        var 图 = 物体.GetComponent<Image>();
+        var 内容体 = new GameObject("内容", typeof(RectTransform), typeof(Image));
+        内容体.transform.SetParent(物体.transform, false);
+        var 图 = 内容体.GetComponent<Image>();
         图.raycastTarget = false;
         // 代理优先显示挂载图标；无图则用品质底色块（半透明跟手）
         var 代理物品 = 数据.物品.TryGetValue(堆叠.标识, out var 代理数据) ? 代理数据 : null;
@@ -922,13 +1081,18 @@ public sealed class 网格面板 : 面板基类
         {
             图.sprite = 代理图标;
             图.color = new Color(1f, 1f, 1f, 0.85f);
-            图.preserveAspect = true;
+            图.preserveAspect = false;
         }
         else
         {
             var 代理底 = 物品品质底(堆叠);
             图.color = new Color(代理底.r, 代理底.g, 代理底.b, 0.85f);
         }
+        var 内容矩 = 内容体.GetComponent<RectTransform>();
+        内容矩.anchorMin = new Vector2(0.5f, 0.5f);
+        内容矩.anchorMax = new Vector2(0.5f, 0.5f);
+        内容矩.pivot = new Vector2(0.5f, 0.5f);
+        内容矩.anchoredPosition = Vector2.zero;   // 居中于代理根（cover 放大由 更新代理尺寸 计算）
         拖拽代理 = 物体.GetComponent<RectTransform>();
         拖拽代理.anchorMin = new Vector2(0.5f, 0.5f);   // Canvas 顶层：中心锚定，屏幕坐标定位
         拖拽代理.anchorMax = new Vector2(0.5f, 0.5f);
@@ -946,7 +1110,7 @@ public sealed class 网格面板 : 面板基类
         影矩形.anchorMin = new Vector2(0, 1);
         影矩形.anchorMax = new Vector2(0, 1);
         影矩形.pivot = new Vector2(0, 1);
-        影矩形.anchoredPosition = new Vector2(堆叠.列 * 格尺寸 + 网格面板配色.物品边距, -堆叠.行 * 格尺寸 - 网格面板配色.物品边距);
+        影矩形.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行) + 网格面板配色.物品边距, -堆叠.行 * 格尺寸 - 网格面板配色.物品边距);
         var (影宽, 影高) = 服务.物品占格(堆叠);   // 影子 = 物品原本占格（原始旋转；旋转预览不影响它）
         影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 影高 * 格尺寸 - 网格面板配色.物品边距 * 2f);
         原位置影子 = 影体;
@@ -1033,20 +1197,41 @@ public sealed class 网格面板 : 面板基类
         if (落点投影 != null)
         {
             落点投影.gameObject.SetActive(true);
-            落点投影.rectTransform.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);   // 精确贴格（吸附网格）
+            落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);   // 精确贴格（吸附网格）
             落点投影.color = 上次可合并 ? 网格面板配色.合并色 : (上次可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色);
         }
     }
 
-    // 代理尺寸 = 物品内缩（跟手图片）；投影尺寸 = 完整占格（贴格指示）——随 拖拽旋转（R 预览）同步；原位置影子保持原始占格不变
+    // 代理尺寸 = 物品占格（每格 100，不内缩）；投影尺寸 = 完整占格（贴格指示）——随 拖拽旋转（R 预览）同步；原位置影子保持原始占格不变
     private void 更新代理尺寸()
     {
         if (拖拽代理 == null || 拖拽源 == null) return;
         var 未旋转 = 服务.形状解析?.Invoke(拖拽源.标识) ?? new 物品形状(1, 1);
         var (宽, 高) = 预览占格(拖拽源);   // 按 拖拽旋转 计算（不写回 堆叠.旋转）
-        // 代理：未旋转内缩宽高 + 随 拖拽旋转 转 90°（跟手图片跟随旋转预览）
-        拖拽代理.sizeDelta = new Vector2(未旋转.宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 未旋转.高 * 格尺寸 - 网格面板配色.物品边距 * 2f);
-        拖拽代理.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);
+        // 代理根：尺寸 = 旋转后 占格（宽高已按旋转交换），根 不旋转——
+        // RectMask2D 是轴对齐裁剪，根旋转会裁掉内容图（古早 bug：R 旋转后图片消失）；内容图旋转由子层 localRotation 承担（同物品框）
+        拖拽代理.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
+        拖拽代理.localRotation = Quaternion.identity;
+        // 内容图 智能 cover：按 未旋转 宽高 等比放大至覆盖整个占格（与 物品框 一致——旋转后恰好匹配，不溢出裁剪）
+        var 内容矩 = 拖拽代理.GetChild(0) as RectTransform;
+        if (内容矩 != null)
+        {
+            float 内容宽 = 未旋转.宽 * 格尺寸;
+            float 内容高 = 未旋转.高 * 格尺寸;
+            var 图标 = 内容矩.GetComponent<Image>().sprite;
+            if (图标 != null)
+            {
+                var 盒 = 精灵内容包围盒.获取(图标);   // position=内容中心(归一化)，size=内容占比(归一化)
+                float 画布宽 = 图标.bounds.size.x, 画布高 = 图标.bounds.size.y;
+                float 内容宽盒 = 画布宽 * 盒.width, 内容高盒 = 画布高 * 盒.height;
+                float 放大 = Mathf.Max(内容宽 / 内容宽盒, 内容高 / 内容高盒);
+                内容宽 = 画布宽 * 放大;
+                内容高 = 画布高 * 放大;
+                内容矩.pivot = new Vector2(盒.x, 盒.y);   // pivot 移到 内容中心：放大后 内容 居中于占格
+            }
+            内容矩.sizeDelta = new Vector2(内容宽, 内容高);
+            内容矩.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);   // 内容图跟随旋转（根不转——RectMask2D 轴对齐裁剪）
+        }
         if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);   // 投影贴格（旋转后）
         // 注：原位置影子不更新——它表示物品原本的占格（原始旋转），旋转预览只影响新位置
     }
@@ -1088,7 +1273,7 @@ public sealed class 网格面板 : 面板基类
         var 目标面板 = 事件下方面板(事件);
         if (目标面板 != null && 目标面板 != this)
         {
-            成功 = 目标面板.接收跨面板转移(服务, 源, 事件);
+            成功 = 目标面板.接收跨面板转移(服务, 源, 事件, 拖拽旋转);   // 传拖拽旋转：跨面板 R 旋转 生效
             if (成功) 音效管理器.实例?.播放放下();
             else 音效管理器.实例?.播放失败();
             拖拽发起面板 = null; 拖拽源服务 = null; 拖拽中堆叠 = null;
@@ -1098,12 +1283,12 @@ public sealed class 网格面板 : 面板基类
         // 容器面板 底座拦截：鼠标在 容器面板 上 → 落点归面板（不触发底下装备槽/面板）
         foreach (var 面板 in FindObjectsOfType<容器面板>(true))
             if (面板.命中(事件.position)) { 音效管理器.实例?.播放失败(); return; }
-        // 拖到装备槽位（装备面板）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"；换装堆叠 内部 已播放下音效）
+        // 拖到装备槽位（装备面板）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"，旧件回背包/回滚已处理）
         if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
         {
             成功 = 数据.物品.TryGetValue(源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名)
                 && 面板操作.换装堆叠(档案, 源, 槽位名, 服务);   // 指定目标槽 + 源服务（穿戴容器/主背包）
-            if (成功) 请求刷新();
+            if (成功) { 请求刷新(); 音效管理器.实例?.播放放下(); }
             else 音效管理器.实例?.播放失败();
             return;
         }
@@ -1178,11 +1363,14 @@ public sealed class 网格面板 : 面板基类
     }
 
     // 接收跨面板转移：把 (源服务) 里的 堆叠 放到本面板 (列,行)（由 容器服务.跨网格转移 执行）。返回 是否成功（音效由调用方播）
-    public bool 接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件)
+    // 拖拽旋转：发起面板 R 预览的旋转状态——跨面板 落格/转移 时应用（否则跨面板旋转被丢弃）
+    public bool 接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
     {
         if (源服务 == null || 堆叠 == null) return false;
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸)) return false;
-        var (物宽, 物高) = 服务.物品占格(堆叠);
+        var 形状 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
+        int 物宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
+        int 物高 = 拖拽旋转 ? 形状.宽 : 形状.高;
         float 相对顶 = 尺寸.y - 相对.y;
         if (!落格(相对.x, 相对顶, 物宽, 物高, out int 列, out int 行)) return false;
         // 转移前校验：目标容器类型限制 + 嵌套防护（自己套自己/循环/套娃上限）
@@ -1206,8 +1394,12 @@ public sealed class 网格面板 : 面板基类
             }
             return false;   // 容器不允许类型 / 已满 → 失败
         }
+        // 跨网格转移 前 应用拖拽旋转（临时改堆叠旋转 → 转移 → 落格判定用旋转后占格）
+        bool 原旋转 = 堆叠.旋转;
+        if (拖拽旋转 != 原旋转) 堆叠.旋转 = 拖拽旋转;
         int 转移 = ServiceRegistry.Get<容器服务>().跨网格转移(源服务, 堆叠, 服务, 列, 行);
-        if (转移 <= 0) return false;
+        if (转移 <= 0) { 堆叠.旋转 = 原旋转; return false; }   // 失败回滚旋转
+        // 成功：旋转已随堆叠入格（跨网格转移 内部 列/行 已按当前旋转写回）
         请求刷新();
         ServiceRegistry.Get<EventBus>().发布(new 背包变化事件(堆叠.标识, 转移, 变化原因.获得));
         return true;
@@ -1242,10 +1434,20 @@ public sealed class 网格面板 : 面板基类
     }
 
     // 屏幕相对 点 → 网格落格（物品中心对齐：四舍五入，偏差对称 ±半格内，1×1 精确——大物体不错位）
+    // 块偏移 反算：行 无偏移；列 先按 无偏移 估算 所属块，再 用 该块 偏移 精算（两块 迭代 收敛）
     private bool 落格(float 相对x, float 相对顶, int 物宽, int 物高, out int 列, out int 行)
     {
-        列 = Mathf.RoundToInt((相对x - 物宽 * 格尺寸 / 2f) / 格尺寸);
         行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
+        float 估算x = 相对x - 物宽 * 格尺寸 / 2f;
+        int 估算列 = Mathf.RoundToInt(估算x / 格尺寸);
+        // 用 估算列 找 所属块偏移，再精算（弹挂 等 并排块 偏移后 落格 正确）
+        float 偏移 = 0f;
+        if (块偏移 != null && 行 >= 0 && 行 < 当前行 && 估算列 >= 0 && 估算列 < 当前列)
+        {
+            int 块 = 服务.该格块(估算列, 行);
+            if (块 >= 0 && 块 < 块偏移.Length) 偏移 = 块偏移[块];
+        }
+        列 = Mathf.RoundToInt((估算x - 偏移) / 格尺寸);
         return 列 >= 0 && 行 >= 0 && 列 < 当前列 && 行 < 当前行;
     }
 
@@ -1273,7 +1475,7 @@ public sealed class 网格面板 : 面板基类
         {
             落点投影.gameObject.SetActive(true);
             落点投影.rectTransform.anchoredPosition = Vector2.zero;
-            落点投影.rectTransform.sizeDelta = new Vector2(当前列 * 格尺寸, 当前行 * 格尺寸);
+            落点投影.rectTransform.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸);
             落点投影.color = 网格面板配色.放置禁色;
             return;
         }
@@ -1284,7 +1486,7 @@ public sealed class 网格面板 : 面板基类
         }
         var (宽, 高) = 服务.物品占格(堆叠);
         落点投影.gameObject.SetActive(true);
-        落点投影.rectTransform.anchoredPosition = new Vector2(列 * 格尺寸, -行 * 格尺寸);
+        落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
         落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
         落点投影.color = 服务.可放置(堆叠.标识, 列, 行, 堆叠.旋转) ? 网格面板配色.放置可色 : 网格面板配色.放置禁色;
     }

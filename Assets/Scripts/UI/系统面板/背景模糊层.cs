@@ -109,10 +109,13 @@ public sealed class 背景模糊层 : MonoBehaviour
     {
         if (模糊材质 == null)
         {
-            var shader = Shader.Find("UI/背景模糊");
+            // 打包后 Shader.Find 找不到未引用 shader（会被裁剪）→ 优先 Resources.Load（Resources 内必定进包），
+            // 失败再回退 Shader.Find（编辑器/未裁剪环境）
+            var shader = Resources.Load<Shader>("Shaders/UI背景模糊");
+            if (shader == null) shader = Shader.Find("UI/背景模糊");
             if (shader == null)
             {
-                Debug.LogError("[背景模糊层] 找不到 Shader \"UI/背景模糊\"（检查 Assets/Shaders/UI背景模糊.shader 是否编译成功）");
+                Debug.LogError("[背景模糊层] 找不到 Shader \"UI/背景模糊\"（检查 Assets/Resources/Shaders/UI背景模糊.shader 是否编译成功）");
                 return null;
             }
             模糊材质 = new Material(shader);

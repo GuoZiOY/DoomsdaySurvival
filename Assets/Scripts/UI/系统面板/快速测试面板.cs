@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -6,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-// 快速测试面板：代码动态搭建的开发者测试面板（仅 UNITY_EDITOR 编译，正式包不包含）。
+// 快速测试面板：代码动态搭建的开发者测试面板（编辑器与正式包均可用——打包后 F1/测试按钮 继续调试）。
 // 屏幕顶部边缘常驻「测试」开关按钮 → 展开/收起 测试按钮列表，点击即执行对应测试操作
 // （装备/背包相关：开背包面板、加随机物品、加容器套装、清空背包、随机穿戴容器、加食物、加医疗品、随机装备武器防具、恢复生存状态）。
 // 由 玩家输入系统.Awake 调用 确保存在() 自动创建；画布置顶，独立于场景 UI 走线。
@@ -506,4 +505,3 @@ public sealed class 快速测试面板 : MonoBehaviour
         }
     }
 }
-#endif

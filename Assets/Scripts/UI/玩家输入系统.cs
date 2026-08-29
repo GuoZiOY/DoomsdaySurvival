@@ -18,9 +18,7 @@ public sealed class 玩家输入系统 : MonoBehaviour
     {
         面板 = GetComponent<面板管理器>();
         if (面板 == null) 面板 = Object.FindFirstObjectByType<面板管理器>();
-#if UNITY_EDITOR
-        快速测试面板.确保存在();   // 编辑器：自动创建右下角 快速测试面板（正式包不编译）
-#endif
+        快速测试面板.确保存在();   // 自动创建 快速测试面板（编辑器与打包程序均可用，便于打包后继续调试）
     }
 
     void Update()

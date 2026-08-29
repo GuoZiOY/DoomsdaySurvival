@@ -18,10 +18,52 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限（0/缺省 = 不可堆叠）
         [NonSerialized] public Func<string, int> 有效最大耐久解析;    // 标识 -> 有效最大耐久（0=无耐久）
         [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量
+        // 容器内部形状：格(列,行) 是否可用（塔科夫式多矩形拼合；null = 整矩形全部可用）。
+        // 由 容器服务 打开/穿戴容器视图 时从模板 容器形状 注入；主背包/仓库 为 null（整矩形）。
+        [NonSerialized] public Func<int, int, bool> 格可用;
+        // 容器内部形状的"块归属"：格(列,行) → 所属块索引（塔科夫式独立口袋——物品必须完全落在同一块内，不能跨块）。
+        // null = 无块概念（整矩形）；配合 格可用 使用：块索引 >= 0 即该格可用。
+        [NonSerialized] public Func<int, int, int> 格所属块;
+        // 形状块几何（画块轮廓用）：容器服务 注入形状时同步；null = 无形状（整矩形，画普通网格线）
+        [NonSerialized] public System.Collections.Generic.List<容器形状块> 形状块;
+
+        // 该格是否可用（形状内/整矩形）
+        public bool 该格可用(int 列, int 行)
+        {
+            if (格可用 == null) return true;
+            if (列 < 0 || 行 < 0 || 列 >= 网格列 || 行 >= 网格行) return false;
+            return 格可用(列, 行);
+        }
+
+        // 该格所属块索引（无块概念 = -2 哨兵；空洞 = -1；正常块 >= 0）
+        public int 该格块(int 列, int 行)
+        {
+            if (格所属块 == null) return -2;   // 无块概念（整矩形）
+            if (列 < 0 || 行 < 0 || 列 >= 网格列 || 行 >= 网格行) return -1;
+            return 格所属块(列, 行);
+        }
+
+        // 形状校验（可放置 共用）：物品覆盖格 全部可用 且（有块概念时）全部属于同一块
+        private bool 覆盖格合法(int 列, int 行, int 宽, int 高)
+        {
+            int 块 = -2;
+            for (int r = 行; r < 行 + 高; r++)
+                for (int c = 列; c < 列 + 宽; c++)
+                {
+                    int 此块 = 该格块(c, r);
+                    if (此块 == -1) return false;   // 空洞格：不可放
+                    if (此块 >= 0)   // 有块概念：所有覆盖格必须同一块（独立口袋，不能跨块）
+                    {
+                        if (块 == -2) 块 = 此块;
+                        else if (块 != 此块) return false;
+                    }
+                }
+            return true;
+        }
 
         // ================= 网格放置 =================
 
-        // 检查某物品能否放在 (列,行)（不越界、不重叠）；排除 = 自身堆叠（移动/换位校验用，忽略其占格）
+        // 检查某物品能否放在 (列,行)（不越界、不重叠、覆盖格全部可用）；排除 = 自身堆叠（移动/换位校验用，忽略其占格）
         public bool 可放置(string 标识, int 列, int 行, bool 旋转, 物品堆叠 排除 = null)
         {
             if (形状解析 == null) return false;
@@ -29,6 +71,8 @@ using System.Collections.Generic;
             int 宽 = 旋转 ? 形状.高 : 形状.宽;
             int 高 = 旋转 ? 形状.宽 : 形状.高;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
+            // 形状校验：物品覆盖的每一格都必须在可用区域内（且同一块内，不跨口袋）
+            if (!覆盖格合法(列, 行, 宽, 高)) return false;
             foreach (var 堆叠 in 背包)
             {
                 if (堆叠 == null || 堆叠 == 排除 || 堆叠.列 < 0) continue;
@@ -45,6 +89,7 @@ using System.Collections.Generic;
             int 宽 = 旋转 ? 形状.高 : 形状.宽;
             int 高 = 旋转 ? 形状.宽 : 形状.高;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
+            if (!覆盖格合法(列, 行, 宽, 高)) return false;
             foreach (var 堆叠 in 背包)
             {
                 if (堆叠 == null || 堆叠 == 排除A || 堆叠 == 排除B || 堆叠.列 < 0) continue;
@@ -201,6 +246,7 @@ using System.Collections.Generic;
             int 宽 = 旋转 ? 形状.高 : 形状.宽;
             int 高 = 旋转 ? 形状.宽 : 形状.高;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
+            if (!覆盖格合法(列, 行, 宽, 高)) return false;
             foreach (var 堆叠 in 背包)
             {
                 if (堆叠 == null || 堆叠 == 忽略A || 堆叠.列 < 0) continue;
@@ -378,6 +424,8 @@ using System.Collections.Generic;
                 int aw = a.旋转 ? 形状a.高 : 形状a.宽;
                 int ah = a.旋转 ? 形状a.宽 : 形状a.高;
                 if (a.列 < 0 || a.行 < 0 || a.列 + aw > 网格列 || a.行 + ah > 网格行) return false;
+                // 形状校验：物品覆盖格必须全部可用且同一块内（容器内部形状空洞不可放、不可跨口袋）
+                if (!覆盖格合法(a.列, a.行, aw, ah)) return false;
                 for (int j = i + 1; j < 物品.Count; j++)
                 {
                     var b = 物品[j];

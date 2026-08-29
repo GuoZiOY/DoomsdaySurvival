@@ -197,27 +197,49 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     }
 
     // 跟手代理：物品图 挂 Canvas 顶层（半透明）
+    // 结构 与 网格面板 拖拽代理 一致：根 = RectMask2D（裁剪 cover 溢出）+ 子 Image 内容图（等比放大铺满占格）
     private void 创建拖拽代理(string 标识)
     {
         var 数据 = ServiceRegistry.Get<DataService>();
         var 画布 = GetComponentInParent<Canvas>();
         if (画布 == null || 数据 == null || !数据.物品.TryGetValue(标识, out var 物品)) return;
-        var 物体 = new GameObject("装备拖拽代理", typeof(RectTransform), typeof(Image));
+        var 物体 = new GameObject("装备拖拽代理", typeof(RectTransform), typeof(RectMask2D));
         物体.transform.SetParent(画布.transform, false);
         物体.transform.SetAsLastSibling();
-        var 图 = 物体.GetComponent<Image>();
+        var 内容体 = new GameObject("内容", typeof(RectTransform), typeof(Image));
+        内容体.transform.SetParent(物体.transform, false);
+        var 图 = 内容体.GetComponent<Image>();
         图.raycastTarget = false;   // 关键：不拦截 滚轮/点击（否则 Canvas 顶层大代理 挡住 下层 ScrollRect 滚动）
         var 图标 = 物品图标服务.获取(物品.图片);
         图.sprite = 图标;
-        图.preserveAspect = true;   // 保持图标宽高比，不被压扁/拉伸
+        图.preserveAspect = false;   // cover：等比放大铺满，不拉伸变形
         图.color = 图标 != null ? new Color(1f, 1f, 1f, 0.7f) : new Color(0.6f, 0.6f, 0.7f, 0.7f);
-        // 统一规格：代理 = 物品占格 × 统一格尺寸（网格面板.格尺寸=100，与网格内拖拽同规格）
+        var 内容矩 = 内容体.GetComponent<RectTransform>();
+        内容矩.anchorMin = new Vector2(0.5f, 0.5f);
+        内容矩.anchorMax = new Vector2(0.5f, 0.5f);
+        内容矩.pivot = new Vector2(0.5f, 0.5f);
+        内容矩.anchoredPosition = Vector2.zero;
+        // 统一规格：代理 = 物品占格 × 统一格尺寸（网格面板.格尺寸=90，与网格内拖拽同规格）
         float 格 = 网格面板.格尺寸;
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         var 形状 = 档案?.背包服务?.形状解析?.Invoke(标识) ?? new 物品形状(1, 1);
         var 矩 = 物体.GetComponent<RectTransform>();
         矩.sizeDelta = new Vector2(形状.宽 * 格, 形状.高 * 格);
         矩.pivot = new Vector2(0.5f, 0.5f);
+        // 内容图 智能 cover：先 trim 透明留白（内容包围盒）→ 按 实际内容 等比放大至覆盖整个占格
+        // （保持长宽比不变形；超出部分被 RectMask2D 居中裁剪；小物品 图标 不再 大片 空白）
+        if (图标 != null)
+        {
+            float 内容宽 = 形状.宽 * 格;
+            float 内容高 = 形状.高 * 格;
+            var 盒 = 精灵内容包围盒.获取(图标);   // position=内容中心(归一化)，size=内容占比(归一化)
+            float 画布宽 = 图标.bounds.size.x, 画布高 = 图标.bounds.size.y;
+            float 内容宽盒 = 画布宽 * 盒.width, 内容高盒 = 画布高 * 盒.height;
+            float 放大 = Mathf.Max(内容宽 / 内容宽盒, 内容高 / 内容高盒);
+            内容矩.sizeDelta = new Vector2(画布宽 * 放大, 画布高 * 放大);
+            内容矩.pivot = new Vector2(盒.x, 盒.y);   // pivot 移到 内容中心：放大后 内容 居中于占格
+        }
+        else 内容矩.sizeDelta = new Vector2(形状.宽 * 格, 形状.高 * 格);
         拖拽代理 = 物体;
     }
 }
