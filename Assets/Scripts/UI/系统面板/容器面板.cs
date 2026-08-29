@@ -8,7 +8,7 @@ using UnityEngine.UI;
 // 本组件 暴露 引用（面板根/网格容器/容器网格/标题文本），动态控制：标题 文本、面板根 与 网格容器 尺寸（随 容器 内容 伸缩）。
 // 样式（字号/颜色/间距/透明度）全在 预制体 调，改 预制体 即 生效。
 // 关闭时销毁；与主背包跨网格拖拽转移（矩形判断，见 网格面板.事件下方面板）。
-public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler
 {
     // 已打开的容器实例 → 面板；同一容器不可重复打开（双击/连点防重）
     private static readonly System.Collections.Generic.Dictionary<物品堆叠, 容器面板> 已打开
@@ -143,13 +143,31 @@ public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         return RectTransformUtility.RectangleContainsScreenPoint(面板根, 屏幕点, 相机);
     }
 
+    // 屏幕点 是否在 本面板 网格容器 矩形 内——自己面板 拖拽 松手 判定用：
+    // 网格内 松手 = 同面板 移动/换位（放行）；底座空白区（标题/边距，非网格）= 拦截（不穿透 下层）
+    public bool 命中网格(Vector2 屏幕点)
+    {
+        if (网格容器 == null) return false;
+        var 画布 = 网格容器.GetComponentInParent<Canvas>();
+        var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
+        return RectTransformUtility.RectangleContainsScreenPoint(网格容器, 屏幕点, 相机);
+    }
+
     // 兜底：面板被其他方式销毁时同步清理登记
     private void OnDestroy()
     {
         if (当前容器 != null) 已打开.Remove(当前容器);
     }
 
-    // ===== 面板拖拽移动（整面板可拖，限制在 Canvas 内） =====
+    // 点击 置顶：按下 本面板 任意 区域 → SetAsLastSibling（渲染 顺序 = 交互 焦点 = 视觉 最上层）。
+    // 叠放 时 "最上层 = 最后 点击" = 用户 当前 操作 面板 → 归属 判定（sibling 顺序）无 歧义；
+    // 且 符合 视觉 直觉：点哪个 面板 就 浮到 最前。拖拽 按下 也 先 置顶（OnPointerDown 先于 OnBeginDrag）。
+    public void OnPointerDown(PointerEventData 事件)
+    {
+        if (面板根 != null) 面板根.SetAsLastSibling();
+    }
+
+    // 面板拖拽移动（整面板可拖，限制在 Canvas 内）
     public void OnBeginDrag(PointerEventData 事件)
     {
         Vector2 屏幕;

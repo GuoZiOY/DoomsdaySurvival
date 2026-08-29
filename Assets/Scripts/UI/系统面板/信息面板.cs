@@ -7,7 +7,7 @@ using UnityEngine.UI;
 //   预制体（Assets/Resources/Prefab/信息面板.prefab）搭好 UI（面板根 Image / 物品图片 Image / 详情 TMP / 关闭按钮），
 //   本组件 暴露 引用（面板根/物品图片/详情文本/关闭按钮），动态 注入：物品 图标 + 完整 详情 文本；居中 显示。
 //   整面板 可 拖拽 移动（世界坐标，锚点/pivot 无关），限制 在 画布 内；关闭 = 销毁 本实例。
-public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler
 {
     private const string 预制体路径 = "Prefab/信息面板";   // Resources 路径（预制体 静态 搭建）
 
@@ -102,6 +102,13 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         float 宽 = 面板根.rect.width * 面板根.lossyScale.x;
         float 高 = 面板根.rect.height * 面板根.lossyScale.y;
         面板根.position = 中心 + 面板根.right * (宽 * (面板根.pivot.x - 0.5f)) - 面板根.up * (高 * (面板根.pivot.y - 0.5f));
+    }
+
+    // 点击 置顶：按下 本面板 任意 区域 → SetAsLastSibling（多开 叠放 时 点哪个 面板 浮到 最前，与 容器面板 一致）。
+    // 事件 从 子元素 冒泡 到 面板根，拖拽 按下 也 先 置顶。
+    public void OnPointerDown(PointerEventData 事件)
+    {
+        if (面板根 != null) 面板根.SetAsLastSibling();
     }
 
     // ===== 面板拖拽移动（世界坐标，锚点/pivot 无关；限制在画布内） =====

@@ -163,28 +163,48 @@ public sealed partial class 网格面板
         var 下方面板 = 事件下方面板(事件);
         // 容器面板 底座 拦截：鼠标在 任一 容器面板 底座（含 网格 区域）上 → 本面板 不显示 投影
         // （容器面板 的 网格面板 若 未 登记/未 命中，底座 仍 应 阻隔 下方 主背包 的 投影）
-        if (下方面板 != null && 下方面板 != this)
+        // 叠放（两个 容器面板 上下 重叠）：取 最上层——鼠标 在 上层 网格内 时 下层 也 命中（矩形 重叠），
+        // 若 按 下层 拦截 会 导致 上层 面板 内 无法 拖拽 放下（叠放 拖拽 修复）。
+        var 自己面板 = GetComponentInParent<容器面板>();
+        var 最上层容器 = 最上层容器面板(事件);
+        if (最上层容器 != null)
         {
-            落点有效 = false;
-            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-            return;
+            // 鼠标 在 容器面板 上（叠放 取 最上层）：落点 归 面板，不 穿透 下层
+            if (最上层容器 != 自己面板)
+            {
+                落点有效 = false;
+                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                return;
+            }
+            // 自己面板：网格内 → 跳过 装备槽 预览，走 自己网格 投影；底座空白区 → 阻隔（不 触发 底下 装备槽）
+            if (!最上层容器.命中网格(事件.position))
+            {
+                落点有效 = false;
+                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                装备面板.实例?.清除全部高亮();
+                return;
+            }
         }
-        if (鼠标在容器面板底座上(事件))
+        else
         {
-            落点有效 = false;
-            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-            return;
+            // 不在 任何 容器面板 上：其他 网格面板（主背包/仓库/穿戴区）跨面板 + 装备槽 高亮
+            if (下方面板 != null && 下方面板 != this)
+            {
+                落点有效 = false;
+                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                return;
+            }
+            // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影
+            if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名))
+            {
+                落点有效 = false;
+                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
+                装备面板.实例.高亮槽位(槽位名, 匹配);
+                return;
+            }
+            装备面板.实例?.清除全部高亮();
         }
-        // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影
-        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名))
-        {
-            落点有效 = false;
-            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-            bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
-            装备面板.实例.高亮槽位(槽位名, 匹配);
-            return;
-        }
-        装备面板.实例?.清除全部高亮();
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸))
         {
             if (落点投影 != null) 落点投影.gameObject.SetActive(false);
@@ -298,13 +318,23 @@ public sealed partial class 网格面板
             return;
         }
         拖拽发起面板 = null; 拖拽源服务 = null; 拖拽中堆叠 = null;
-        // 容器面板 底座拦截：鼠标在 **其他** 容器面板 上 → 落点归面板（不触发底下装备槽/面板）。
-        // 排除 自己 所属 的 容器面板：本面板 就是 该 容器面板 的 网格 → 网格内 松手 = 同面板 移动/换位（正常）
+        // 容器面板 底座拦截：鼠标在 任一 容器面板 底座 上 → 落点归面板（不触发底下装备槽/面板）。
+        // 叠放（两个 容器面板 上下 重叠）取 最上层：鼠标 在 上层 网格内 时 下层 也 命中（矩形 重叠），
+        // 若 按 下层 拦截 会 导致 上层 面板 内 无法 拖拽 放下（叠放 拖拽 修复）。
+        // 自己面板：网格内 松手 = 同面板 移动/换位（跳过 装备槽 分支——网格内 落点 也可能 对准 下层 装备槽，
+        // 若 放行 到 装备槽 分支 会 穿透 装备 —— 穿透 修复）；底座空白区 = 拦截取消。
         var 自己面板 = GetComponentInParent<容器面板>();
-        foreach (var 面板 in FindObjectsOfType<容器面板>(true))
-            if (面板 != null && 面板 != 自己面板 && 面板.命中(事件.position)) { 音效管理器.实例?.播放失败(); return; }
+        var 最上层容器 = 最上层容器面板(事件);
+        bool 在自己面板网格内 = false;
+        if (最上层容器 != null)
+        {
+            if (最上层容器 != 自己面板) { 音效管理器.实例?.播放失败(); return; }   // 其他 容器面板 上 → 拦截
+            if (!最上层容器.命中网格(事件.position)) { 音效管理器.实例?.播放失败(); return; }   // 底座空白区 → 拦截
+            在自己面板网格内 = true;   // 网格内 → 同面板 移动/换位
+        }
         // 拖到装备槽位（装备面板）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"，旧件回背包/回滚已处理）
-        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
+        // 自己面板 网格内 松手 不 走 装备槽（落点 归 容器面板）
+        if (!在自己面板网格内 && 装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
         {
             成功 = 数据.物品.TryGetValue(源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名)
                 && 面板操作.换装堆叠(档案, 源, 槽位名, 服务);   // 指定目标槽 + 源服务（穿戴容器/主背包）
@@ -362,41 +392,58 @@ public sealed partial class 网格面板
 
     // 鼠标下方的 网格面板：用矩形范围判断（不依赖 raycastTarget），返回命中面面板（含自己）。
     // 主背包：检查 网格容器 矩形；容器面板：检查其 面板根 矩形（更大，拖到面板任意处都能命中）
+    // 排序：容器面板 用 面板根 sibling index（Canvas 顶层 同父，直接 可比——叠放 时 矩形 重叠，面积 无法 区分 上下）；
+    //       普通面板 用 自身 sibling（局部；互不重叠 够用）。容器面板 在 Canvas 顶层 → 优先 于 普通面板。
     // 登记表遍历（替代 FindObjectsOfType——拖拽中每帧调用，FindObjectsOfType 很慢）
     private 网格面板 事件下方面板(PointerEventData 事件)
     {
-        网格面板 命中 = null;
-        float 最小面积 = float.MaxValue;
+        网格面板 容器命中 = null, 普通命中 = null;
+        int 最大容器序号 = -1, 最大普通序号 = -1;
         foreach (var 面板 in 全部面板)
         {
             if (面板 == null || !面板.gameObject.activeInHierarchy) continue;
+            var 容器面板 = 面板.所属容器 != null ? 面板.GetComponentInParent<容器面板>() : null;
             RectTransform 矩形;
-            if (面板.所属容器 != null)
-            {
-                var 容器面板 = 面板.GetComponentInParent<容器面板>();
-                矩形 = 容器面板 != null ? (RectTransform)容器面板.transform : 面板.网格容器;
-            }
-            else 矩形 = 面板.网格容器;
+            矩形 = 容器面板 != null ? (RectTransform)容器面板.transform : 面板.网格容器;
             if (矩形 == null) continue;
             if (!RectTransformUtility.RectangleContainsScreenPoint(矩形, 事件.position, 事件.pressEventCamera)) continue;
-            // 多个面板重叠时取最上层（面积最小 = 视觉最前）
-            float 面积 = 矩形.rect.width * 矩形.rect.height;
-            if (面积 < 最小面积) { 最小面积 = 面积; 命中 = 面板; }
+            if (容器面板 != null)
+            {
+                int 序号 = 容器面板.transform.GetSiblingIndex();   // Canvas 顶层 同父，直接 可比
+                if (序号 > 最大容器序号) { 最大容器序号 = 序号; 容器命中 = 面板; }
+            }
+            else
+            {
+                int 序号 = 面板.transform.GetSiblingIndex();
+                if (序号 > 最大普通序号) { 最大普通序号 = 序号; 普通命中 = 面板; }
+            }
         }
-        return 命中;
+        return 容器命中 ?? 普通命中;   // 容器面板 在 Canvas 顶层，优先
+    }
+
+    // 鼠标 位置 上 最上层 的 容器面板（叠放 时 取 视觉 最前；无 = null）。
+    // 容器面板 都 挂 Canvas 顶层（同父），sibling index 直接 可比——矩形 重叠 时 面积 无法 区分 上下（叠放 穿透 修复）。
+    private static 容器面板 最上层容器面板(PointerEventData 事件)
+    {
+        容器面板 最上层 = null;
+        int 最大序号 = -1;
+        foreach (var 面板 in FindObjectsOfType<容器面板>(true))
+        {
+            if (面板 == null || !面板.gameObject.activeInHierarchy) continue;
+            if (!面板.命中(事件.position)) continue;
+            int 序号 = 面板.transform.GetSiblingIndex();
+            if (序号 > 最大序号) { 最大序号 = 序号; 最上层 = 面板; }
+        }
+        return 最上层;
     }
 
     // 鼠标 是否 在 任一 容器面板 底座 上（含 网格 区域）——拖拽中 阻隔 下方 面板 投影 用。
-    // 排除 自己 所属 的 容器面板（本面板 就是 该 容器面板 的 网格 → 正常 显示 投影）。
+    // 排除 自己 所属 的 容器面板（本面板 就是 该 容器面板 的 网格 → 正常 显示 投影）；叠放 取 最上层。
     private bool 鼠标在容器面板底座上(PointerEventData 事件)
     {
         var 自己面板 = GetComponentInParent<容器面板>();
-        foreach (var 面板 in FindObjectsOfType<容器面板>(true))
-        {
-            if (面板 == null || !面板.gameObject.activeInHierarchy || 面板 == 自己面板) continue;
-            if (面板.命中(事件.position)) return true;
-        }
-        return false;
+        var 最上层 = 最上层容器面板(事件);
+        return 最上层 != null && 最上层 != 自己面板;
     }
 
     // 接收跨面板转移：把 (源服务) 里的 堆叠 放到本面板 (列,行)（由 容器服务.跨网格转移 执行）。返回 是否成功（音效由调用方播）
