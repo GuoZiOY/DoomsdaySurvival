@@ -3,215 +3,165 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-    // 容器面板：完全代码动态搭建的浮动容器面板（塔科夫式）。
-    // 双击容器物品 → 动态生成并挂到 Canvas 顶层（不受 ScrollRect/Viewport 裁剪、不被任何面板覆盖——与跨面板拖拽代理一致）：
-    //   面板根（Image 半透明底，可整面板拖拽移动，限制在屏幕内）→ 标题 + 关闭按钮 + 网格容器（挂 网格面板 组件显示容器内容）。
-    // 关闭时销毁；与主背包跨网格拖拽转移（矩形判断，见 网格面板.事件下方面板）。
-    public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+// 容器面板：预制体（静态搭建 UI）+ 动态数据注入 的浮动容器面板（塔科夫式）。
+// 预制体（Assets/Resources/Prefab/容器面板.prefab）搭好 底座/标题/关闭按钮/网格容器（挂 网格面板），
+// 本组件 暴露 引用（面板根/网格容器/容器网格/标题文本），动态控制：标题 文本、面板根 与 网格容器 尺寸（随 容器 内容 伸缩）。
+// 样式（字号/颜色/间距/透明度）全在 预制体 调，改 预制体 即 生效。
+// 关闭时销毁；与主背包跨网格拖拽转移（矩形判断，见 网格面板.事件下方面板）。
+public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+{
+    // 已打开的容器实例 → 面板；同一容器不可重复打开（双击/连点防重）
+    private static readonly System.Collections.Generic.Dictionary<物品堆叠, 容器面板> 已打开
+        = new System.Collections.Generic.Dictionary<物品堆叠, 容器面板>();
+
+    // ===== 布局常量（网格容器 居中锚；面板 尺寸 与 网格 位置 由 这些 预留 决定） =====
+    private const float 顶部预留 = 76f;    // 网格 顶部 距 面板 顶部（标题/按钮 区 高度；改 预制体 时 相应 调 标题 位置）
+    private const float 左右留白 = 16f;    // 网格 两侧 距 面板 边缘（水平 居中）
+    private const float 底边距 = 16f;      // 网格 底部 距 面板 底缘
+    private const float 最小面板宽 = 360f;       // 面板宽度下限（容纳顶部行：标题+按钮）
+    private const float 最小面板高 = 250f;       // 面板高度下限（顶部行 + 2×2 网格 + 底边距）
+    private const float 初始宽 = 480f, 初始高 = 420f;   // 创建时占位尺寸（显示容器时按网格覆盖）
+    private const float 初始右偏比例 = 0.15f;    // 初始位置：挂载父左上 向右偏移比例（×挂载父宽）
+    private const float 初始下偏 = 20f;          // 初始位置：向下偏移
+    private const float 兜底右偏比例 = 0.4f;     // 位置换算失败兜底：Canvas 左上偏右比例
+    private const string 预制体路径 = "Prefab/容器面板";   // Resources 路径（预制体 静态 搭建）
+
+    // —— 预制体 引用（Inspector 拖好；实例化 后 自动 绑定） ——
+    [SerializeField] private RectTransform 面板根;      // 面板根（含 Image 底座，可拖拽；尺寸 动态 控制）
+    [SerializeField] private RectTransform 网格容器;    // 容器内部网格的 Content（尺寸 动态 控制）
+    [SerializeField] private 网格面板 容器网格;          // 网格面板 组件（预制体 已 挂）
+    [SerializeField] private TextMeshProUGUI 标题文本;   // 顶部 容器名（显示容器 时 赋值）
+    [SerializeField] private Button 关闭按钮;            // 右上 关闭按钮（Awake 自动 挂 关闭()）
+
+    private 物品堆叠 当前容器;
+    private Vector2 拖拽偏移;
+
+    // 预制体 引用 绑定：关闭按钮 自动 挂 关闭() + 注册 成功音效（动态实例化，音效管理器 场景扫描 覆盖不到）
+    private void Awake()
     {
-        // 已打开的容器实例 → 面板；同一容器不可重复打开（双击/连点防重）
-        private static readonly System.Collections.Generic.Dictionary<物品堆叠, 容器面板> 已打开
-            = new System.Collections.Generic.Dictionary<物品堆叠, 容器面板>();
-
-        // ===== 布局常量（集中调整容器面板外观：大小/格子/间距，改这里全局生效） =====
-        private const float 格尺寸 = 100f;            // 容器内单格像素（与 网格面板.格尺寸 统一：全项目 100）
-        private const float 边距 = 12f;              // 网格/文本 距面板左缘
-        private const float 标题高 = 56f;            // 顶部行占位（上边距 12 + 标题行 44）
-        private const float 按钮尺寸 = 40f;          // 顶部行：关闭按钮尺寸（右上角）
-        private const float 区间距 = 6f;             // 顶部行 与网格 及底边距
-        private const float 最小面板宽 = 360f;       // 面板宽度下限（容纳顶部行：标题+按钮；小容器面板高度仍随容量伸缩）
-        private const float 最小面板高 = 250f;       // 面板高度下限（顶部行 56 + 2×2 网格 180 + 底边距）
-        private const float 初始宽 = 480f, 初始高 = 420f;   // 创建时占位尺寸（显示容器时按网格覆盖）
-        private const float 面板底透明 = 1f;    // 面板底座透明度（半透明，可透出下层主背包；调低更透）
-        private const float 初始右偏比例 = 0.15f;    // 初始位置：主背包左上 向右偏移比例（×挂载父宽）
-        private const float 初始下偏 = 20f;          // 初始位置：向下偏移
-        private const float 兜底右偏比例 = 0.4f;     // 位置换算失败兜底：Canvas 左上偏右比例
-
-        private 网格面板 容器网格;   // 动态创建（显示容器内部）
-        private RectTransform 面板根;     // 动态创建（含 Image，可拖拽）
-        private RectTransform 网格容器;   // 动态创建（容器内部网格的 Content）
-        private 物品堆叠 当前容器;
-        private Vector2 拖拽偏移;
-
-        // 供 网格面板 双击时调用：动态搭建容器面板并显示
-        public static 容器面板 创建(RectTransform 挂载父, 物品堆叠 容器)
+        if (关闭按钮 != null)
         {
-            if (容器 == null) return null;
-            // 防重：同一容器已打开 → 提到最上层并复用，不重复创建
-            容器面板 已有;
-            if (已打开.TryGetValue(容器, out 已有) && 已有 != null)
-            {
-                已有.面板根.SetAsLastSibling();   // 聚焦已有面板（顶到最上层）
-                return 已有;
-            }
-            var 服务 = ServiceRegistry.Get<容器服务>();
-            // 挂 Canvas 顶层：不受 ScrollRect/Viewport 裁剪、不被任何面板覆盖（与跨面板拖拽代理一致）
-            var 画布 = 挂载父.GetComponentInParent<Canvas>();
-            var 顶层 = 画布 != null ? (RectTransform)画布.transform : 挂载父;
-            var 物体 = new GameObject("容器面板", typeof(RectTransform), typeof(Image));
-            var 根 = 物体.GetComponent<RectTransform>();
-            根.SetParent(顶层, false);
-            根.SetAsLastSibling();   // 容器面板在 Canvas 最上层（拖拽代理创建时再顶到其上）
-            根.anchorMin = new Vector2(0, 1);   // 左上锚定
-            根.anchorMax = new Vector2(0, 1);
-            根.pivot = new Vector2(0, 1);
-            // 初始位置：主背包 ScrollRect 左上角 → Canvas 局部坐标 → 相对 Canvas 左上锚点(0,1) 的偏移 + 右下偏移（避开原挂载点）
-            var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
-            Vector2 挂载父左上;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(顶层,
-                    RectTransformUtility.WorldToScreenPoint(相机, 挂载父.TransformPoint(new Vector3(挂载父.rect.xMin, 挂载父.rect.yMax, 0f))),
-                    相机, out 挂载父左上))
-                // 锚点(0,1)=Canvas 左上在局部坐标 (rect.xMin, rect.yMax)；偏移 = 挂载父左上 - 锚点（y 需取负方向：往下）
-                根.anchoredPosition = 挂载父左上 - new Vector2(顶层.rect.xMin, 顶层.rect.yMax) + new Vector2(挂载父.rect.width * 初始右偏比例, -初始下偏);
-            else
-                根.anchoredPosition = new Vector2(顶层.rect.width * 兜底右偏比例, -初始下偏);   // 兜底：Canvas 左上偏右（屏幕内）
-            根.sizeDelta = new Vector2(初始宽, 初始高);   // 初始占位（实际按容器网格尺寸在 显示容器 里覆盖）
-            var 图 = 物体.GetComponent<Image>();
-            图.color = new Color(0.08f, 0.08f, 0.1f, 面板底透明);   // 半透明底（透出下层，透明度见常量）
-
-            var 面板 = 物体.AddComponent<容器面板>();
-            面板.面板根 = 根;
-            面板.当前容器 = 容器;
-            已打开[容器] = 面板;   // 登记：同一容器只允许一个面板
-            面板.构建子结构(服务);
-            面板.显示容器(容器);
-            return 面板;
+            关闭按钮.onClick.AddListener(关闭);
+            音效管理器.实例?.注册按钮(关闭按钮);   // 点击 → 按钮成功音效
         }
-
-        // 构建标题/关闭按钮/网格容器（全部代码生成）
-        private void 构建子结构(容器服务 服务)
-        {
-            // 顶部行：标题（左，拉伸自适应——右侧只让位给 关闭按钮；超宽省略号截断）
-            var 标题物体 = new GameObject("标题", typeof(RectTransform), typeof(TextMeshProUGUI));
-            标题物体.transform.SetParent(面板根, false);
-            var 标题矩形 = 标题物体.GetComponent<RectTransform>();
-            标题矩形.anchorMin = new Vector2(0, 1);
-            标题矩形.anchorMax = new Vector2(1, 1);
-            标题矩形.pivot = new Vector2(0.5f, 1);
-            标题矩形.offsetMin = new Vector2(边距, -12f - 44f);
-            标题矩形.offsetMax = new Vector2(-(8f + 按钮尺寸 + 8f), -12f);
-            var 标题文本 = 标题物体.GetComponent<TextMeshProUGUI>();
-            标题文本.fontSize = 40f;
-            标题文本.alignment = TextAlignmentOptions.Left;
-            标题文本.color = Color.white;
-            标题文本.raycastTarget = false;
-            标题文本.overflowMode = TextOverflowModes.Ellipsis;   // 面板窄时省略号
-            // 顶部行：关闭按钮（右上角 "×"）
-            var 按钮物体 = new GameObject("关闭", typeof(RectTransform), typeof(Image), typeof(Button));
-            按钮物体.transform.SetParent(面板根, false);
-            var 按钮矩形 = 按钮物体.GetComponent<RectTransform>();
-            按钮矩形.anchorMin = new Vector2(1, 1);
-            按钮矩形.anchorMax = new Vector2(1, 1);
-            按钮矩形.pivot = new Vector2(1, 1);
-            按钮矩形.anchoredPosition = new Vector2(-8f, -12f);
-            按钮矩形.sizeDelta = new Vector2(按钮尺寸, 按钮尺寸);
-            按钮物体.GetComponent<Image>().color = new Color(1f, 0.3f, 0.3f, 0.8f);
-            按钮物体.GetComponent<Button>().onClick.AddListener(关闭);
-            // 按钮上的 "x" 文本（撑满按钮；不拦截点击——点击落在按钮组件上）
-            var 按钮文本物体 = new GameObject("文本", typeof(RectTransform), typeof(TextMeshProUGUI));
-            按钮文本物体.transform.SetParent(按钮物体.transform, false);
-            var 按钮文本矩形 = 按钮文本物体.GetComponent<RectTransform>();
-            按钮文本矩形.anchorMin = Vector2.zero;
-            按钮文本矩形.anchorMax = Vector2.one;
-            按钮文本矩形.offsetMin = Vector2.zero;
-            按钮文本矩形.offsetMax = Vector2.zero;
-            var 按钮文本 = 按钮文本物体.GetComponent<TextMeshProUGUI>();
-            按钮文本.text = "x";
-            按钮文本.fontSize = 37f;
-            按钮文本.alignment = TextAlignmentOptions.Center;
-            按钮文本.color = Color.white;
-            按钮文本.raycastTarget = false;   // 不拦截点击（按钮在父物体上）
-            // 网格容器（容器内部网格的 Content；挂 网格面板 组件渲染）
-            // 用左上锚定 + 固定尺寸（不撑满面板根）：网格尺寸 = 列×格尺寸，面板根按它适配
-            var 网格物体 = new GameObject("容器网格", typeof(RectTransform));
-            网格物体.transform.SetParent(面板根, false);
-            var 网格矩形 = 网格物体.GetComponent<RectTransform>();
-            网格矩形.anchorMin = new Vector2(0, 1);
-            网格矩形.anchorMax = new Vector2(0, 1);
-            网格矩形.pivot = new Vector2(0, 1);
-            网格矩形.anchoredPosition = new Vector2(边距, -标题高 - 区间距);   // 顶部行下方
-            网格矩形.sizeDelta = new Vector2(格尺寸, 格尺寸);         // 占位，显示容器时按实际网格尺寸覆盖
-            网格容器 = 网格矩形;
-            // 动态挂 网格面板 组件（复用全部网格渲染/拖拽/转移逻辑）
-            容器网格 = 网格物体.AddComponent<网格面板>();
-            容器网格.绑定网格容器(网格矩形);
-            容器网格.配置视图显示();   // 格尺寸统一常量（网格面板.格尺寸=100）；尺寸用 服务.网格列/行
-        }
-
-        // 显示容器：注入容器视图数据源并渲染
-        private void 显示容器(物品堆叠 容器)
-        {
-            当前容器 = 容器;
-            var 服务 = ServiceRegistry.Get<容器服务>();
-            服务.初始化容器(容器);
-            var 视图 = 服务.打开(容器);
-            容器网格.数据源 = 视图;
-            容器网格.所属容器 = 容器;
-            var 标题 = 面板根.Find("标题")?.GetComponent<TextMeshProUGUI>();
-            if (标题 != null) 标题.text = 容器.标识;
-            容器网格.请求刷新();   // 脏标记合并：Update 帧末按 尺寸/增量 判定（尺寸变=重建结构，否则增量刷新物品）
-            // 面板根大小 = 顶部行（标题|按钮） + 网格 + 底边距；随容量伸缩，保证最小可操作尺寸
-            // 用 视图 数据直接算尺寸（请求刷新 延迟执行，渲染列/行 此刻还是旧值）；格尺寸统一常量 100
-            float 网格宽 = 视图.网格列 * 网格面板.格尺寸;
-            float 网格高 = 视图.网格行 * 网格面板.格尺寸;
-            // 布局：顶部行 y=0~-标题高 → 网格 (边距,-标题高-区间距) 高 网格高 → 底边距
-            面板根.sizeDelta = new Vector2(Mathf.Max(最小面板宽, 网格宽 + 边距 * 2f), Mathf.Max(最小面板高, 标题高 + 区间距 + 网格高 + 区间距));
-            网格容器.sizeDelta = new Vector2(网格宽, 网格高);
-            限制在屏幕内();   // 面板尺寸定稿后自动校正位置，确保创建出来就在屏幕内
-        }
-
-        // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏（出屏既看不见也点不到）
-        // 锚 0,1 = 面板左上对齐父左上（父左上局部坐标 = (rect.xMin, rect.yMax)，anchoredPosition = 面板左上局部 − 父左上）：
-        //   x 向右为正：贴左=0，贴右=父宽−面板宽；y 向下为负：贴顶=0，贴底=−(父高−面板高)
-        private void 限制在屏幕内()
-        {
-            var 父 = 面板根.parent as RectTransform;
-            if (父 == null) return;
-            var 位置 = 面板根.anchoredPosition;
-            float 父宽 = 父.rect.width, 父高 = 父.rect.height;
-            float 面板宽 = 面板根.sizeDelta.x, 面板高 = 面板根.sizeDelta.y;
-            位置.x = Mathf.Clamp(位置.x, 0f, Mathf.Max(0f, 父宽 - 面板宽));      // 贴左 → 贴右（父宽<面板宽时锁贴左兜底）
-            位置.y = Mathf.Clamp(位置.y, Mathf.Min(0f, -(父高 - 面板高)), 0f);   // 贴顶 → 贴底
-            面板根.anchoredPosition = 位置;
-        }
-
-        public void 关闭()
-        {
-            if (当前容器 != null) 已打开.Remove(当前容器);
-            当前容器 = null;
-            if (容器网格 != null) { 容器网格.数据源 = null; 容器网格.所属容器 = null; }
-            Destroy(gameObject);
-        }
-
-        // 屏幕点 是否在 本面板根（底座）矩形 内——拖拽落点 拦截用：鼠标在 容器面板 上时，落点归面板，
-        // 不 触发 底下 装备槽/其他 面板（底座 不可穿透）
-        public bool 命中(Vector2 屏幕点)
-        {
-            if (面板根 == null) return false;
-            var 画布 = 面板根.GetComponentInParent<Canvas>();
-            var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
-            return RectTransformUtility.RectangleContainsScreenPoint(面板根, 屏幕点, 相机);
-        }
-
-        // 兜底：面板被其他方式销毁时同步清理登记
-        private void OnDestroy()
-        {
-            if (当前容器 != null) 已打开.Remove(当前容器);
-        }
-
-        // ===== 面板拖拽移动（整面板可拖，限制在 Canvas 内） =====
-        public void OnBeginDrag(PointerEventData 事件)
-        {
-            Vector2 屏幕;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform.parent, 事件.position, 事件.pressEventCamera, out 屏幕))
-                拖拽偏移 = 面板根.anchoredPosition - 屏幕;
-        }
-        public void OnDrag(PointerEventData 事件)
-        {
-            Vector2 屏幕;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform.parent, 事件.position, 事件.pressEventCamera, out 屏幕)) return;
-            面板根.anchoredPosition = 屏幕 + 拖拽偏移;
-            限制在屏幕内();   // 拖拽中同样限制在屏幕内
-        }
-        public void OnEndDrag(PointerEventData 事件) { }
     }
+
+    // 供 网格面板 双击时调用：实例化预制体 + 注入容器数据
+    public static 容器面板 创建(RectTransform 挂载父, 物品堆叠 容器)
+    {
+        if (容器 == null) return null;
+        // 防重：同一容器已打开 → 提到最上层并复用，不重复创建
+        容器面板 已有;
+        if (已打开.TryGetValue(容器, out 已有) && 已有 != null)
+        {
+            已有.面板根.SetAsLastSibling();   // 聚焦已有面板（顶到最上层）
+            return 已有;
+        }
+        var 预制 = Resources.Load<容器面板>(预制体路径);
+        if (预制 == null)
+        {
+            Debug.LogError($"[容器面板] 找不到预制体 Resources/{预制体路径}（请用 预制体 搭建容器面板 UI，并 拖好 引用）。");
+            return null;
+        }
+        var 面板 = Instantiate(预制);
+        // 挂 Canvas 顶层：不受 ScrollRect/Viewport 裁剪、不被任何面板覆盖（与跨面板拖拽代理一致）
+        var 画布 = 挂载父.GetComponentInParent<Canvas>();
+        var 顶层 = 画布 != null ? (RectTransform)画布.transform : 挂载父;
+        面板.transform.SetParent(顶层, false);
+        面板.transform.SetAsLastSibling();   // 容器面板在 Canvas 最上层（拖拽代理创建时再顶到其上）
+        // 左上锚定 + 初始位置：挂载父 左上 → Canvas 局部坐标 → 右下偏移（避开原挂载点）
+        var 根 = 面板.面板根;
+        根.anchorMin = new Vector2(0, 1);
+        根.anchorMax = new Vector2(0, 1);
+        根.pivot = new Vector2(0, 1);
+        var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
+        Vector2 挂载父左上;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(顶层,
+                RectTransformUtility.WorldToScreenPoint(相机, 挂载父.TransformPoint(new Vector3(挂载父.rect.xMin, 挂载父.rect.yMax, 0f))),
+                相机, out 挂载父左上))
+            根.anchoredPosition = 挂载父左上 - new Vector2(顶层.rect.xMin, 顶层.rect.yMax) + new Vector2(挂载父.rect.width * 初始右偏比例, -初始下偏);
+        else
+            根.anchoredPosition = new Vector2(顶层.rect.width * 兜底右偏比例, -初始下偏);   // 兜底：Canvas 左上偏右（屏幕内）
+        根.sizeDelta = new Vector2(初始宽, 初始高);   // 初始占位（实际按容器网格尺寸在 显示容器 里覆盖）
+        面板.当前容器 = 容器;
+        已打开[容器] = 面板;   // 登记：同一容器只允许一个面板
+        面板.显示容器(容器);
+        return 面板;
+    }
+
+    // 显示容器：注入容器视图数据源并渲染（标题/网格尺寸/数据源——仅 动态 数据，样式 在 预制体）
+    private void 显示容器(物品堆叠 容器)
+    {
+        当前容器 = 容器;
+        var 服务 = ServiceRegistry.Get<容器服务>();
+        服务.初始化容器(容器);
+        var 视图 = 服务.打开(容器);
+        容器网格.数据源 = 视图;
+        容器网格.所属容器 = 容器;
+        if (标题文本 != null) 标题文本.text = 容器.标识;   // 顶部 容器名（弹药箱/医疗箱…）
+        容器网格.立即刷新();   // 同步重建（此刻 渲染网格宽/高 才是 容器 实际 尺寸——含 形状 块偏移）
+        // 面板根尺寸 = 预留 + 网格 内容 尺寸；网格容器 居中锚 → 水平 居中、垂直 按 预留 定位。
+        float 网格宽 = 容器网格.渲染网格宽;
+        float 网格高 = 容器网格.渲染网格高;
+        面板根.sizeDelta = new Vector2(
+            Mathf.Max(最小面板宽, 网格宽 + 左右留白 * 2f),
+            Mathf.Max(最小面板高, 顶部预留 + 网格高 + 底边距));
+        网格容器.sizeDelta = new Vector2(网格宽, 网格高);
+        // 居中锚 定位：网格 底部 距 面板 底缘 = 底边距（则 顶部 距 面板 顶 = 顶部预留，标题/按钮 区）
+        网格容器.anchoredPosition = new Vector2(0f, (底边距 - 顶部预留) / 2f);
+        限制在屏幕内();   // 面板尺寸定稿后自动校正位置，确保创建出来就在屏幕内
+    }
+
+    // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏（出屏既看不见也点不到）
+    private void 限制在屏幕内()
+    {
+        var 父 = 面板根.parent as RectTransform;
+        if (父 == null) return;
+        var 位置 = 面板根.anchoredPosition;
+        float 父宽 = 父.rect.width, 父高 = 父.rect.height;
+        float 面板宽 = 面板根.sizeDelta.x, 面板高 = 面板根.sizeDelta.y;
+        位置.x = Mathf.Clamp(位置.x, 0f, Mathf.Max(0f, 父宽 - 面板宽));      // 贴左 → 贴右（父宽<面板宽时锁贴左兜底）
+        位置.y = Mathf.Clamp(位置.y, Mathf.Min(0f, -(父高 - 面板高)), 0f);   // 贴顶 → 贴底
+        面板根.anchoredPosition = 位置;
+    }
+
+    public void 关闭()
+    {
+        if (当前容器 != null) 已打开.Remove(当前容器);
+        当前容器 = null;
+        if (容器网格 != null) { 容器网格.数据源 = null; 容器网格.所属容器 = null; }
+        Destroy(gameObject);
+    }
+
+    // 屏幕点 是否在 本面板根（底座）矩形 内——拖拽落点 拦截用：鼠标在 容器面板 上时，落点归面板，
+    // 不 触发 底下 装备槽/其他 面板（底座 不可穿透）
+    public bool 命中(Vector2 屏幕点)
+    {
+        if (面板根 == null) return false;
+        var 画布 = 面板根.GetComponentInParent<Canvas>();
+        var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
+        return RectTransformUtility.RectangleContainsScreenPoint(面板根, 屏幕点, 相机);
+    }
+
+    // 兜底：面板被其他方式销毁时同步清理登记
+    private void OnDestroy()
+    {
+        if (当前容器 != null) 已打开.Remove(当前容器);
+    }
+
+    // ===== 面板拖拽移动（整面板可拖，限制在 Canvas 内） =====
+    public void OnBeginDrag(PointerEventData 事件)
+    {
+        Vector2 屏幕;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform.parent, 事件.position, 事件.pressEventCamera, out 屏幕))
+            拖拽偏移 = 面板根.anchoredPosition - 屏幕;
+    }
+    public void OnDrag(PointerEventData 事件)
+    {
+        Vector2 屏幕;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform.parent, 事件.position, 事件.pressEventCamera, out 屏幕)) return;
+        面板根.anchoredPosition = 屏幕 + 拖拽偏移;
+        限制在屏幕内();   // 拖拽中同样限制在屏幕内
+    }
+    public void OnEndDrag(PointerEventData 事件) { }
+}

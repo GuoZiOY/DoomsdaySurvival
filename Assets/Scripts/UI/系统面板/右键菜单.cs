@@ -50,7 +50,8 @@ public sealed class 右键菜单 : MonoBehaviour
         if (!string.IsNullOrEmpty(目标槽位))
         {
             音效管理器.实例?.播放成功();   // 详情 → 按钮成功音效
-            if (信息面板.实例 != null) 信息面板.实例.显示槽位(目标槽位);
+            var 挂载父 = (目标面板 ?? 背包面板)?.transform as RectTransform;
+            信息面板.显示槽位详情(目标槽位, 挂载父);   // 多实例：每次 新建 面板
             return;
         }
         (目标面板 ?? 背包面板)?.菜单查看详情();
@@ -162,6 +163,7 @@ public sealed class 右键菜单 : MonoBehaviour
         if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(false);   // 物品模式无卸下
         if (!有操作) { 隐藏(); return; }
         目标槽位 = null;   // 物品模式
+        音效管理器.实例?.播放成功();   // 右键呼出菜单 → 按钮成功音效
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();   // 置顶（不被其他面板遮挡）
         定位到物品右侧(物品框);
@@ -180,6 +182,7 @@ public sealed class 右键菜单 : MonoBehaviour
         if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
         if (详情按钮 != null) 详情按钮.gameObject.SetActive(true);
         if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(true);
+        音效管理器.实例?.播放成功();   // 右键呼出菜单（装备槽模式）→ 按钮成功音效
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();
         定位到物品右侧(框);
