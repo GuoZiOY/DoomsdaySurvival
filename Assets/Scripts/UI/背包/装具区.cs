@@ -1,12 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 装具块：中区一个预搭块（弹挂/腰封/背包）——块物体挂 网格面板，Inspector 配好 网格容器 引用
+// 装具块：中区一个预搭块（弹挂/腰封/背包）——块物体挂 物品网格面板，Inspector 配好 网格容器 引用
 [System.Serializable]
 public class 装具块
 {
     public 装备槽 装备槽;         // 对应 装备区 上的该容器槽（引用其 槽位名——一处配置，与装备区一致）
-    public 网格面板 面板;         // 块上挂的 网格面板（场景预搭）
+    public 物品网格面板 面板;         // 块上挂的 物品网格面板（场景预搭）
 
     public string 槽位名 => 装备槽 != null ? 装备槽.槽位 : "";   // 查询键：弹挂 / 腰封 / 背包
 }
@@ -14,7 +14,7 @@ public class 装具块
 // 装具区（中区，塔科夫式）：ScrollRect 内容 = 身上 3 个装具（弹挂/腰封/背包）的网格块。
 //   块常驻（同装备区槽位）：穿上 → 网格显示（注入 穿戴容器视图）；没穿 → 网格隐藏（为空，无需占位元素）。
 //   重建后 强制刷新 Layout Group（布局父 参数），保证 显隐/尺寸 变化即时生效。
-//   场景手动预搭 3 块（各挂 网格面板），本组件只做：穿戴变化 → 网格显隐 + 刷新数据源。
+//   场景手动预搭 3 块（各挂 物品网格面板），本组件只做：穿戴变化 → 网格显隐 + 刷新数据源。
 public sealed class 装具区 : MonoBehaviour
 {
     public static 装具区 实例;   // 场景挂载自动登记（持有面板打开时强制重建用）
@@ -79,7 +79,7 @@ public sealed class 装具区 : MonoBehaviour
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[装具区] 未配置 容器块 数组（请拖入 弹挂/腰封/背包 三块：装备槽 + 面板 引用）。"));
             return;
         }
-        float 格 = 网格面板.格尺寸;   // 格尺寸统一常量 100（全项目一致）
+        float 格 = 物品网格面板.格尺寸;   // 格尺寸统一常量 100（全项目一致）
         foreach (var 块 in 容器块)
         {
             if (块?.面板 == null) continue;

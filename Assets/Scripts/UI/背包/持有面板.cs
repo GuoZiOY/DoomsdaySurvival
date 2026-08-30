@@ -35,7 +35,7 @@ public sealed class 持有面板 : 面板基类
 
     protected override void 刷新(object 上下文)
     {
-        // 装备区刷新（背包区 = 网格面板 由其自身 override 刷新 自刷——显示面板 已调用 刷新）
+        // 装备区刷新（背包区 = 物品网格面板 由其自身 override 刷新 自刷——显示面板 已调用 刷新）
         装备区.实例?.刷新();
         // 装具区：每次打开强制重建布局（块面板 由 本区 注入数据源，Layout 重建走 LateUpdate 延迟到渲染后）
         装具区.实例?.重建();

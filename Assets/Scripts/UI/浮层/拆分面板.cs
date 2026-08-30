@@ -5,7 +5,7 @@ using UnityEngine.UI;
 // 拆分面板（场景手动搭建 UI，代码控制联动/显隐/执行）：
 //   暴露参数：面板根（初始隐藏）+ 滑动条 + 减/加按钮 + 数量输入框 + 确认/取消按钮。
 //   联动：滑条 / 加减按钮 / 输入框 三者同步（改任一，其余更新）；范围 [1, 堆叠数量-1]，默认拆半。
-//   确认 → 目标面板（网格面板）执行 菜单拆分；取消/关闭 → 隐藏。
+//   确认 → 目标面板（物品网格面板）执行 菜单拆分；取消/关闭 → 隐藏。
 public sealed class 拆分面板 : MonoBehaviour
 {
     public static 拆分面板 实例;   // 场景挂载自动登记
@@ -19,7 +19,7 @@ public sealed class 拆分面板 : MonoBehaviour
     [SerializeField] private Button 取消按钮;           // 关闭
 
     private 物品堆叠 当前堆叠;
-    private 网格面板 目标面板;
+    private 物品网格面板 目标面板;
 
     void Awake()
     {
@@ -34,7 +34,7 @@ public sealed class 拆分面板 : MonoBehaviour
     }
 
     // 打开：目标 = 选中堆叠 + 所在面板；范围 [1, 数量-1]，默认拆半
-    public void 打开(物品堆叠 堆叠, 网格面板 面板)
+    public void 打开(物品堆叠 堆叠, 物品网格面板 面板)
     {
         if (!gameObject.activeSelf) gameObject.SetActive(true);   // 物体整体隐藏时先激活（触发 Awake 登记 实例）
         if (面板根 == null || 堆叠 == null || 堆叠.数量 <= 1) return;

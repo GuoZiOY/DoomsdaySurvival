@@ -4,10 +4,10 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // 容器面板：预制体（静态搭建 UI）+ 动态数据注入 的浮动容器面板（塔科夫式）。
-// 预制体（Assets/Resources/Prefab/容器面板.prefab）搭好 底座/标题/关闭按钮/网格容器（挂 网格面板），
+// 预制体（Assets/Resources/Prefab/容器面板.prefab）搭好 底座/标题/关闭按钮/网格容器（挂 物品网格面板），
 // 本组件 暴露 引用（面板根/网格容器/容器网格/标题文本），动态控制：标题 文本、面板根 与 网格容器 尺寸（随 容器 内容 伸缩）。
 // 样式（字号/颜色/间距/透明度）全在 预制体 调，改 预制体 即 生效。
-// 关闭时销毁；与主背包跨网格拖拽转移（矩形判断，见 网格面板.事件下方面板）。
+// 关闭时销毁；与主背包跨网格拖拽转移（矩形判断，见 物品网格面板.事件下方面板）。
 public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler
 {
     // 已打开的容器实例 → 面板；同一容器不可重复打开（双击/连点防重）
@@ -29,7 +29,7 @@ public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
     // —— 预制体 引用（Inspector 拖好；实例化 后 自动 绑定） ——
     [SerializeField] private RectTransform 面板根;      // 面板根（含 Image 底座，可拖拽；尺寸 动态 控制）
     [SerializeField] private RectTransform 网格容器;    // 容器内部网格的 Content（尺寸 动态 控制）
-    [SerializeField] private 网格面板 容器网格;          // 网格面板 组件（预制体 已 挂）
+    [SerializeField] private 物品网格面板 容器网格;          // 物品网格面板 组件（预制体 已 挂）
     [SerializeField] private TextMeshProUGUI 标题文本;   // 顶部 容器名（显示容器 时 赋值）
     [SerializeField] private Button 关闭按钮;            // 右上 关闭按钮（Awake 自动 挂 关闭()）
 
@@ -46,7 +46,7 @@ public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         }
     }
 
-    // 供 网格面板 双击时调用：实例化预制体 + 注入容器数据
+    // 供 物品网格面板 双击时调用：实例化预制体 + 注入容器数据
     public static 容器面板 创建(RectTransform 挂载父, 物品堆叠 容器)
     {
         if (容器 == null) return null;

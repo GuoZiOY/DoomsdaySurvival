@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 // UI 工具：动态创建 uGUI/TMP 组件的静态辅助——收敛各面板的 new GameObject + SetParent + 锚点 + 组件 样板。
 // 高频用法：创建图（黑块/底图/投影/图标）、创建文本（名称/数量/角标/提示）、创建物体（纯容器层）。
-// 搜索面板 / 网格面板 / 拖拽视觉 等 动态 UI 全部走这里（改风格只动本类）。
+// 搜索面板 / 物品网格面板 / 拖拽视觉 等 动态 UI 全部走这里（改风格只动本类）。
 public static class UI工具
 {
     // 创建 纯 RectTransform 物体（无 附加 组件），设 单点锚 + pivot

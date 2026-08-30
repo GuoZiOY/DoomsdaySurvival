@@ -10,7 +10,7 @@ using UnityEngine.UI;
 // 流程：打开容器 → 整层黑布 自动 倒计时 → 撤黑布 → 每件未搜物品 黑块"？" 自动 逐个 搜索（左→右、上→下）→ 揭开 + 显现动画。
 // 未搜索物品：黑块 拦截 拖拽/右键（天然不可交互）；已搜索状态 存 搜索服务（会话内持久，重开容器 已搜完 直接可见 不重搜）。
 // 箱中箱：搜索网格 内 双击 容器物品 → 4 区 原位 替换（多级嵌套）。
-// 场景搭建：搜索面板 物体（挂本组件）→ 子物体：标题 TMP + 网格容器（RectTransform + 网格面板 组件）。
+// 场景搭建：搜索面板 物体（挂本组件）→ 子物体：标题 TMP + 网格容器（RectTransform + 物品网格面板 组件）。
 public sealed class 搜索面板 : MonoBehaviour
 {
     // ===== 常量（视觉/资源 统一） =====
@@ -23,7 +23,7 @@ public sealed class 搜索面板 : MonoBehaviour
     private const float 扫描速度 = 2f;                // 扫描 圈/秒
     private static readonly Color 遮盖色 = new Color(0.05f, 0.05f, 0.08f, 1f);   // 黑幕/黑块 底色
 
-    [SerializeField] private 网格面板 面板;          // 搜索网格（预搭：网格面板 组件）
+    [SerializeField] private 物品网格面板 面板;          // 搜索网格（预搭：物品网格面板 组件）
     [SerializeField] private TMP_Text 标题文本;       // 顶部 容器名（鞋柜/冰箱…）
     [SerializeField] private RectTransform 网格容器;  // 网格区域（容器黑布 挂载点）
 
@@ -188,7 +188,7 @@ public sealed class 搜索面板 : MonoBehaviour
             var 矩形 = 物体.GetComponent<RectTransform>();
             UI工具.铺满(矩形);
             物体.GetComponent<Image>().color = 遮盖色;   // 全不透明黑块
-            var 问 = UI工具.创建文本(物体.transform, "?", "？", Mathf.Clamp(网格面板.格尺寸 * 0.5f, 18f, 48f), TextAlignmentOptions.Center);
+            var 问 = UI工具.创建文本(物体.transform, "?", "？", Mathf.Clamp(物品网格面板.格尺寸 * 0.5f, 18f, 48f), TextAlignmentOptions.Center);
             UI工具.铺满(问.rectTransform);
             var 块 = 物体.AddComponent<物品搜索块>();
             RectTransform 放大镜 = null;

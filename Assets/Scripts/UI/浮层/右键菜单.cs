@@ -27,15 +27,15 @@ public sealed class 右键菜单 : MonoBehaviour
     [SerializeField] private Button 家具升级按钮;    // 家具 模式：升级（安全屋 房间网格 右键 家具）
     [SerializeField] private Button 家具拆除按钮;    // 家具 模式：拆除（家具 移出 房间网格）
 
-    private 网格面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
-    public 网格面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
+    private 网格面板基类 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
+    public 网格面板基类 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
     private string 目标槽位;          // 非空 = 装备槽模式（菜单显示 详情/卸下，操作对象是槽位而非堆叠）
 
     void Awake()
     {
         实例 = this;
         if (菜单根 != null) 菜单根.gameObject.SetActive(false);   // 初始隐藏
-        foreach (var 面板 in FindObjectsOfType<网格面板>())
+        foreach (var 面板 in FindObjectsOfType<网格面板基类>())
             if (面板.数据源 == null) { 背包面板 = 面板; break; }   // 主背包面板 = 兜底操作目标
         if (使用按钮 != null) 使用按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单使用(); });
         if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单装备(); });
@@ -44,8 +44,8 @@ public sealed class 右键菜单 : MonoBehaviour
         if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单丢弃(); });
         if (详情按钮 != null) 详情按钮.onClick.AddListener(() => { 隐藏(); 查看详情(); });
         if (卸下按钮 != null) 卸下按钮.onClick.AddListener(() => { 隐藏(); 卸下装备(); });
-        if (家具升级按钮 != null) 家具升级按钮.onClick.AddListener(() => { 隐藏(); (目标面板 as 网格面板)?.家具升级(); });   // 家具：升级（作用于 选中）
-        if (家具拆除按钮 != null) 家具拆除按钮.onClick.AddListener(() => { 隐藏(); (目标面板 as 网格面板)?.家具拆除(); });
+        if (家具升级按钮 != null) 家具升级按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.家具升级(); });   // 家具：升级（作用于 选中）
+        if (家具拆除按钮 != null) 家具拆除按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.家具拆除(); });
     }
 
     // 详情：装备槽模式 → 信息面板.显示槽位；物品模式 → 目标面板.菜单查看详情
@@ -195,7 +195,7 @@ public sealed class 右键菜单 : MonoBehaviour
     }
 
     // 家具模式（安全屋 房间网格 右键 家具）：升级/拆除/详情（旋转 = R 键，移动 = 拖拽，不进菜单）。
-    // 操作对象 = 目标面板（网格面板）的 选中；菜单定位到 家具框 右侧。
+    // 操作对象 = 目标面板（物品网格面板）的 选中；菜单定位到 家具框 右侧。
     public void 显示家具(物品堆叠 堆叠, RectTransform 框)
     {
         if (菜单根 == null || 堆叠 == null) return;

@@ -115,10 +115,10 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         if (拖拽代理 != null) { Destroy(拖拽代理); 拖拽代理 = null; }
         var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (玩家 == null) return;
-        // ① 拖到 背包网格（任一 网格面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）——登记表遍历（替代 FindObjectsOfType）
-        foreach (var 面板 in 网格面板.面板登记表)
+        // ① 拖到 背包网格（任一 物品网格面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）——登记表遍历（替代 FindObjectsOfType）
+        foreach (var 面板 in 物品网格面板.面板登记表)
         {
-            if (面板.家具宿主 != null) continue;   // 家具 网格（安全屋 房间）：装备 不 能 卸 进去
+            if (面板 is 家具网格面板) continue;   // 家具 网格（安全屋 房间）：装备 不 能 卸 进去
             if (!面板.gameObject.activeInHierarchy || !面板.屏幕命中(事件.position)) continue;
             // 保护：穿戴容器不能放进自己的容器里（目标网格的背包列表 == 本槽穿戴容器的 容器物品 同一引用 = 自己装自己）
             if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品)
@@ -180,9 +180,9 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         }
         // ② 背包网格 → 落格投影（可放绿/不可放红，同背包内拖拽；自己容器 → 强制红）——登记表遍历（替代 FindObjectsOfType）
         if (拖拽堆叠 == null) return;
-        foreach (var 面板 in 网格面板.面板登记表)
+        foreach (var 面板 in 物品网格面板.面板登记表)
         {
-            if (面板.家具宿主 != null) continue;   // 家具 网格：装备 不 显示 投影
+            if (面板 is 家具网格面板) continue;   // 家具 网格：装备 不 显示 投影
             if (面板.gameObject.activeInHierarchy && 面板.屏幕命中(事件.position))
             {
                 bool 自己容器 = 拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品;
@@ -196,12 +196,12 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     private void 清除拖拽投影()
     {
         if (装备区.实例 != null) 装备区.实例.清除全部高亮();
-        foreach (var 面板 in 网格面板.面板登记表)
+        foreach (var 面板 in 物品网格面板.面板登记表)
             面板.隐藏装备拖拽投影();
     }
 
     // 跟手代理：物品图 挂 Canvas 顶层（半透明）
-    // 结构 与 网格面板 拖拽代理 一致：根 = RectMask2D（裁剪 cover 溢出）+ 子 Image 内容图（等比放大铺满占格）
+    // 结构 与 物品网格面板 拖拽代理 一致：根 = RectMask2D（裁剪 cover 溢出）+ 子 Image 内容图（等比放大铺满占格）
     private void 创建拖拽代理(string 标识)
     {
         var 数据 = ServiceRegistry.Get<DataService>();
@@ -221,8 +221,8 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         var 内容矩 = 内容体.GetComponent<RectTransform>();
         UI工具.设锚点(内容矩, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
         内容矩.anchoredPosition = Vector2.zero;
-        // 统一规格：代理 = 物品占格 × 统一格尺寸（网格面板.格尺寸=90，与网格内拖拽同规格）
-        float 格 = 网格面板.格尺寸;
+        // 统一规格：代理 = 物品占格 × 统一格尺寸（物品网格面板.格尺寸=90，与网格内拖拽同规格）
+        float 格 = 物品网格面板.格尺寸;
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         var 形状 = 档案?.背包服务?.形状解析?.Invoke(标识) ?? new 物品形状(1, 1);
         var 矩 = 物体.GetComponent<RectTransform>();
