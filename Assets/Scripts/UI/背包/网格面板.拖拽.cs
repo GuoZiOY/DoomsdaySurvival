@@ -30,9 +30,7 @@ public sealed partial class 网格面板
         落点投影.color = 网格面板配色.放置可色;
         落点投影.raycastTarget = false;
         var 投影矩形 = 投体.GetComponent<RectTransform>();
-        投影矩形.anchorMin = new Vector2(0, 1);
-        投影矩形.anchorMax = new Vector2(0, 1);
-        投影矩形.pivot = new Vector2(0, 1);
+        UI工具.设锚点(投影矩形, new Vector2(0, 1), new Vector2(0, 1));
         落点投影.gameObject.SetActive(false);
     }
 
@@ -99,14 +97,10 @@ public sealed partial class 网格面板
             图.color = new Color(代理底.r, 代理底.g, 代理底.b, 0.85f);
         }
         var 内容矩 = 内容体.GetComponent<RectTransform>();
-        内容矩.anchorMin = new Vector2(0.5f, 0.5f);
-        内容矩.anchorMax = new Vector2(0.5f, 0.5f);
-        内容矩.pivot = new Vector2(0.5f, 0.5f);
+        UI工具.设锚点(内容矩, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
         内容矩.anchoredPosition = Vector2.zero;   // 居中于代理根（cover 放大由 更新代理尺寸 计算）
         拖拽代理 = 物体.GetComponent<RectTransform>();
-        拖拽代理.anchorMin = new Vector2(0.5f, 0.5f);   // Canvas 顶层：中心锚定，屏幕坐标定位
-        拖拽代理.anchorMax = new Vector2(0.5f, 0.5f);
-        拖拽代理.pivot = new Vector2(0.5f, 0.5f);   // 中心跟随鼠标
+        UI工具.设锚点(拖拽代理, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));   // Canvas 顶层：中心锚定，屏幕坐标定位
         // ② 落点投影（绿/红，贴格）——复用懒创建，尺寸由 更新代理尺寸 设置
         确保投影();
         更新代理尺寸();
@@ -117,12 +111,10 @@ public sealed partial class 网格面板
         影图.color = new Color(0.65f, 0.65f, 0.7f, 0.3f);   // 半透明灰
         影图.raycastTarget = false;
         var 影矩形 = 影体.GetComponent<RectTransform>();
-        影矩形.anchorMin = new Vector2(0, 1);
-        影矩形.anchorMax = new Vector2(0, 1);
-        影矩形.pivot = new Vector2(0, 1);
-        影矩形.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行) + 网格面板配色.物品边距, -堆叠.行 * 格尺寸 - 网格面板配色.物品边距);
         var (影宽, 影高) = 服务.物品占格(堆叠);   // 影子 = 物品原本占格（原始旋转；旋转预览不影响它）
-        影矩形.sizeDelta = new Vector2(影宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 影高 * 格尺寸 - 网格面板配色.物品边距 * 2f);
+        UI工具.设锚(影矩形, new Vector2(0, 1), new Vector2(0, 1),
+            new Vector2(格x(堆叠.列, 堆叠.行) + 网格面板配色.物品边距, -堆叠.行 * 格尺寸 - 网格面板配色.物品边距),
+            new Vector2(影宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 影高 * 格尺寸 - 网格面板配色.物品边距 * 2f));
         原位置影子 = 影体;
         拖拽代理.SetAsLastSibling();   // 代理置顶渲染——否则同格的落点投影（后创建）会盖住它
     }
@@ -181,7 +173,7 @@ public sealed partial class 网格面板
             {
                 落点有效 = false;
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-                装备面板.实例?.清除全部高亮();
+                装备区.实例?.清除全部高亮();
                 return;
             }
         }
@@ -195,15 +187,15 @@ public sealed partial class 网格面板
                 return;
             }
             // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影
-            if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名))
+            if (装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 槽位名))
             {
                 落点有效 = false;
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
                 bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
-                装备面板.实例.高亮槽位(槽位名, 匹配);
+                装备区.实例.高亮槽位(槽位名, 匹配);
                 return;
             }
-            装备面板.实例?.清除全部高亮();
+            装备区.实例?.清除全部高亮();
         }
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸))
         {
@@ -301,13 +293,13 @@ public sealed partial class 网格面板
         var 源 = 拖拽源;
         拖拽源 = null;
         清理所有面板投影();   // 隐藏其他面板（容器）跨面板显示的投影
-        装备面板.实例?.清除全部高亮();   // 装备槽高亮（背包↔装备区拖拽提示）
+        装备区.实例?.清除全部高亮();   // 装备槽高亮（背包↔装备区拖拽提示）
         if (拖拽代理 != null) { Destroy(拖拽代理.gameObject); 拖拽代理 = null; }
         if (落点投影 != null) { Destroy(落点投影.gameObject); 落点投影 = null; }
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }
         if (源 == null) { 拖拽发起面板 = null; return; }
         bool 成功 = false;   // 各分支统一：成功 播放下，失败 只播失败
-        // 跨面板：先找鼠标下方是否有别的 网格面板（容器面板/穿戴容器块/仓库）
+        // 跨面板：先找鼠标下方是否有别的 网格面板（容器面板/装具块/仓库面板）
         var 目标面板 = 事件下方面板(事件);
         if (目标面板 != null && 目标面板 != this)
         {
@@ -332,9 +324,9 @@ public sealed partial class 网格面板
             if (!最上层容器.命中网格(事件.position)) { 音效管理器.实例?.播放失败(); return; }   // 底座空白区 → 拦截
             在自己面板网格内 = true;   // 网格内 → 同面板 移动/换位
         }
-        // 拖到装备槽位（装备面板）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"，旧件回背包/回滚已处理）
+        // 拖到装备槽位（装备区）→ 穿戴：槽位兼容才可穿（实例级换装到"命中槽位"，旧件回背包/回滚已处理）
         // 自己面板 网格内 松手 不 走 装备槽（落点 归 容器面板）
-        if (!在自己面板网格内 && 装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
+        if (!在自己面板网格内 && 装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 槽位名) && 源 != null)
         {
             成功 = 数据.物品.TryGetValue(源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名)
                 && 面板操作.换装堆叠(档案, 源, 槽位名, 服务);   // 指定目标槽 + 源服务（穿戴容器/主背包）；内部已播 装备音效

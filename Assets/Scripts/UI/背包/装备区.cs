@@ -1,12 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 装备面板（左区，场景手动搭建 UI）：7 个装备槽位（主手/副手/头部/胸部/腿部/脚部/手部 + 容器位 弹挂/腰封/背包），槽位式（非网格）。
+// 装备区（左区，场景手动搭建 UI）：7 个装备槽位（主手/副手/头部/胸部/腿部/脚部/手部 + 容器位 弹挂/腰封/背包），槽位式（非网格）。
 //   引用方式：直接拖 装备槽预制体组件（装备槽[]）——槽位参数在预制体上配置，改预制体全局生效。
 //   刷新：遍历 槽位 → 各槽 设置(玩家, 数据) + 强制 Layout 重建（槽显隐/尺寸变化即时生效）；命中槽位：拖拽穿戴。
-public sealed class 装备面板 : MonoBehaviour
+public sealed class 装备区 : MonoBehaviour
 {
-    public static 装备面板 实例;   // 场景挂载自动登记
+    public static 装备区 实例;   // 场景挂载自动登记
 
     [SerializeField] private 装备槽[] 槽位;   // 装备槽（引用预制体上的 装备槽 组件；顺序 = 视觉顺序）
     [SerializeField] private RectTransform 布局父;   // 装备槽 布局容器（Layout Group 所在）；刷新后强制重排

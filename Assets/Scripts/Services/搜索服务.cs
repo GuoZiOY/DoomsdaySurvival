@@ -22,19 +22,20 @@ using UnityEngine;
         private readonly Dictionary<string, 背包服务> 已生成 = new Dictionary<string, 背包服务>();
         public IReadOnlyCollection<背包服务> 已生成视图 => 已生成.Values;
 
-        // 已搜索物品：容器标识 → 已搜完的 堆叠 引用（与缓存视图同生命周期——重开容器 已搜过的 物品 不再搜索）
+        // 已搜索物品：容器标识 → 已搜完的 堆叠 引用（与缓存视图同生命周期——重开容器 已搜过的 物品 不再搜索）。
+        // 键 = 容器标识（搜索容器.标识 或 嵌套物品容器.标识 统一）
         private readonly Dictionary<string, HashSet<物品堆叠>> 已搜索 = new Dictionary<string, HashSet<物品堆叠>>();
 
-        public bool 已搜索物品(搜索容器 定义, 物品堆叠 堆叠)
+        public bool 已搜索物品(string 容器标识, 物品堆叠 堆叠)
         {
-            if (定义 == null || 堆叠 == null) return false;
-            return 已搜索.TryGetValue(定义.标识, out var 集) && 集.Contains(堆叠);
+            if (string.IsNullOrEmpty(容器标识) || 堆叠 == null) return false;
+            return 已搜索.TryGetValue(容器标识, out var 集) && 集.Contains(堆叠);
         }
 
-        public void 标记已搜索(搜索容器 定义, 物品堆叠 堆叠)
+        public void 标记已搜索(string 容器标识, 物品堆叠 堆叠)
         {
-            if (定义 == null || 堆叠 == null) return;
-            if (!已搜索.TryGetValue(定义.标识, out var 集)) 已搜索[定义.标识] = 集 = new HashSet<物品堆叠>();
+            if (string.IsNullOrEmpty(容器标识) || 堆叠 == null) return;
+            if (!已搜索.TryGetValue(容器标识, out var 集)) 已搜索[容器标识] = 集 = new HashSet<物品堆叠>();
             集.Add(堆叠);
         }
 
@@ -93,13 +94,13 @@ using UnityEngine;
                 var 条目 = 按权重随机(定义.搜索表);
                 if (条目 == null || string.IsNullOrEmpty(条目.物品标识)) continue;
                 if (!数据.物品.TryGetValue(条目.物品标识, out var 模板)) continue;
-                if (模板.是容器) continue;   // 嵌套容器（箱中箱）后续单独规则，生成阶段跳过
                 int 数量 = Math.Max(1, 随机.Next(条目.数量最小, Math.Max(条目.数量最小, 条目.数量最大) + 1));
                 // 顺序放置：寻找可放置格（智能旋转：当前旋转 放不下 自动 转 90°）——左上 → 右下
                 var 堆叠 = new 物品堆叠(条目.物品标识, 数量)
                 {
                     当前耐久 = 有效最大耐久解析?.Invoke(条目.物品标识) ?? 0,   // 装备初始化完整耐久
                 };
+                if (模板.是容器) 容器.初始化容器(堆叠);   // 箱中箱：容器物品 初始化 容器列表（双击 可在 搜索面板 内 打开）
                 var 空位 = 视图.寻找可放置格智能旋转(堆叠, out bool 需旋转);
                 if (空位 == null) continue;   // 放不下 → 换下一件
                 堆叠.旋转 = 需旋转;

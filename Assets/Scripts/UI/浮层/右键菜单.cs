@@ -64,7 +64,7 @@ public sealed class 右键菜单 : MonoBehaviour
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (档案 == null) return;
         面板操作.卸下(档案, 目标槽位);
-        if (装备面板.实例 != null) 装备面板.实例.请求刷新();   // 脏标记合并（卸下已发事件，Update 统一刷新）
+        if (装备区.实例 != null) 装备区.实例.请求刷新();   // 脏标记合并（卸下已发事件，Update 统一刷新）
     }
 
     // 关闭检测：点击菜单外（左键/右键按下且不在菜单矩形内）/ 滚轮 → 关闭。不拦截事件——下层物品/滚动正常响应

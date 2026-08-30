@@ -1,10 +1,11 @@
 using UnityEngine;
 
-// 仓库区（右区，塔科夫 stash）：收纳型大网格（档案.仓库物品，10×20）。
+// 仓库面板（右区·仓库模式，塔科夫 stash）：收纳型大网格（档案.仓库物品，10×20）。
+//   模式面板：仅 持有面板 仓库模式（上下文 null）显示；搜索模式 时隐藏（与 搜索面板 二选一）。
 //   场景搭建：ScrollRect（Viewport → Content）+ 挂 网格面板（Inspector 配 网格容器）；
 //   本组件 注入 数据源 = 档案.仓库视图()（跨网格转移/拖拽 与穿戴容器互通）。
 //   仓库不占负重（收纳）；背包变化 → 网格自动刷新（网格面板 已订阅事件）。
-public sealed class 仓库区 : MonoBehaviour
+public sealed class 仓库面板 : MonoBehaviour
 {
     [SerializeField] private 网格面板 面板;   // 仓库网格（场景预搭：网格面板）
 
@@ -22,7 +23,7 @@ public sealed class 仓库区 : MonoBehaviour
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (面板 == null)
         {
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[仓库区] 未配置 面板 引用（请拖入 网格面板）。"));
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[仓库面板] 未配置 面板 引用（请拖入 网格面板）。"));
             return;
         }
         if (档案 == null) return;

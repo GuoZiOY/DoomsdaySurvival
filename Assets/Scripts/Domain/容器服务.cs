@@ -66,7 +66,7 @@ using System.Collections.Generic;
             return 入 != null && 入.类型 == 模板.容器允许类型;
         }
 
-        // 允许放入（按 容器标识 查模板；穿戴容器块 校验用——装备记录 非 物品堆叠）
+        // 允许放入（按 容器标识 查模板；装具块 校验用——装备记录 非 物品堆叠）
         public bool 允许放入(string 容器标识, string 入标识)
         {
             if (string.IsNullOrEmpty(容器标识) || string.IsNullOrEmpty(入标识)) return false;
@@ -77,7 +77,7 @@ using System.Collections.Generic;
             return 入 != null && 入.类型 == 容器模板.容器允许类型;
         }
 
-        // 按 标识 判断 是否容器（穿戴容器块 嵌套校验用）
+        // 按 标识 判断 是否容器（装具块 嵌套校验用）
         public bool 是容器(string 标识)
         {
             if (string.IsNullOrEmpty(标识)) return false;

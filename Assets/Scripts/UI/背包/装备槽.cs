@@ -7,7 +7,7 @@ using UnityEngine.UI;
 //   暴露参数：槽位名 + 品质图/物品图/物品名/耐久 + 框（预制体配好，改预制体全局生效）。
 //   刷新：设置(玩家, 数据) 更新 品质图（品质色/空槽灰）、物品图（sprite）、物品名、耐久。
 //   交互：点击本槽（最上层的 物品图 Image 接收点击，raycastTarget 保持 true）→ 右键菜单（详情/卸下）；
-//         拖拽本槽装备 → 背包网格（卸下入格）/ 其他装备槽（类型匹配换槽）；框 供 装备面板 拖拽穿戴命中。
+//         拖拽本槽装备 → 背包网格（卸下入格）/ 其他装备槽（类型匹配换槽）；框 供 装备区 拖拽穿戴命中。
 public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [SerializeField] private string 槽位名;          // 该槽名称（主手/副手/头部/胸部/腿部/脚部/手部）
@@ -27,7 +27,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     private GameObject 拖拽代理;   // 跟手物品图（挂 Canvas 顶层）
     private 物品堆叠 拖拽堆叠;     // 拖拽期间的临时堆叠（缓存一次，避免 OnDrag 每帧 new 产生 GC）
 
-    // 刷新本槽显示（装备面板 遍历调用）
+    // 刷新本槽显示（装备区 遍历调用）
     public void 设置(玩家档案 玩家, DataService 数据)
     {
         if (玩家 == null) return;
@@ -73,7 +73,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         if (右键菜单.实例 != null) 右键菜单.实例.显示装备槽(槽位名, 框);
     }
 
-    // 拖拽落点高亮：预制体上的专门高亮图（绿=可放 / 红=类型不匹配）——装备面板 遍历调用
+    // 拖拽落点高亮：预制体上的专门高亮图（绿=可放 / 红=类型不匹配）——装备区 遍历调用
     public void 显示高亮(bool 可放)
     {
         if (高亮图 == null) return;
@@ -123,7 +123,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品)
             {
                 音效管理器.实例?.播放失败();
-                if (装备面板.实例 != null) 装备面板.实例.请求刷新();   // 脏标记合并（事件驱动 Update 统一刷新）
+                if (装备区.实例 != null) 装备区.实例.请求刷新();   // 脏标记合并（事件驱动 Update 统一刷新）
                 拖拽记录 = null; 拖拽堆叠 = null;
                 return;
             }
@@ -134,12 +134,12 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             else 成功 = false;   // 落点在网格外/格坐标无效
             if (成功) 音效管理器.实例?.播放放下();
             else 音效管理器.实例?.播放失败();
-            if (装备面板.实例 != null) 装备面板.实例.请求刷新();
+            if (装备区.实例 != null) 装备区.实例.请求刷新();
             拖拽记录 = null; 拖拽堆叠 = null;
             return;
         }
         // ② 拖到 其他装备槽 → 换槽（槽位兼容：主副手互通，其余严格；互换：源槽 ↔ 目标槽 交换，旧件不回背包）
-        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 目标槽) && 目标槽 != 槽位名)
+        if (装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 目标槽) && 目标槽 != 槽位名)
         {
             var 数据 = ServiceRegistry.Get<DataService>();
             if (数据.物品.TryGetValue(拖拽记录.标识, out var 物品) && 面板操作.槽位匹配(物品.槽位, 目标槽))
@@ -155,7 +155,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
                 事件总线?.发布(new 背包变化事件(源记录.标识, -1, 变化原因.消耗));
                 事件总线?.发布(new 属性变化事件(玩家.体质, 玩家.力量, 玩家.智慧, 玩家.敏捷, 玩家.意志, 玩家.自由属性点));
                 音效管理器.实例?.播放装备();   // 换槽（装备到 装备槽）→ 装备音效
-                if (装备面板.实例 != null) 装备面板.实例.请求刷新();
+                if (装备区.实例 != null) 装备区.实例.请求刷新();
                 拖拽记录 = null; 拖拽堆叠 = null;
                 return;
             }
@@ -170,11 +170,11 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         清除拖拽投影();
         if (!拖拽中) return;
         // ① 其他装备槽：槽位兼容 → 绿，否则红
-        if (装备面板.实例 != null && 装备面板.实例.命中槽位(事件.position, out var 目标槽) && 目标槽 != 槽位名)
+        if (装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 目标槽) && 目标槽 != 槽位名)
         {
             var 数据 = ServiceRegistry.Get<DataService>();
             bool 匹配 = 数据.物品.TryGetValue(拖拽记录.标识, out var 物品) && 面板操作.槽位匹配(物品.槽位, 目标槽);
-            装备面板.实例.高亮槽位(目标槽, 匹配);
+            装备区.实例.高亮槽位(目标槽, 匹配);
             return;
         }
         // ② 背包网格 → 落格投影（可放绿/不可放红，同背包内拖拽；自己容器 → 强制红）——登记表遍历（替代 FindObjectsOfType）
@@ -191,7 +191,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     // 清除全部拖拽投影（装备槽高亮 + 网格绿框）——登记表遍历（替代 FindObjectsOfType）
     private void 清除拖拽投影()
     {
-        if (装备面板.实例 != null) 装备面板.实例.清除全部高亮();
+        if (装备区.实例 != null) 装备区.实例.清除全部高亮();
         foreach (var 面板 in 网格面板.面板登记表)
             面板.隐藏装备拖拽投影();
     }
@@ -215,9 +215,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         图.preserveAspect = false;   // cover：等比放大铺满，不拉伸变形
         图.color = 图标 != null ? new Color(1f, 1f, 1f, 0.7f) : new Color(0.6f, 0.6f, 0.7f, 0.7f);
         var 内容矩 = 内容体.GetComponent<RectTransform>();
-        内容矩.anchorMin = new Vector2(0.5f, 0.5f);
-        内容矩.anchorMax = new Vector2(0.5f, 0.5f);
-        内容矩.pivot = new Vector2(0.5f, 0.5f);
+        UI工具.设锚点(内容矩, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
         内容矩.anchoredPosition = Vector2.zero;
         // 统一规格：代理 = 物品占格 × 统一格尺寸（网格面板.格尺寸=90，与网格内拖拽同规格）
         float 格 = 网格面板.格尺寸;

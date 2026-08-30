@@ -71,9 +71,7 @@ public sealed class 容器面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         面板.transform.SetAsLastSibling();   // 容器面板在 Canvas 最上层（拖拽代理创建时再顶到其上）
         // 左上锚定 + 初始位置：挂载父 左上 → Canvas 局部坐标 → 右下偏移（避开原挂载点）
         var 根 = 面板.面板根;
-        根.anchorMin = new Vector2(0, 1);
-        根.anchorMax = new Vector2(0, 1);
-        根.pivot = new Vector2(0, 1);
+        UI工具.设锚点(根, new Vector2(0, 1), new Vector2(0, 1));
         var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
         Vector2 挂载父左上;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(顶层,

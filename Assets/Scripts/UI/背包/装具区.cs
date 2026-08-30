@@ -1,25 +1,25 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 穿戴容器块：中区一个预搭块（弹挂/腰封/背包）——块物体挂 网格面板，Inspector 配好 网格容器 引用
+// 装具块：中区一个预搭块（弹挂/腰封/背包）——块物体挂 网格面板，Inspector 配好 网格容器 引用
 [System.Serializable]
-public class 穿戴容器块
+public class 装具块
 {
-    public 装备槽 装备槽;         // 对应 装备面板 上的该容器槽（引用其 槽位名——一处配置，与装备区一致）
+    public 装备槽 装备槽;         // 对应 装备区 上的该容器槽（引用其 槽位名——一处配置，与装备区一致）
     public 网格面板 面板;         // 块上挂的 网格面板（场景预搭）
 
     public string 槽位名 => 装备槽 != null ? 装备槽.槽位 : "";   // 查询键：弹挂 / 腰封 / 背包
 }
 
-// 穿戴容器区（中区，塔科夫式）：ScrollRect 内容 = 身上 3 个穿戴容器（弹挂/腰封/背包）的网格块。
+// 装具区（中区，塔科夫式）：ScrollRect 内容 = 身上 3 个装具（弹挂/腰封/背包）的网格块。
 //   块常驻（同装备区槽位）：穿上 → 网格显示（注入 穿戴容器视图）；没穿 → 网格隐藏（为空，无需占位元素）。
 //   重建后 强制刷新 Layout Group（布局父 参数），保证 显隐/尺寸 变化即时生效。
 //   场景手动预搭 3 块（各挂 网格面板），本组件只做：穿戴变化 → 网格显隐 + 刷新数据源。
-public sealed class 穿戴容器区 : MonoBehaviour
+public sealed class 装具区 : MonoBehaviour
 {
-    public static 穿戴容器区 实例;   // 场景挂载自动登记（装备背包面板打开时强制重建用）
+    public static 装具区 实例;   // 场景挂载自动登记（持有面板打开时强制重建用）
 
-    [SerializeField] private 穿戴容器块[] 容器块;   // 3 个预搭块（弹挂/腰封/背包，顺序随布局）
+    [SerializeField] private 装具块[] 容器块;   // 3 个预搭块（弹挂/腰封/背包，顺序随布局）
     [SerializeField] private RectTransform 布局父;   // Layout Group 所在容器（如 Content）；重建后强制刷新布局
 
     void Awake()
@@ -76,7 +76,7 @@ public sealed class 穿戴容器区 : MonoBehaviour
         if (容器服务 == null) return;
         if (容器块 == null || 容器块.Length == 0)
         {
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[穿戴容器区] 未配置 容器块 数组（请拖入 弹挂/腰封/背包 三块：装备槽 + 面板 引用）。"));
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[装具区] 未配置 容器块 数组（请拖入 弹挂/腰封/背包 三块：装备槽 + 面板 引用）。"));
             return;
         }
         float 格 = 网格面板.格尺寸;   // 格尺寸统一常量 100（全项目一致）
