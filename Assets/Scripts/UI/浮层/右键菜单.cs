@@ -200,7 +200,13 @@ public sealed class 右键菜单 : MonoBehaviour
     {
         if (菜单根 == null || 堆叠 == null) return;
         目标槽位 = null;   // 家具 模式：物品 堆叠 操作（非 槽位）
-        if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);
+        if (使用按钮 != null)
+        {
+            // 使用：储物箱 → 打开 仓库（其余 家具 暂 无 使用 动作）
+            var (定义标识, _) = 家具工具.解码(堆叠.标识);
+            bool 可使用 = 定义标识 == "储物箱";
+            使用按钮.gameObject.SetActive(可使用);
+        }
         if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
         if (打开按钮 != null) 打开按钮.gameObject.SetActive(false);
         if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);

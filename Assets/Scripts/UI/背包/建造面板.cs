@@ -1,0 +1,108 @@
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+// 建造面板：安全屋 家具 建造 面板（场景 手动 搭 骨架：标题 + 内容区；行 用 预制体 模板 实例化）。
+// 显示 固定 5 件 家具 信息（名称/等级/描述/效果/占格/建造或升级材料）+ 建造/升级 按钮（三态 行）。
+// 建造 = 安全屋面板.进入摆放（需 编辑 模式）；升级 = 安全屋管理器.升级（占格 变化 → 网格 强制 重建 + 本面板 刷新）。
+// 场景搭建：建造面板 物体 挂 本组件，拖入 内容区（家具行 容器）+ 行模板（挂 家具行 的 模板 物体）+ 安全屋面板 引用位。
+public sealed class 建造面板 : MonoBehaviour
+{
+    [SerializeField] private RectTransform 内容区;   // 家具行 容器（场景 手动 搭）
+    [SerializeField] private GameObject 行模板;      // 家具行 模板（挂 家具行：字体/布局 模板 里 手动 排）
+    [SerializeField] private 安全屋面板 安全屋;       // 安全屋面板（进入 摆放 / 强制 重建 网格）
+
+    private static readonly string[] 家具顺序 = { "床", "工作台", "储物箱", "收音机", "灶台" };   // 固定 顺序
+
+    private 玩家档案 玩家 => ServiceRegistry.Get<PlayerService>().档案;
+    private DataService 数据 => ServiceRegistry.Get<DataService>();
+    private 安全屋管理器 管理器 => ServiceRegistry.Get<安全屋管理器>();
+
+    // 刷新：安全屋面板 打开/编辑切换/建造/升级 后 调用（重建 家具 行）
+    public void 刷新()
+    {
+        if (内容区 == null || 行模板 == null) return;
+        面板基类.清空(内容区);
+        for (int 序 = 0; 序 < 家具顺序.Length; 序++)
+            if (数据.家具.TryGetValue(家具顺序[序], out var 定义))
+                创建家具行(内容区, 家具顺序[序], 定义);
+    }
+
+    // 家具行：实例化 模板 + 绑定 内容（三态：建造/升级/满级——满级 由 名称 体现，操作按钮 建造/升级 共用）
+    private void 创建家具行(RectTransform 父, string 标识, 家具数据 定义)
+    {
+        var 已有 = 玩家.家具实例(标识);
+        int 等级 = 已有 != null ? 家具工具.解码(已有.标识).等级 : 0;
+        bool 满级 = 已有 != null && 等级 >= 定义.最大等级;
+        // 需求 材料：建造 = 定义.材料；升级 = 升级[等级-1].材料（满级 = null）
+        配方材料[] 需求 = 已有 == null ? 定义.材料
+            : (定义.升级 != null && 等级 - 1 < 定义.升级.Length && 定义.升级[等级 - 1] != null ? 定义.升级[等级 - 1].材料 : null);
+        bool 材料够 = 材料足够(需求);
+        // 升级 空间 不足（升级 后 占格 变大 且 房间 放不下）→ 占格 文本 变红 警示
+        bool 升级空间不足 = 已有 != null && !满级 && !管理器.升级空间足够(已有);
+        var 行 = 面板基类.创建模板<家具行>(父, 行模板);
+        if (行 == null) return;
+        行.绑定(
+            $"{定义.名称}（{等级}级）" + (满级 ? "·已满级" : ""),
+            定义.描述,
+            摘要文本(定义, 需求, 已有, 材料够, 升级空间不足),
+            已有 == null,                                          // 未建 → 建造
+            !满级,                                                 // 可升级
+            材料够,                                                // 材料 不足 → 灰显 + 失败 音效
+            () => 安全屋?.进入摆放(标识),
+            () =>
+            {
+                if (管理器.升级(已有))
+                {
+                    音效管理器.实例?.播放家具放下();   // 升级 完成
+                    安全屋?.强制重建网格();   // 占格 可能 变大（储物箱）→ 网格 全量 重建
+                    刷新();
+                }
+                else 音效管理器.实例?.播放失败();   // 空间 不足 / 其他 失败 → 失败 音效（材料 不足 已 在 按钮 灰显 拦截）
+            });
+    }
+
+    // 信息 摘要：占格（当前 等级 实际 占格——储物箱 升级 2×3→3×3→4×4 文本 跟随；升级 空间 不足 → 红色 警示）
+    //             + 所需材料（材料 不足 → 材料 部分 rich text 红色）
+    private string 摘要文本(家具数据 定义, 配方材料[] 需求, 物品堆叠 已有, bool 材料足够, bool 升级空间不足)
+    {
+        var 段 = new List<string>();
+        string 占格;
+        if (已有 != null)
+        {
+            var (占宽, 占高) = 管理器.占格(已有.标识, 已有.旋转);   // 已建：按 等级 实例 占格
+            占格 = $"占格：{占宽}×{占高}";
+        }
+        else 占格 = $"占格：{定义.形状宽}×{定义.形状高}";             // 未建：1 级 形状
+        if (升级空间不足) 占格 = $"<color=#F27366>{占格}</color>";   // 红：当前 空间 不足 以 支持 升级
+        段.Add(占格);
+        if (需求 != null && 需求.Length > 0)
+        {
+            string 材料 = (已有 == null ? "建造：" : "升级：") + 材料文本(需求);
+            if (!材料足够) 材料 = $"<color=#F27366>{材料}</color>";
+            段.Add(材料);
+        }
+        return string.Join("  ", 段);
+    }
+
+    // 材料 是否 足够（玩家 持有 管理 查询；跨 穿戴 容器/仓库）
+    private bool 材料足够(配方材料[] 材料)
+    {
+        if (材料 == null) return true;
+        foreach (var 材 in 材料)
+            if (材 != null && 玩家.持有管理.物品数量(材.物品) < 材.数量) return false;
+        return true;
+    }
+
+    private string 材料文本(配方材料[] 材料)
+    {
+        if (材料 == null || 材料.Length == 0) return "";
+        var 段 = new List<string>();
+        foreach (var 材 in 材料)
+            if (材 != null) 段.Add($"{物品名(材.物品)}×{材.数量}");
+        return string.Join(" ", 段);
+    }
+
+    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+}

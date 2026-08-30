@@ -32,6 +32,7 @@ using UnityEngine;
         {
             档案 = new 玩家档案();
             接线解析器(档案);
+            档案.户型种子 = UnityEngine.Random.Range(1, int.MaxValue);   // 新游戏：随机 户型 种子（读档 恢复 不 覆盖）
             档案.生命 = 档案.最大生命;
             档案.行动点 = 档案.最大行动点;
             发布初始状态();

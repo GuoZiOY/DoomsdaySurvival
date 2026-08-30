@@ -164,11 +164,19 @@ public abstract partial class 网格面板基类 : 面板基类
     public void 立即刷新() => 刷新网格();
     public void 强制重建()
     {
-        if (底盘 != null) { Destroy(底盘.gameObject); 底盘 = null; }
-        底座层 = 线层 = 物品层 = null;
+        销毁网格结构();
         当前列 = 当前行 = 0;
         上次格尺寸 = 0f;
         刷新网格();
+    }
+
+    // 销毁 网格 结构（底盘 + 底座层/线层/物品层——全 销毁，防 重建 残留 累积；先 SetActive(false) 立即 隐藏——Destroy 延迟，避免 同 帧 新旧 层 视觉 重叠）
+    private void 销毁网格结构()
+    {
+        if (底盘 != null) { 底盘.gameObject.SetActive(false); Destroy(底盘.gameObject); 底盘 = null; }
+        if (底座层 != null) { 底座层.gameObject.SetActive(false); Destroy(底座层.gameObject); 底座层 = null; }
+        if (线层 != null) { 线层.gameObject.SetActive(false); Destroy(线层.gameObject); 线层 = null; }
+        if (物品层 != null) { 物品层.gameObject.SetActive(false); Destroy(物品层.gameObject); 物品层 = null; }
     }
 
     protected override void 刷新(object 上下文)
@@ -262,8 +270,7 @@ public abstract partial class 网格面板基类 : 面板基类
     public void 绑定网格容器(RectTransform 容器)
     {
         网格容器 = 容器;
-        if (底盘 != null) { Destroy(底盘.gameObject); 底盘 = null; }
-        底座层 = 线层 = 物品层 = null;
+        销毁网格结构();
     }
 
     public void 配置视图显示()

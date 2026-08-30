@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -86,6 +87,56 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         面板根.SetAsLastSibling();   // 置顶
         居中定位();
     }
+
+    // 家具 详情 静态入口（安全屋 房间网格 右键「详情」）：每次 显示 新建 一个 面板（与 物品 详情 一致）
+    public static void 显示家具详情(物品堆叠 堆叠, RectTransform 挂载父 = null)
+    {
+        if (堆叠 == null) return;
+        var 面板 = 创建(挂载父);
+        if (面板 != null) 面板.显示家具(堆叠);
+    }
+
+    // 显示 家具 详情（家具数据 驱动：名称/等级/描述/效果/占格/材料——非 物品数据）
+    public void 显示家具(物品堆叠 堆叠)
+    {
+        if (面板根 == null || 堆叠 == null) return;
+        var 数据 = ServiceRegistry.Get<DataService>();
+        if (物品图片 != null) 物品图片.color = new Color(1f, 1f, 1f, 0f);   // 家具 无 图标：透明占位
+        if (详情文本 != null)
+        {
+            var (定义标识, 等级) = 家具工具.解码(堆叠.标识);
+            详情文本.text = 数据.家具.TryGetValue(定义标识, out var 定义) ? 家具详情文本(定义, 等级) : 堆叠.标识;
+        }
+        面板根.gameObject.SetActive(true);
+        面板根.SetAsLastSibling();
+        居中定位();
+    }
+
+    // 家具 详情 文本：名称 N级：描述 + 效果 + 占格 + 建造/升级 材料
+    private string 家具详情文本(家具数据 定义, int 等级)
+    {
+        var 数据 = ServiceRegistry.Get<DataService>();
+        var 段 = new List<string> { $"{定义.名称} {等级}级：{定义.描述}" };
+        if (定义.效果 != null && 等级 - 1 < 定义.效果.Length)
+            段.Add($"效果：{定义.效果[等级 - 1]}");
+        段.Add($"占格：{定义.形状宽}×{定义.形状高}（旋转 宽高 互换）");
+        if (定义.材料 != null && 定义.材料.Length > 0)
+            段.Add("建造：" + 家具材料文本(数据, 定义.材料));
+        if (定义.升级 != null && 等级 - 1 < 定义.升级.Length && 定义.升级[等级 - 1] != null)
+            段.Add("升级：" + 家具材料文本(数据, 定义.升级[等级 - 1].材料));
+        return string.Join("\n", 段);
+    }
+
+    private string 家具材料文本(DataService 数据, 配方材料[] 材料)
+    {
+        if (材料 == null || 材料.Length == 0) return "无";
+        var 段 = new List<string>();
+        foreach (var 材 in 材料)
+            if (材 != null) 段.Add($"{物品名(数据, 材.物品)}×{材.数量}");
+        return string.Join(" ", 段);
+    }
+
+    private string 物品名(DataService 数据, string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
 
     public void 关闭()
     {

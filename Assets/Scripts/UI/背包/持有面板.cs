@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 // 持有面板：薄编排器（挂"持有面板"父物体）——玩家全部持有物的总界面。
 // 子节点：装备区 + 装具区（常驻）+ 右区（模式面板，同级）；父物体显隐时子节点随之显隐（OnEnable/刷新 自刷）。
@@ -12,11 +13,19 @@ public sealed class 持有面板 : 面板基类
 {
     [SerializeField] private 仓库面板 仓库;      // 右区 仓库面板（仓库模式：1+2+3）
     [SerializeField] private 搜索面板 搜索;    // 右区 搜索面板（搜索模式：1+2+4，3 位 换 4）
+    [SerializeField] private Button 返回按钮;    // 返回按钮（Inspector 暴露引用）：点击 = 回退——返回 上一面板
+                                                // （从 安全屋 储物箱「使用」打开 → 回 安全屋；F1 打开 → 回 F1 前 面板；主菜单 打开 → 回 主菜单）
 
-    // 默认关闭：即使未接面板管理器（可切换面板列表外），也初始隐藏；由 F1/面板管理器.显示 激活
+    // 初始隐藏 由 场景 控制（持有面板 物体 场景 里 初始 inactive；面板管理器.显示 激活）。
+    // 注意：不 在 Awake 里 SetActive(false)——物体 初始 inactive 时 Awake 延迟 到 首次 激活 才 执行，
+    //       首次 打开（SetActive(true)）触发 Awake 又 关掉 = 第一次 打不开（重复一次 才 成功）。
     void Awake()
     {
-        gameObject.SetActive(false);
+        if (返回按钮 != null)
+        {
+            返回按钮.onClick.AddListener(() => 回退());
+            音效管理器.实例?.注册按钮(返回按钮);
+        }
     }
 
     public override void 显示面板(object 上下文 = null, bool 上下互切 = false, bool 返回方向 = false)

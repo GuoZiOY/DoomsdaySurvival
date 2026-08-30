@@ -18,6 +18,7 @@ public sealed class 音效管理器 : MonoBehaviour
     [SerializeField] private AudioClip 搜索音效;   // 搜索容器：物品 搜索 出来（黑块 揭开）
     [SerializeField] private AudioClip 搜索中音效; // 搜索容器：搜索 进行中（容器/物品 倒计时 循环）
     [SerializeField] private AudioClip 装备音效;   // 装备槽 放下 装备（穿戴 成功）
+    [SerializeField] private AudioClip 家具放下音效; // 家具 拖拽 放下 / 建造 落格 / 升级 完成
 
     // —— 各音效独立音量（0~10 整数，默认 10=满；全局音量仍由 AudioListener.volume 控制）——
     [SerializeField, Range(0, 10)] private int 背景音乐音量 = 10;
@@ -29,6 +30,7 @@ public sealed class 音效管理器 : MonoBehaviour
     [SerializeField, Range(0, 10)] private int 搜索音量 = 10;
     [SerializeField, Range(0, 10)] private int 搜索中音量 = 10;
     [SerializeField, Range(0, 10)] private int 装备音量 = 10;
+    [SerializeField, Range(0, 10)] private int 家具放下音量 = 10;
 
     private AudioSource 音乐源;
     private AudioSource 音效源;
@@ -47,6 +49,7 @@ public sealed class 音效管理器 : MonoBehaviour
         搜索音量 = Mathf.Clamp(搜索音量, 0, 10);
         搜索中音量 = Mathf.Clamp(搜索中音量, 0, 10);
         装备音量 = Mathf.Clamp(装备音量, 0, 10);
+        家具放下音量 = Mathf.Clamp(家具放下音量, 0, 10);
         if (音乐源 != null) 音乐源.volume = 换算(背景音乐音量);
         if (搜索源 != null && 搜索源.isPlaying) 搜索源.volume = 换算(搜索中音量);   // 搜索循环 音量 即时生效
     }
@@ -178,6 +181,13 @@ public sealed class 音效管理器 : MonoBehaviour
         音效源.PlayOneShot(装备音效, 换算(装备音量));
     }
 
+    // 家具 放下 音效（拖拽 移动/换位 放下 / 建造 落格 / 升级 完成）
+    public void 播放家具放下()
+    {
+        if (家具放下音效 == null || 音效源 == null) return;
+        音效源.PlayOneShot(家具放下音效, 换算(家具放下音量));
+    }
+
     // 音量开关：静音/恢复（侧边栏 音量按钮）
     public void 切换静音()
     {
@@ -210,4 +220,5 @@ public sealed class 音效管理器 : MonoBehaviour
     public void 设置搜索音量(int 音量) { 搜索音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置搜索中音量(int 音量) { 搜索中音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置装备音量(int 音量) { 装备音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置家具放下音量(int 音量) { 家具放下音量 = Mathf.Clamp(音量, 0, 10); }
 }

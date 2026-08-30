@@ -173,10 +173,13 @@ public abstract partial class 网格面板基类
         物体.transform.SetParent(底座层, false);
         var 图 = 物体.GetComponent<Image>();
         图.sprite = 网格底层精灵();
-        图.color = 网格面板配色.底座色;
+        图.color = 块底格色(服务.该格块(列, 行));   // 按 块 着色（房间 之间 区别 明显）
         图.raycastTarget = false;
         定位(物体.GetComponent<RectTransform>(), 列, 行, 1, 1);
     }
+
+    // 块 底格 色 钩子（基类 通用 = 底座 色；家具 户型 override：走廊 灰 + 房间 浅 色 表——子类 专属 视觉 不 污染 基类）
+    protected virtual Color 块底格色(int 块) => 网格面板配色.底座色;
 
     private static Sprite 网格底层缓存;
     private static Sprite 网格底层精灵()
@@ -201,7 +204,7 @@ public abstract partial class 网格面板基类
                 画横线段(i, j, 横线边界(i, j));
     }
 
-    private void 画块网格线()
+    protected virtual void 画块网格线()
     {
         for (int 列 = 0; 列 <= 当前列; 列++)
             for (int 行 = 0; 行 < 当前行; 行++)
