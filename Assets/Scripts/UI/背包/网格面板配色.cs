@@ -22,6 +22,10 @@ public static class 网格面板配色
     public static readonly Color 放置可色 = new Color(0.4941f, 0.7725f, 0.5294f, 0.3922f);  // 拖拽投影：可放（#7EC587 A100；装备槽高亮同款）
     public static readonly Color 放置禁色 = new Color(0.7529f, 0.4078f, 0.4078f, 0.3922f);  // 拖拽投影：不可放（#C06868 A100；装备槽高亮同款）
     public static readonly Color 合并色 = new Color(0.451f, 0.749f, 1f, 0.3922f);            // 拖拽投影：可合并（#73BFFF A100）
+    // 家具（安全屋 房间网格）：色块区分 用 文本（名称/等级角标），底色 统一——改风格只改这里
+    public static readonly Color 家具底色 = new Color(0.18f, 0.18f, 0.22f, 1f);      // 家具框 底色
+    public static readonly Color 家具选中色 = new Color(0.32f, 0.32f, 0.4f, 1f);      // 家具框 选中 高亮
+    public static readonly Color 家具内容色 = new Color(0.22f, 0.22f, 0.27f, 1f);     // 家具 内容 色块（名称 底）
     // 容器内部形状（塔科夫式独立口袋）：块间 空隙 = 块偏移 自然 露出（无线/无底图/不填色），
     // 每块 四边 亮轮廓 框（独立 闭合）——本类 无 缝隙 配色
 }

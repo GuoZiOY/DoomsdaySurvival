@@ -401,6 +401,7 @@ public sealed partial class 网格面板
     // 返回 物品框（增量刷新：键=堆叠实例，复用更新；null = 数据缺失不创建）
     private 物品框 创建物品(物品堆叠 堆叠)
     {
+        if (家具宿主 != null) return 创建家具(堆叠);   // 家具模式：色块+名称+等级角标
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return null;
         var 框 = new 物品框();
         var (宽, 高) = 服务.物品占格(堆叠);   // 领域规则：形状×旋转 → 占格
@@ -422,6 +423,42 @@ public sealed partial class 网格面板
         创建文本角标(物体.transform, 堆叠, 物品, 框);
         // ③ 点击（非按钮） + 拖拽（挂在物品框上）
         挂接交互(框, 堆叠, 内容矩形);
+        return 框;
+    }
+
+    // 家具框（安全屋 房间网格）：色块（统一底色/选中亮）+ 名称（居中）+ 等级角标（右下）+ 高光 + 交互（点击/右键/拖拽 同物品）。
+    // 家具 = 物品堆叠 承载（标识 含 等级后缀）；名称/等级 用 家具解析（家具宿主 提供）。
+    private 物品框 创建家具(物品堆叠 堆叠)
+    {
+        if (堆叠 == null) return null;
+        var 框 = new 物品框();
+        var (宽, 高) = 服务.物品占格(堆叠);
+        var 物体 = new GameObject($"家具_{家具名称(堆叠.标识)}", typeof(RectTransform), typeof(Image));
+        物体.transform.SetParent(物品层, false);
+        框.根 = 物体.GetComponent<RectTransform>();
+        框.框图 = 物体.GetComponent<Image>();
+        框.框图.color = 选中 == 堆叠 ? 网格面板配色.家具选中色 : 网格面板配色.家具底色;
+        var 边框 = 物体.AddComponent<Outline>();
+        边框.effectColor = 物品描边色;
+        边框.effectDistance = 物品描边距离;
+        定位(框.根, 堆叠.列, 堆叠.行, 宽, 高);
+        框.高光层 = 创建高光层(物体.transform);
+        // 内容层：家具 内容色块（内缩 物品边距）+ 名称 居中
+        var 内容图 = UI工具.创建图(物体.transform, "内容", null, 网格面板配色.家具内容色, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+        UI工具.设锚(内容图.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
+            new Vector2(宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 高 * 格尺寸 - 网格面板配色.物品边距 * 2f));
+        框.内容层 = 内容图.rectTransform;
+        var 名称 = UI工具.创建文本(内容图.transform, "名称", 家具名称(堆叠.标识), Mathf.Clamp(格尺寸 * 0.22f, 14f, 44f), TextAlignmentOptions.Center);
+        UI工具.铺满(名称.rectTransform);
+        名称.enableWordWrapping = true;
+        框.名称 = 名称;
+        // 等级角标（右下；复用 数量 槽——家具 数量 恒 1，角标 显示 等级）
+        int 等级 = 家具工具.解码(堆叠.标识).等级;
+        var 数 = UI工具.创建文本(物体.transform, "数量", $"{等级}级", 40f, TextAlignmentOptions.TopRight);
+        UI工具.设锚(数.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-5f, -2f), new Vector2(70f, 34f));
+        框.数量 = 数;
+        框.上次数量 = 等级;
+        挂接交互(框, 堆叠, 内容图.rectTransform);
         return 框;
     }
 
@@ -518,6 +555,7 @@ public sealed partial class 网格面板
     private void 更新物品框(物品框 框, 物品堆叠 堆叠)
     {
         if (框 == null || 框.根 == null) return;
+        if (家具宿主 != null) { 更新家具框(框, 堆叠); return; }   // 家具模式：位置/旋转/选中色/等级角标
         var (宽, 高) = 服务.物品占格(堆叠);
         框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -堆叠.行 * 格尺寸);
         float 新宽 = 宽 * 格尺寸, 新高 = 高 * 格尺寸;
@@ -573,6 +611,33 @@ public sealed partial class 网格面板
             {
                 框.耐久.gameObject.SetActive(false);
                 框.上次耐久 = null;
+            }
+        }
+    }
+
+    // 更新 家具框（增量）：位置/尺寸/旋转/选中色/等级角标（升级 后 标识 变 → 角标 更新）
+    private void 更新家具框(物品框 框, 物品堆叠 堆叠)
+    {
+        var (宽, 高) = 服务.物品占格(堆叠);
+        框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -堆叠.行 * 格尺寸);
+        float 新宽 = 宽 * 格尺寸, 新高 = 高 * 格尺寸;
+        if (Mathf.Abs(框.根.sizeDelta.x - 新宽) > 0.01f || Mathf.Abs(框.根.sizeDelta.y - 新高) > 0.01f)
+            框.根.sizeDelta = new Vector2(新宽, 新高);
+        if (框.内容层 != null)
+        {
+            var 旋转 = Quaternion.Euler(0f, 0f, 堆叠.旋转 ? 90f : 0f);
+            if (框.内容层.localRotation != 旋转) 框.内容层.localRotation = 旋转;
+        }
+        var 色 = 选中 == 堆叠 ? 网格面板配色.家具选中色 : 网格面板配色.家具底色;
+        if (框.框图 != null && 框.框图.color != 色)
+            框.框图.color = 色;
+        if (框.数量 != null)
+        {
+            int 等级 = 家具工具.解码(堆叠.标识).等级;
+            if (框.上次数量 != 等级)
+            {
+                框.数量.text = $"{等级}级";
+                框.上次数量 = 等级;
             }
         }
     }

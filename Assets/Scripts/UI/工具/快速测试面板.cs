@@ -141,11 +141,13 @@ public sealed class 快速测试面板 : MonoBehaviour
         (string, UnityAction)[] 测试项 =
         {
             ("打开背包面板", 打开背包面板),
+            ("打开安全屋面板", () => 面板管理器.实例?.显示面板类型<安全屋面板>()),
             ("加随机物品", 加随机物品),
             ("加容器套装", 加容器套装),
             ("清空背包", 清空背包),
             ("随机穿戴容器", 随机穿戴容器),
             ("仓库加物品", 仓库加物品),
+            ("加建材（安全屋）", 加建材),
             ("加食物×5", 加食物),
             ("加医疗品×5", 加医疗品),
             ("随机装备武器防具", 随机装备武器防具),
@@ -211,6 +213,20 @@ public sealed class 快速测试面板 : MonoBehaviour
     private 玩家档案 档案() => ServiceRegistry.Get<PlayerService>()?.档案;
     private DataService 数据() => ServiceRegistry.Get<DataService>();
     private EventBus 事件() => ServiceRegistry.Get<EventBus>();
+
+    // 加建材：一键补齐 安全屋 家具 建造/升级 材料（测试用）
+    private void 加建材()
+    {
+        string[] 建材 = { "木板", "钉子", "布料", "铁皮", "砖块", "绳索", "水泥袋", "电线", "零件", "煤油" };
+        string[] 电器 = { "电池", "充电宝", "收音机" };
+        if (数据() == null || 档案() == null) return;
+        foreach (var 标识 in 建材)
+            if (数据().物品.ContainsKey(标识)) 档案().放入物品(标识, 20);
+        foreach (var 标识 in 电器)
+            if (数据().物品.ContainsKey(标识)) 档案().放入物品(标识, 3);
+        事件()?.发布(new 背包变化事件("", 0, 变化原因.获得));
+        日志("[测试] 已加建材 ×20 + 电器 ×3（安全屋 建造/升级 用）。");
+    }
 
     // 通知 UI 刷新：背包变化事件（装备区/装具区/网格）+ 属性变化事件（属性/装具区/网格）
     private void 通知刷新(玩家档案 玩家)

@@ -651,20 +651,65 @@ using System;
 
     // ================= 安全屋家具 =================
 
+    // 家具升级需求：升级消耗材料 + 升级后占格（-1 = 不变）。索引 0 = 1→2 级，1 = 2→3 级…
+    [Serializable]
+    public class 家具升级需求
+    {
+        public 配方材料[] 材料;   // 升级所需材料
+        public int 形状宽 = -1;   // 升级后占格宽（-1 = 不变）
+        public int 形状高 = -1;   // 升级后占格高（-1 = 不变）
+    }
+
+    // 家具定义（家具.json）：建造与升级的数据驱动
     [Serializable]
     public class 家具数据
     {
         public string 标识;
         public string 名称;
         public string 描述;
-        public int 解锁等级;   // 安全屋达到该等级才可建造
-        public int 价格;       // 建造所需价值点数（以物易物材料）
-        public 配方材料[] 材料; // 建造所需材料
-        public int 最大等级;   // 家具可升级到的等级
+        public int 解锁等级;        // 安全屋达到该等级才可建造
+        public int 价格;            // 建造所需价值点数（以物易物材料）
+        public 配方材料[] 材料;     // 建造（1级）所需材料
+        public int 最大等级;        // 家具可升级到的等级
+        public string 功能类型;     // 睡觉 / 制作 / 仓库 / 情报 / 取暖（效果值解释用）
+        public int 形状宽 = 1;      // 1级占格
+        public int 形状高 = 1;
+        public 家具升级需求[] 升级; // 每级升级（索引0=1→2级）：材料 + 形状变化
+        public int[] 效果;          // 每级效果值（索引0=1级；含义按 功能类型 解释）
     }
 
     [Serializable]
     public class 家具根 { public 家具数据[] 家具; }
+
+    // 家具工具：家具实例标识 编码/解码（实例标识 含 等级后缀："储物箱_2"；等级 1 不带后缀）
+    public static class 家具工具
+    {
+        public static string 编码(string 定义标识, int 等级) => 等级 > 1 ? $"{定义标识}_{等级}" : 定义标识;
+
+        public static (string 定义, int 等级) 解码(string 实例标识)
+        {
+            if (!string.IsNullOrEmpty(实例标识))
+            {
+                int 分隔 = 实例标识.LastIndexOf('_');
+                if (分隔 > 0 && int.TryParse(实例标识.Substring(分隔 + 1), out int 等级))
+                    return (实例标识.Substring(0, 分隔), 等级);
+            }
+            return (实例标识, 1);
+        }
+    }
+
+    // ================= 收音机情报（情报.json） =================
+
+    // 情报条目：收音机 收听 播报内容（等级 = 收音机家具等级门槛）
+    [Serializable]
+    public class 情报条目
+    {
+        public string 文本;
+        public int 等级 = 1;   // 需要 收音机 达到该等级 才可播报
+    }
+
+    [Serializable]
+    public class 情报根 { public 情报条目[] 情报; }
 
     // ================= 搜索容器（塔科夫式搜刮） =================
     // 层级：地图类型（居民房）→ 房间（玄关/客厅/厨房…）→ 容器（鞋柜/冰箱…）。

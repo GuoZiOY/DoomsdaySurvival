@@ -118,6 +118,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         // ① 拖到 背包网格（任一 网格面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）——登记表遍历（替代 FindObjectsOfType）
         foreach (var 面板 in 网格面板.面板登记表)
         {
+            if (面板.家具宿主 != null) continue;   // 家具 网格（安全屋 房间）：装备 不 能 卸 进去
             if (!面板.gameObject.activeInHierarchy || !面板.屏幕命中(事件.position)) continue;
             // 保护：穿戴容器不能放进自己的容器里（目标网格的背包列表 == 本槽穿戴容器的 容器物品 同一引用 = 自己装自己）
             if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品)
@@ -180,12 +181,15 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         // ② 背包网格 → 落格投影（可放绿/不可放红，同背包内拖拽；自己容器 → 强制红）——登记表遍历（替代 FindObjectsOfType）
         if (拖拽堆叠 == null) return;
         foreach (var 面板 in 网格面板.面板登记表)
+        {
+            if (面板.家具宿主 != null) continue;   // 家具 网格：装备 不 显示 投影
             if (面板.gameObject.activeInHierarchy && 面板.屏幕命中(事件.position))
             {
                 bool 自己容器 = 拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品;
                 面板.显示装备拖拽投影(拖拽堆叠, 事件.position, 自己容器);
                 return;
             }
+        }
     }
 
     // 清除全部拖拽投影（装备槽高亮 + 网格绿框）——登记表遍历（替代 FindObjectsOfType）

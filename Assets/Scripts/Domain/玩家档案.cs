@@ -13,6 +13,7 @@ using System.Collections.Generic;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
+        public int 电池电量;        // 收音机家具 电池剩余收听次数（非收音机家具 = 0；随档存档）
         // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
         public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
         public int 容器行;          // 实例网格行数
@@ -73,7 +74,8 @@ using System.Collections.Generic;
         public 装备记录(string 槽位, string 标识) { this.槽位 = 槽位; this.标识 = 标识; }
     }
 
-    // 安全屋家具实例（等级解锁 + 多种家具）
+    // 安全屋家具实例（已废弃：家具由 物品堆叠 承载——标识 含 等级后缀、列/行/旋转 = 房间网格位置、电池电量 = 收音机剩余次数。
+    // 保留本类仅防 旧档 JSON 反序列化 引用；新代码一律用 物品堆叠。）
     [Serializable]
     public class 家具实例
     {
@@ -101,6 +103,7 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限——接背包服务
         [NonSerialized] public Func<string, int> 最大耐久解析;        // 标识 -> 最大耐久（0 = 无耐久，不损坏）
         [NonSerialized] public Func<string, (int 列, int 行)> 容器尺寸解析;   // 标识 -> 容器模板网格尺寸（弹挂/腰封/背包 穿戴时初始化）
+        [NonSerialized] public Func<string, 家具数据> 家具定义解析;          // 家具标识 -> 家具定义（安全屋 家具效果 查询用；PlayerService 接线）
         [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板
 
         // —— 身份：职业与天赋 ——
@@ -180,7 +183,35 @@ using System.Collections.Generic;
 
         // —— 安全屋 ——
         public int 安全屋等级 = 1;
-        public List<家具实例> 家具 = new List<家具实例>();
+        public List<物品堆叠> 家具 = new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载：标识 = 家具标识[含等级后缀]、数量恒 1、列/行/旋转 = 房间网格位置、电池电量 = 收音机剩余收听次数）
+        public int 预知天气 = -1;   // 收音机 预知的 明日天气（-1 = 无预知，跨天随机）
+
+        // —— 安全屋家具 查询（每种家具唯一；未建 = null/0） ——
+
+        // 家具列表中 指定定义 的家具堆叠（无 = null）
+        public 物品堆叠 家具实例(string 定义标识)
+        {
+            foreach (var 堆叠 in 家具)
+                if (堆叠 != null && 家具工具.解码(堆叠.标识).定义 == 定义标识) return 堆叠;
+            return null;
+        }
+
+        // 指定家具 当前等级（未建 = 0）
+        public int 家具等级(string 定义标识)
+        {
+            var 实例 = 家具实例(定义标识);
+            return 实例 != null ? 家具工具.解码(实例.标识).等级 : 0;
+        }
+
+        // 指定家具 当前等级 效果值（未建/无效果 = 0；含义按 功能类型：床=恢复系数×100 / 储物箱=仓库行加成 / 灶台=寒潮豁免等级 / 收音机=电池次数 / 工作台=词缀概率加成%）
+        public int 家具效果(string 定义标识)
+        {
+            int 等级 = 家具等级(定义标识);
+            if (等级 <= 0 || 家具定义解析 == null) return 0;
+            var 定义 = 家具定义解析(定义标识);
+            if (定义?.效果 == null || 定义.效果.Length == 0) return 0;
+            return 等级 <= 定义.效果.Length ? 定义.效果[等级 - 1] : 定义.效果[定义.效果.Length - 1];
+        }
 
         // —— 幸存者（第二版预留） ——
         public List<string> 幸存者 = new List<string>();

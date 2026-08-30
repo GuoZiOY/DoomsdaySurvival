@@ -37,6 +37,7 @@ public sealed partial class 网格面板 : 面板基类
     [NonSerialized] public 物品堆叠 所属容器;  // 非空 = 本面板显示的容器实例（跨面板转移用；容器面板注入）
     [NonSerialized] public string 所属槽位;   // 非空 = 本面板显示的穿戴容器槽位（弹挂/腰封/背包；装具区注入）——允许放入/嵌套校验用
     [NonSerialized] public 搜索面板 搜索宿主;  // 非空 = 本面板 是 搜索面板 的 网格：双击 容器 物品 → 4 区 原位 替换（箱中箱）
+    [NonSerialized] public 安全屋面板 家具宿主;  // 非空 = 本面板 是 安全屋 房间网格（家具 模式）：渲染/交互/拖拽 走 家具 分支
 
     // 全局活动拖拽：跨面板拖拽（主背包 ↔ 容器）的状态。发起面板在 开始拖拽 记录，任一面板 结束拖拽 时消费。
     private static 网格面板 拖拽发起面板;
@@ -96,8 +97,14 @@ public sealed partial class 网格面板 : 面板基类
             { 待刷新网格 = false; 待刷新物品 = false; 刷新网格(); }
         else if (待刷新物品)
             { 待刷新物品 = false; 刷新物品(); }
-        if (拖拽中堆叠 == null)
-            return;
+        // 家具 选中（未 拖拽）R 旋转：原位 旋转（拖拽 中 的 R 旋转 在 下方 拖拽 分支 处理）
+        if (家具宿主 != null && 选中 != null && 拖拽中堆叠 == null && 检测按R())
+        {
+            if (服务.移动堆叠(选中, 选中.列, 选中.行, !选中.旋转)) { 请求刷新(); }
+            else ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "旋转后放不下。"));
+        }
+        if (拖拽中堆叠 == null || 家具宿主 != null)
+            return;   // 家具 网格：不 参与 跨面板 投影（家具 拖拽 落点 走 OnDrag——结束拖拽 家具 分支）
         Vector2 鼠标 = 输入鼠标位置();   // 方法级：R 旋转 与 跨面板投影 共用（避免 CS0136 重名）
         var 伪事件 = new PointerEventData(EventSystem.current) { position = 鼠标 };
         // R 旋转预览：放 Update 每帧检测（不受 OnDrag 需鼠标移动才触发的限制——静止按住也能按 R）。
@@ -238,6 +245,34 @@ public sealed partial class 网格面板 : 面板基类
     {
         if (堆叠 == null) return null;
         return 物品框表.TryGetValue(堆叠, out var 框) ? 框.根 : null;
+    }
+
+    // ===== 家具 操作（右键菜单 调用；家具 模式 下 作用于 选中 家具） =====
+
+    // 家具 升级（安全屋管理器：占格 变大 自动 找空位；失败 原因 已 发 日志）——升级 后 占格/分隔线 变化 → 强制 全量重建
+    public void 家具升级()
+    {
+        if (选中 == null || 家具宿主 == null) return;
+        if (ServiceRegistry.Get<安全屋管理器>().升级(选中)) 强制重建();
+    }
+
+    // 家具 拆除（移出 房间网格；材料 不 返还）
+    public void 家具拆除()
+    {
+        if (选中 == null || 家具宿主 == null || 选中.列 < 0) return;
+        var 拆 = 选中;
+        选中 = null;
+        服务.背包.Remove(拆);
+        请求刷新();
+        音效管理器.实例?.播放成功();
+        ServiceRegistry.Get<EventBus>().发布(new 日志事件(日志类型.反馈, $"拆除了 {家具名称(拆.标识)}。"));
+    }
+
+    // 家具 名称（家具标识 解码 定义 名称；安全屋面板 同款）
+    public string 家具名称(string 实例标识)
+    {
+        var (定义标识, _) = 家具工具.解码(实例标识);
+        return 数据.家具.TryGetValue(定义标识, out var 定义) ? 定义.名称 : 实例标识;
     }
 
     // ===== 内部组件：非按钮点击 + 拖拽 =====

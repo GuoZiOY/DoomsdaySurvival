@@ -24,6 +24,8 @@ public sealed class 右键菜单 : MonoBehaviour
     [SerializeField] private Button 丢弃按钮;        // 丢弃（任何入格物品均可，始终显示）
     [SerializeField] private Button 详情按钮;        // 信息展示面板（任何物品/装备槽均显示）
     [SerializeField] private Button 卸下按钮;        // 卸下（仅 装备槽模式 显示：已装备物品卸下回背包）
+    [SerializeField] private Button 家具升级按钮;    // 家具 模式：升级（安全屋 房间网格 右键 家具）
+    [SerializeField] private Button 家具拆除按钮;    // 家具 模式：拆除（家具 移出 房间网格）
 
     private 网格面板 背包面板;   // 兜底操作目标（场景主背包面板，Awake 查找）
     public 网格面板 目标面板;    // 当前操作目标（发起右键的面板，显示时由调用方设置；优先于 背包面板）
@@ -42,6 +44,8 @@ public sealed class 右键菜单 : MonoBehaviour
         if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单丢弃(); });
         if (详情按钮 != null) 详情按钮.onClick.AddListener(() => { 隐藏(); 查看详情(); });
         if (卸下按钮 != null) 卸下按钮.onClick.AddListener(() => { 隐藏(); 卸下装备(); });
+        if (家具升级按钮 != null) 家具升级按钮.onClick.AddListener(() => { 隐藏(); (目标面板 as 网格面板)?.家具升级(); });   // 家具：升级（作用于 选中）
+        if (家具拆除按钮 != null) 家具拆除按钮.onClick.AddListener(() => { 隐藏(); (目标面板 as 网格面板)?.家具拆除(); });
     }
 
     // 详情：装备槽模式 → 信息面板.显示槽位；物品模式 → 目标面板.菜单查看详情
@@ -182,7 +186,39 @@ public sealed class 右键菜单 : MonoBehaviour
         if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
         if (详情按钮 != null) 详情按钮.gameObject.SetActive(true);
         if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(true);
+        if (家具升级按钮 != null) 家具升级按钮.gameObject.SetActive(false);
+        if (家具拆除按钮 != null) 家具拆除按钮.gameObject.SetActive(false);
         音效管理器.实例?.播放成功();   // 右键呼出菜单（装备槽模式）→ 按钮成功音效
+        菜单根.gameObject.SetActive(true);
+        菜单根.SetAsLastSibling();
+        定位到物品右侧(框);
+    }
+
+    // 家具模式（安全屋 房间网格 右键 家具）：升级/拆除/详情（旋转 = R 键，移动 = 拖拽，不进菜单）。
+    // 操作对象 = 目标面板（网格面板）的 选中；菜单定位到 家具框 右侧。
+    public void 显示家具(物品堆叠 堆叠, RectTransform 框)
+    {
+        if (菜单根 == null || 堆叠 == null) return;
+        目标槽位 = null;   // 家具 模式：物品 堆叠 操作（非 槽位）
+        if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);
+        if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
+        if (打开按钮 != null) 打开按钮.gameObject.SetActive(false);
+        if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);
+        if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);
+        if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
+        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(false);
+        // 升级：未满级 才显示（满级 = 隐藏）
+        bool 可升级 = false;
+        if (家具升级按钮 != null)
+        {
+            var (定义标识, 等级) = 家具工具.解码(堆叠.标识);
+            if (ServiceRegistry.Get<DataService>().家具.TryGetValue(定义标识, out var 定义))
+                可升级 = 等级 < 定义.最大等级;
+            家具升级按钮.gameObject.SetActive(可升级);
+        }
+        if (家具拆除按钮 != null) 家具拆除按钮.gameObject.SetActive(true);   // 拆除 恒 显示
+        if (详情按钮 != null) 详情按钮.gameObject.SetActive(true);
+        音效管理器.实例?.播放成功();   // 右键呼出菜单（家具模式）→ 按钮成功音效
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();
         定位到物品右侧(框);

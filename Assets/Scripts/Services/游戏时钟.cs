@@ -17,15 +17,17 @@ public sealed class 游戏时钟 : MonoBehaviour
         int 当前小时 = 当前分钟 / 60;
         int 当前天 = (int)(玩家.游戏分钟数 / 1440f);
 
-        // 跨天：随机新天气
+        // 跨天：随机新天气（收音机 预知 优先——预知只保一天，用后清零）
         if (当前天 != 上次天)
         {
             上次天 = 当前天;
             var 事件 = ServiceRegistry.Get<EventBus>();
             if (事件 != null)
             {
-                var 天气 = (天气类型)Random.Range(0, System.Enum.GetValues(typeof(天气类型)).Length);
+                var 天气 = 玩家.预知天气 >= 0 ? (天气类型)玩家.预知天气
+                    : (天气类型)Random.Range(0, System.Enum.GetValues(typeof(天气类型)).Length);
                 玩家.天气 = (int)天气;
+                玩家.预知天气 = -1;
                 事件.发布(new 天气变化事件(天气));
             }
         }

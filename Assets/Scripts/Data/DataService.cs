@@ -28,6 +28,7 @@ using UnityEngine;
         public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
         public Dictionary<string, 天气数据> 天气 { get; private set; } = new Dictionary<string, 天气数据>();
         public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
+        public List<情报条目> 情报 { get; private set; } = new List<情报条目>();   // 收音机 情报池（无标识，列表承载）
         public Dictionary<string, 搜索地图类型> 搜索地图类型 { get; private set; } = new Dictionary<string, 搜索地图类型>();
 
         public List<string> 校验错误 { get; } = new List<string>();
@@ -60,6 +61,7 @@ using UnityEngine;
             加载("天气", 天气, (天气根 根) => 根.天气);       // 允许缺失（天气系统）
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
             加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
+            加载情报();
             加载助战组与区域剧情();
         }
 
@@ -71,6 +73,15 @@ using UnityEngine;
             加载("items_消耗品", 物品, (物品根 根) => 根.物品);
             加载("items_材料", 物品, (物品根 根) => 根.物品);
             加载("items_容器", 物品, (物品根 根) => 根.物品);
+        }
+
+        // 情报池（收音机 收听 播报内容；无标识，列表承载）
+        private void 加载情报()
+        {
+            var 资产 = Resources.Load<TextAsset>("Data/情报");
+            if (资产 == null) { 事件.发布(new 日志事件(日志类型.系统, "[数据] 缺失 Data/情报.json")); return; }
+            var 根 = JsonUtility.FromJson<情报根>(资产.text);
+            if (根?.情报 != null) 情报.AddRange(根.情报);
         }
 
         // 附加表：encounters 助战组 + story 区域剧情（同一文件内的第二数组）
@@ -291,6 +302,27 @@ using UnityEngine;
                             }
                     }
                 }
+            }
+
+            // —— 安全屋家具：材料/升级材料 物品存在 + 形状/效果 合法 ——
+            foreach (var (标识, 家具) in 家具)
+            {
+                if (家具.最大等级 <= 0) 校验错误.Add($"家具[{标识}] 最大等级 非法");
+                if (家具.形状宽 <= 0 || 家具.形状高 <= 0) 校验错误.Add($"家具[{标识}] 形状 非法（宽×高）");
+                if (家具.效果 == null || 家具.效果.Length < 家具.最大等级)
+                    校验错误.Add($"家具[{标识}] 效果 长度不足（需 {家具.最大等级} 级，当前 {(家具.效果?.Length ?? 0)}）");
+                if (家具.材料 != null)
+                    foreach (var 材 in 家具.材料)
+                        if (!物品.ContainsKey(材.物品)) 校验错误.Add($"家具[{标识}] → 材料[{材.物品}] 不存在");
+                if (家具.升级 != null)
+                    for (int i = 0; i < 家具.升级.Length; i++)
+                    {
+                        var 需 = 家具.升级[i];
+                        if (需 == null) continue;
+                        if (需.材料 != null)
+                            foreach (var 材 in 需.材料)
+                                if (!物品.ContainsKey(材.物品)) 校验错误.Add($"家具[{标识}] 升{i + 2}级 → 材料[{材.物品}] 不存在");
+                    }
             }
         }
     }

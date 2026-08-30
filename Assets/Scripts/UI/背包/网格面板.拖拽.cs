@@ -56,6 +56,7 @@ public sealed partial class 网格面板
     // 按下进入拖拽：记录源物品 + 创建视觉（代理/投影/影子），立即开始
     private void 开始拖拽(物品堆叠 堆叠, PointerEventData 事件)
     {
+        if (家具宿主 != null && 家具宿主.摆放中) return;   // 摆放 模式：家具 拖拽 忽略（左键 用于 落格 建造）
         右键菜单.实例?.隐藏();   // 拖拽时关闭右键菜单
         音效管理器.实例?.播放拿起();   // 拿起物品音效
         拖拽源 = 堆叠;
@@ -186,8 +187,8 @@ public sealed partial class 网格面板
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
                 return;
             }
-            // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影
-            if (装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 槽位名))
+            // 拖到 装备槽（装备区）→ 槽位高亮提示（绿=槽位兼容 / 红=不兼容），本面板不显示网格投影（家具 模式 跳过——家具 不 能 穿 装备槽）
+            if (家具宿主 == null && 装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out var 槽位名))
             {
                 落点有效 = false;
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
@@ -299,6 +300,21 @@ public sealed partial class 网格面板
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }
         if (源 == null) { 拖拽发起面板 = null; return; }
         bool 成功 = false;   // 各分支统一：成功 播放下，失败 只播失败
+        // 家具模式：只 同 网格 移动/换位（禁止 装备槽/跨面板/容器/快捷收入——家具 是 房间 固定 物）
+        if (家具宿主 != null)
+        {
+            if (落点有效)
+            {
+                int 落列 = 落点列, 落行 = 落点行;
+                var 目标 = 该格物品(落列, 落行);
+                if (目标 != null && 目标 != 源) 成功 = 服务.换位(源, 目标);   // 家具 换位
+                else if (目标 == null) 成功 = 服务.移动堆叠(源, 落列, 落行, 拖拽旋转);   // 移动（含 R 旋转）
+            }
+            if (成功) { 请求刷新(); 音效管理器.实例?.播放放下(); }
+            else 音效管理器.实例?.播放失败();
+            拖拽发起面板 = null; 拖拽源服务 = null; 拖拽中堆叠 = null;
+            return;
+        }
         // 跨面板：先找鼠标下方是否有别的 网格面板（容器面板/装具块/仓库面板）
         var 目标面板 = 事件下方面板(事件);
         if (目标面板 != null && 目标面板 != this)
@@ -443,6 +459,7 @@ public sealed partial class 网格面板
     public bool 接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
     {
         if (源服务 == null || 堆叠 == null) return false;
+        if (家具宿主 != null) return false;   // 家具 网格：拒绝 外部 物品 转移（房间 只 放 家具）
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸)) return false;
         var 形状 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
         int 物宽 = 拖拽旋转 ? 形状.高 : 形状.宽;
