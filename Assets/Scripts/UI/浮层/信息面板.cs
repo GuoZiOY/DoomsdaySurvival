@@ -19,7 +19,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
     private Vector3 拖拽偏移;   // 拖拽：面板 position 与 鼠标 世界点 的偏移
 
     // ===== 静态 入口（任意处 可调；每次 显示 新建 一个 面板，支持 同时 多开） =====
-    public static void 显示详情(物品堆叠 堆叠, 背包服务 服务 = null, RectTransform 挂载父 = null)
+    public static void 显示详情(物品堆叠 堆叠, 网格服务 服务 = null, RectTransform 挂载父 = null)
     {
         if (堆叠 == null) return;
         var 面板 = 创建(挂载父);
@@ -33,7 +33,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         if (档案 == null) return;
         var 记录 = 档案.装备.Find(e => e.槽位 == 槽位);
         if (记录 == null || string.IsNullOrEmpty(记录.标识)) return;
-        显示详情(new 物品堆叠(记录.标识, 1) { 当前耐久 = 记录.当前耐久, 词缀 = 记录.词缀 }, 档案.背包服务, 挂载父);
+        显示详情(new 物品堆叠(记录.标识, 1) { 当前耐久 = 记录.当前耐久, 词缀 = 记录.词缀 }, 档案.网格服务, 挂载父);
     }
 
     // 实例化 预制体 + 挂 Canvas 顶层（不受 裁剪 / 不被 覆盖）+ 置顶
@@ -69,7 +69,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
     }
 
     // 显示 背包/容器内 物品堆叠 的详情
-    public void 显示(物品堆叠 堆叠, 背包服务 服务 = null)
+    public void 显示(物品堆叠 堆叠, 网格服务 服务 = null)
     {
         if (面板根 == null || 堆叠 == null) return;
         var 档案 = ServiceRegistry.Get<PlayerService>().档案;
@@ -81,7 +81,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
             物品图片.sprite = 图标;
             物品图片.color = 图标 != null ? new Color(1f, 1f, 1f, 1f) : new Color(1f, 1f, 1f, 0f);
         }
-        if (详情文本 != null) 详情文本.text = 物品工具.构建详情(档案, 数据, 堆叠, 服务 ?? 档案.背包服务);
+        if (详情文本 != null) 详情文本.text = 物品工具.构建详情(档案, 数据, 堆叠, 服务 ?? 档案.网格服务);
         面板根.gameObject.SetActive(true);
         面板根.SetAsLastSibling();   // 置顶
         居中定位();

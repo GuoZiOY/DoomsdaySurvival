@@ -44,7 +44,7 @@ public static class 物品工具
     }
 
     // 完整详情文本（信息面板/物品网格面板共用）：名称/类型/描述/数值(含词缀)/形状/重量/价值/堆叠/耐久/操作提示
-    public static string 构建详情(玩家档案 档案, DataService 数据, 物品堆叠 堆叠, 背包服务 服务, List<词缀条> 词缀 = null)
+    public static string 构建详情(玩家档案 档案, DataService 数据, 物品堆叠 堆叠, 网格服务 服务, List<词缀条> 词缀 = null)
     {
         if (堆叠 == null) return "";
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return 堆叠.标识;

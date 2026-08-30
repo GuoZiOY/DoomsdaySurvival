@@ -36,8 +36,8 @@ public abstract partial class 网格面板基类 : 面板基类
     protected RectTransform 底盘;                   // 网格整体 衬底
     protected RectTransform 底座层, 线层, 物品层;   // 网格分层（底座 / 分隔线 / 物品）
 
-    protected 背包服务 服务 => 数据源 ?? 档案.背包服务;
-    [NonSerialized] public 背包服务 数据源;   // 注入 外部视图（容器/仓库/穿戴容器/家具网格）
+    protected 网格服务 服务 => 数据源 ?? 档案.网格服务;
+    [NonSerialized] public 网格服务 数据源;   // 注入 外部视图（容器/仓库/穿戴容器/家具网格）
     [NonSerialized] public 物品堆叠 所属容器;  // 非空 = 本面板显示的容器实例（跨面板转移用；容器面板注入）
     [NonSerialized] public string 所属槽位;   // 非空 = 本面板显示的穿戴容器槽位（弹挂/腰封/背包；装具区注入）
 
@@ -71,7 +71,7 @@ public abstract partial class 网格面板基类 : 面板基类
 
     // ===== 全局活动拖拽（跨面板转移 状态；发起面板 记录，任一面板 结束 消费） =====
     protected static 网格面板基类 拖拽发起面板;
-    protected static 背包服务 拖拽源服务;
+    protected static 网格服务 拖拽源服务;
     protected static 物品堆叠 拖拽中堆叠;
     protected static readonly List<网格面板基类> 全部面板 = new List<网格面板基类>();
     public static List<网格面板基类> 面板登记表 => 全部面板;
@@ -114,16 +114,17 @@ public abstract partial class 网格面板基类 : 面板基类
     protected virtual bool 允许开始拖拽(物品堆叠 堆叠) => true;
     /// 拖拽：代理 内容 显示（物品=图标/品质底；家具=色块）
     protected virtual void 创建代理内容(Image 图, 物品堆叠 堆叠) { }
-    /// 拖拽：鼠标 下 装备槽 命中（物品=装备区 判定；家具=false）
-    protected virtual bool 命中装备槽(PointerEventData 事件) => false;
-    /// Update：选中 实体 R 旋转（家具=原位 旋转；物品 无）
-    protected virtual void 更新选中旋转() { }
+    /// 拖拽：装备槽 落点 反馈（整段行为 交给 子类——基类 零 装备槽 概念）。
+    /// 物品=命中装备槽→槽位匹配→高亮（绿/红）→返回 true（消费本帧，隐藏网格投影）；家具=false（走正常落格）
+    protected virtual bool 处理装备槽落点(PointerEventData 事件) => false;
+    /// 拖拽：清除 拖拽 高亮（物品=装备区 槽位 高亮 清除；家具=空）
+    protected virtual void 清除拖拽高亮() { }
     /// 拖拽投影：目标 允许 放入（物品=容器 类型 校验；家具=true）
     protected virtual bool 目标允许放入(string 标识) => true;
     /// 拖拽投影：目标 禁 放入（物品=嵌套 防护；家具=false）
     protected virtual bool 目标禁放入(物品堆叠 拖入) => false;
     /// 接收 跨面板 转移（物品=实现；家具/探索=false 拒绝）
-    public virtual bool 接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false) => false;
+    public virtual bool 接收跨面板转移(网格服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false) => false;
     // 右键菜单 公开 操作（物品=使用/装备/打开/丢弃/拆分/详情；家具=升级/拆除）——子类 覆盖 需要的
     public virtual void 菜单使用() { }
     public virtual void 菜单装备() { }
@@ -193,19 +194,19 @@ public abstract partial class 网格面板基类 : 面板基类
             { 待刷新网格 = false; 待刷新物品 = false; 刷新网格(); }
         else if (待刷新物品)
             { 待刷新物品 = false; 刷新物品(); }
-        更新选中旋转();   // 钩子：家具 选中 R 旋转
-        if (拖拽中堆叠 == null || !允许跨面板())
-            return;   // 家具 网格：不 参与 跨面板 投影（家具 拖拽 落点 走 OnDrag）
+        if (拖拽中堆叠 == null)
+            return;
         Vector2 鼠标 = 输入鼠标位置();
         var 伪事件 = new PointerEventData(EventSystem.current) { position = 鼠标 };
+        // 拖拽中 R 旋转预览（所有 实体 通用：物品/家具 一致）——必须在 跨面板 return 之前（家具 允许跨面板=false）
         if (拖拽发起面板 == this && 检测按R())
         {
             拖拽旋转 = !拖拽旋转;
             更新代理尺寸();
             拖拽移动(伪事件);
         }
-        if (拖拽发起面板 == this)
-            return;
+        if (!允许跨面板() || 拖拽发起面板 == this)
+            return;   // 家具 网格：不 参与 跨面板 投影（拖拽 中 R 旋转 已 处理；落点 投影 走 OnDrag）
         确保投影();
         if (落点投影 == null)
             return;
@@ -272,5 +273,5 @@ public abstract partial class 网格面板基类 : 面板基类
     }
 
     // 当前面板网格服务（装备拖拽放置用）
-    public 背包服务 视图服务 => 服务;
+    public 网格服务 视图服务 => 服务;
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
     // 搜索服务：塔科夫式搜刮容器（纯 C# 逻辑，零 MonoBehaviour）。
-    // 打开 搜索容器 → 首次按 搜索表 权重随机生成物品（复用 背包服务 网格算法，散落放置不堆角）；
+    // 打开 搜索容器 → 首次按 搜索表 权重随机生成物品（复用 网格服务 网格算法，散落放置不堆角）；
     // 同一容器 会话内 打开 再打开 内容一致（缓存视图；撤离时 清空战局 整体销毁）。
     // 搜索时间：容器级 = 定义.搜索时间；物品级 = 条目.搜索时间（0 → 按 物品价值 推导）。
     // 解析器 与 容器服务 同源（PlayerService 装配后接线）。
@@ -19,8 +19,8 @@ using UnityEngine;
         [NonSerialized] public Func<string, int> 重量解析;
 
         // 会话缓存：容器标识 → 已生成视图（撤离/清空战局 前 一直存在）
-        private readonly Dictionary<string, 背包服务> 已生成 = new Dictionary<string, 背包服务>();
-        public IReadOnlyCollection<背包服务> 已生成视图 => 已生成.Values;
+        private readonly Dictionary<string, 网格服务> 已生成 = new Dictionary<string, 网格服务>();
+        public IReadOnlyCollection<网格服务> 已生成视图 => 已生成.Values;
 
         // 已搜索物品：容器标识 → 已搜完的 堆叠 引用（与缓存视图同生命周期——重开容器 已搜过的 物品 不再搜索）。
         // 键 = 容器标识（搜索容器.标识 或 嵌套物品容器.标识 统一）
@@ -61,13 +61,13 @@ using UnityEngine;
         }
 
         // 打开搜索容器：首次 → 随机生成；再次 → 返回缓存视图。返回 null = 定义缺失。
-        public 背包服务 打开(搜索容器 定义)
+        public 网格服务 打开(搜索容器 定义)
         {
             if (定义 == null || string.IsNullOrEmpty(定义.标识)) return null;
             if (已生成.TryGetValue(定义.标识, out var 已有)) return 已有;
             if (定义.容器列 <= 0 || 定义.容器行 <= 0) return null;
-            var 视图 = new 背包服务();
-            视图.背包 = new List<物品堆叠>();
+            var 视图 = new 网格服务();
+            视图.网格物品 = new List<物品堆叠>();
             视图.网格列 = 定义.容器列;
             视图.网格行 = 定义.容器行;
             注入解析器(视图);
@@ -84,7 +84,7 @@ using UnityEngine;
 
         // 按搜索表权重随机填充；物品 按 空间顺序 放置（左→右、上→下 第一个空位，智能旋转）——
         // 塔科夫式 紧凑排列（与 自动搜索 顺序 一致：搜完 这件 下一件 就是 旁边 那件）
-        private void 生成物品(搜索容器 定义, 背包服务 视图)
+        private void 生成物品(搜索容器 定义, 网格服务 视图)
         {
             if (定义.搜索表 == null || 定义.搜索表.Length == 0) return;
             int 尝试上限 = Math.Max(定义.容器列 * 定义.容器行 * 2, 12);
@@ -106,7 +106,7 @@ using UnityEngine;
                 堆叠.旋转 = 需旋转;
                 堆叠.列 = 空位.Value.列;
                 堆叠.行 = 空位.Value.行;
-                视图.背包.Add(堆叠);
+                视图.网格物品.Add(堆叠);
                 已生成件++;
                 // 概率收尾：已生成 ≥2 件后每件 45% 结束（留空位，不塞满——物品 稀疏 一些）
                 if (已生成件 >= 2 && 随机.NextDouble() < 0.45) break;
@@ -152,7 +152,7 @@ using UnityEngine;
 
         // ================= 内部 =================
 
-        private void 注入解析器(背包服务 服务)
+        private void 注入解析器(网格服务 服务)
         {
             服务.形状解析 = 形状解析;
             服务.堆叠上限解析 = 堆叠上限解析;
@@ -161,7 +161,7 @@ using UnityEngine;
         }
 
         // 注入搜索容器形状（整矩形 / 拼合块）——与 容器服务.注入形状 同语义（独立口袋：物品必须完全落在同一块内）
-        private void 注入形状(背包服务 服务, 搜索容器 定义)
+        private void 注入形状(网格服务 服务, 搜索容器 定义)
         {
             var 块们 = 定义.容器形状;
             if (块们 != null && 块们.Length > 0)

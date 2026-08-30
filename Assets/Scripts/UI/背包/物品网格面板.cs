@@ -22,10 +22,21 @@ public sealed partial class 物品网格面板 : 网格面板基类
     protected override bool 完成拖拽(PointerEventData 事件, 物品堆叠 堆叠) => 物品完成拖拽(事件, 堆叠);
     protected override bool 允许跨面板() => true;   // 物品：跨面板 转移（背包↔容器↔仓库）
     protected override void 创建代理内容(Image 图, 物品堆叠 堆叠) => 物品代理内容(图, 堆叠);
-    protected override bool 命中装备槽(PointerEventData 事件) => 装备区.实例 != null && 装备区.实例.命中槽位(事件.position, out _);
+    // 装备槽 落点 反馈（基类 处理装备槽落点 钩子）：命中 → 匹配 + 高亮（绿/红）→ 消费本帧；未命中 → 不消费
+    protected override bool 处理装备槽落点(PointerEventData 事件)
+    {
+        if (装备区.实例 == null || !装备区.实例.命中槽位(事件.position, out var 槽位名)) return false;
+        落点有效 = false;
+        if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+        bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
+        装备区.实例.高亮槽位(槽位名, 匹配);
+        return true;
+    }
+
+    protected override void 清除拖拽高亮() => 装备区.实例?.清除全部高亮();
     protected override bool 目标允许放入(string 标识) => 物品允许放入(标识);
     protected override bool 目标禁放入(物品堆叠 拖入) => 物品禁放入(拖入);
-    public override bool 接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
+    public override bool 接收跨面板转移(网格服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
         => 物品接收跨面板转移(源服务, 堆叠, 事件, 拖拽旋转);
 
     // 右键菜单 公开 操作（物品 语义）

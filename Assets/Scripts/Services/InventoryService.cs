@@ -1,5 +1,5 @@
 
-    // 背包服务：包装玩家档案，操作后发布 背包变化事件
+    // 网格服务：包装玩家档案，操作后发布 背包变化事件
     public sealed class InventoryService
     {
         private readonly EventBus 事件;

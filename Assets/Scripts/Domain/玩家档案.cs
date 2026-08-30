@@ -13,11 +13,10 @@ using System.Collections.Generic;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
-        public int 电池电量;        // 收音机家具 电池剩余收听次数（非收音机家具 = 0；随档存档）
         // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
         public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
         public int 容器行;          // 实例网格行数
-        public List<物品堆叠> 容器物品;   // 容器内部物品（与 背包服务.背包 同构）；null = 非容器/空容器
+        public List<物品堆叠> 容器物品;   // 容器内部物品（与 网格服务.网格物品 同构）；null = 非容器/空容器
 
         public 物品堆叠() { }
         public 物品堆叠(string 标识, int 数量) { this.标识 = 标识; this.数量 = 数量; }
@@ -68,13 +67,13 @@ using System.Collections.Generic;
         // —— 穿戴容器（弹挂/腰封/背包）：穿戴后内部网格与物品（随档存档；非容器装备 = 默认 0/null）——
         public int 容器列;                   // 实例网格列数（缺省用模板）
         public int 容器行;                   // 实例网格行数
-        public List<物品堆叠> 容器物品;      // 容器内部物品（与 背包服务.背包 同构）；null = 非容器/空容器
+        public List<物品堆叠> 容器物品;      // 容器内部物品（与 网格服务.网格物品 同构）；null = 非容器/空容器
 
         public 装备记录() { }
         public 装备记录(string 槽位, string 标识) { this.槽位 = 槽位; this.标识 = 标识; }
     }
 
-    // 安全屋家具实例（已废弃：家具由 物品堆叠 承载——标识 含 等级后缀、列/行/旋转 = 房间网格位置、电池电量 = 收音机剩余次数。
+    // 安全屋家具实例（已废弃：家具由 物品堆叠 承载——标识 含 等级后缀、列/行/旋转 = 房间网格位置。
     // 保留本类仅防 旧档 JSON 反序列化 引用；新代码一律用 物品堆叠。）
     [Serializable]
     public class 家具实例
@@ -98,9 +97,9 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 负重加成解析;
         [NonSerialized] public Func<string, 武器种类> 武器种类解析;   // 标识 -> 武器种类
         [NonSerialized] public Func<string, int> 抗性加成解析;        // 标识 -> 抗性百分数贡献点
-        [NonSerialized] public Func<string, 物品形状> 形状解析;        // 标识 -> 物品形状（宽×高）——接背包服务
-        [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量——接背包服务
-        [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限——接背包服务
+        [NonSerialized] public Func<string, 物品形状> 形状解析;        // 标识 -> 物品形状（宽×高）——接网格服务
+        [NonSerialized] public Func<string, int> 重量解析;            // 标识 -> 物品重量——接网格服务
+        [NonSerialized] public Func<string, int> 堆叠上限解析;        // 标识 -> 堆叠上限——接网格服务
         [NonSerialized] public Func<string, int> 最大耐久解析;        // 标识 -> 最大耐久（0 = 无耐久，不损坏）
         [NonSerialized] public Func<string, (int 列, int 行)> 容器尺寸解析;   // 标识 -> 容器模板网格尺寸（弹挂/腰封/背包 穿戴时初始化）
         [NonSerialized] public Func<string, 家具数据> 家具定义解析;          // 家具标识 -> 家具定义（安全屋 家具效果 查询用；PlayerService 接线）
@@ -138,16 +137,16 @@ using System.Collections.Generic;
         public int 骨折 = 0;          // 坠落/重击，夹板固定长期恢复
         public int 发烧 = 0;          // 伤口恶化/重伤，抗生素治疗
 
-        // —— 网格背包（数据与方法内聚于 背包服务；背包/网格列/网格行 随存档序列化，解析器委托除外） ——
-        public 背包服务 背包服务 = new 背包服务();   // 网格尺寸/背包列表/网格算法 全部在此
+        // —— 网格背包（数据与方法内聚于 网格服务；背包/网格列/网格行 随存档序列化，解析器委托除外） ——
+        public 网格服务 网格服务 = new 网格服务();   // 网格尺寸/网格物品列表/网格算法 全部在此
 
         // —— 仓库（stash，收纳型大容器；不占负重，塔科夫右区） ——
         public List<物品堆叠> 仓库物品 = new List<物品堆叠>();
         public int 仓库列 = 10;   // 仓库网格列
         public int 仓库行 = 20;   // 仓库网格行
 
-        // 仓库视图：把 仓库物品 包成 背包服务（复用全部网格/拖拽/跨网格转移逻辑）——持有管理器 统一提供
-        public 背包服务 仓库视图() => 持有管理.仓库视图();
+        // 仓库视图：把 仓库物品 包成 网格服务（复用全部网格/拖拽/跨网格转移逻辑）——持有管理器 统一提供
+        public 网格服务 仓库视图() => 持有管理.仓库视图();
 
         // —— 装备：8 槽（主手/副手/头部/胸部/腿部/脚部/手部/背包） ——
         public List<装备记录> 装备 = new List<装备记录>();
@@ -183,7 +182,7 @@ using System.Collections.Generic;
 
         // —— 安全屋 ——
         public int 安全屋等级 = 1;
-        public List<物品堆叠> 家具 = new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载：标识 = 家具标识[含等级后缀]、数量恒 1、列/行/旋转 = 房间网格位置、电池电量 = 收音机剩余收听次数）
+        public List<物品堆叠> 家具 = new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载：标识 = 家具标识[含等级后缀]、数量恒 1、列/行/旋转 = 房间网格位置）
         public int 预知天气 = -1;   // 收音机 预知的 明日天气（-1 = 无预知，跨天随机）
 
         // —— 安全屋家具 查询（每种家具唯一；未建 = null/0） ——
@@ -339,7 +338,7 @@ using System.Collections.Generic;
         public int 背包当前耐久(string 标识) => 持有管理.背包当前耐久(标识);
         public int 放入物品(string 标识, int 数量 = 1) => 持有管理.放入物品(标识, 数量);
         public int 放入堆叠(物品堆叠 堆叠) => 持有管理.放入堆叠(堆叠);
-        public 背包服务 穿戴容器视图(string 槽位) => 持有管理.穿戴容器视图(槽位);
+        public 网格服务 穿戴容器视图(string 槽位) => 持有管理.穿戴容器视图(槽位);
 
         // 旧主背包 网格数据（废弃：不再存放游戏物品——物品统一在 3 穿戴容器 + 仓库 + 嵌套容器；
         // 保留 网格算法 与 旧引用 兼容；物品网格面板 数据源 null 时显示空网格兜底）
@@ -347,22 +346,7 @@ using System.Collections.Generic;
         public int 网格列 { get => 持有管理.网格列; set => 持有管理.网格列 = value; }
         public int 网格行 { get => 持有管理.网格行; set => 持有管理.网格行 = value; }
 
-        // 网格放置（背包服务 算法 转发；外部视图 用各自 服务，不经过本类）
-        public bool 可放置(string 标识, int 列, int 行, bool 旋转, 物品堆叠 排除 = null) => 背包服务.可放置(标识, 列, 行, 旋转, 排除);
-        public bool 移动堆叠(物品堆叠 堆叠, int 列, int 行, bool 旋转) => 背包服务.移动堆叠(堆叠, 列, 行, 旋转);
-        public bool 可换位(物品堆叠 甲, 物品堆叠 乙) => 背包服务.可换位(甲, 乙);
-        public bool 换位(物品堆叠 甲, 物品堆叠 乙) => 背包服务.换位(甲, 乙);
-        public 物品堆叠 该格物品(int 列, int 行) => 背包服务.该格物品(列, 行);
-        public (int 宽, int 高) 物品占格(物品堆叠 堆叠) => 背包服务.物品占格(堆叠);
-        public int 已用格数() => 背包服务.已用格数();
-        public List<物品堆叠> 区域内物品(int 列, int 行, int 宽, int 高) => 背包服务.区域内物品(列, 行, 宽, 高);
-        public bool 区域可互换(物品堆叠 A, int 目标列, int 目标行, bool 目标旋转) => 背包服务.区域可互换(A, 目标列, 目标行, 目标旋转);
-        public bool 区域互换(物品堆叠 A, int 目标列, int 目标行, bool 目标旋转) => 背包服务.区域互换(A, 目标列, 目标行, 目标旋转);
-        public bool 布局安全() => 背包服务.布局安全();
-        public bool 可堆叠(string 标识) => 背包服务.可堆叠(标识);
-        public int 堆叠上限(string 标识) => 背包服务.堆叠上限(标识);
-        public bool 可合并(物品堆叠 目标, 物品堆叠 来源) => 背包服务.可合并(目标, 来源);
-        public int 合并堆叠(物品堆叠 目标, 物品堆叠 来源) => 背包服务.合并堆叠(目标, 来源);
+        // 网格放置（转发已清理：外部视图 用各自 网格服务，不经本类；本类 只 暴露 档案.网格服务 引用）
 
         // 放入/移除（统一持有入口重定向：穿戴容器 → 仓库；旧"主背包"转发 已废弃，不再往 档案.背包 放物品）
         public int 放入网格(string 标识, int 数量 = 1) => 持有管理.放入网格(标识, 数量);

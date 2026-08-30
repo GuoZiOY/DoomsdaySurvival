@@ -37,7 +37,7 @@ public sealed partial class 物品网格面板
         if (选中 == null || 选中.列 < 0) return;
         var 丢 = 选中;
         选中 = null;
-        服务.背包.Remove(丢);
+        服务.网格物品.Remove(丢);
         请求刷新();
         音效管理器.实例?.播放成功();
         ServiceRegistry.Get<EventBus>().发布(new 背包变化事件(丢.标识, -丢.数量, 变化原因.失去));

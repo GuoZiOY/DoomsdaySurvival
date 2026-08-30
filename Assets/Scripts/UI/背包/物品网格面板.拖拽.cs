@@ -86,7 +86,7 @@ public sealed partial class 物品网格面板
     }
 
     // 接收跨面板转移（物品 语义）：把 (源服务) 里的 堆叠 放到本面板 (列,行)。返回 是否成功（音效由调用方播）
-    private bool 物品接收跨面板转移(背包服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
+    private bool 物品接收跨面板转移(网格服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false)
     {
         if (源服务 == null || 堆叠 == null) return false;
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸)) return false;

@@ -180,7 +180,7 @@ public abstract partial class 网格面板基类
             {
                 落点有效 = false;
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-                装备区.实例?.清除全部高亮();
+                清除拖拽高亮();
                 return;
             }
         }
@@ -192,13 +192,8 @@ public abstract partial class 网格面板基类
                 if (落点投影 != null) 落点投影.gameObject.SetActive(false);
                 return;
             }
-            if (命中装备槽(事件))   // 钩子：物品=装备槽 高亮；家具=false
-            {
-                落点有效 = false;
-                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
-                return;
-            }
-            装备区.实例?.清除全部高亮();
+            if (处理装备槽落点(事件)) return;   // 粗钩子：物品=命中+匹配+高亮+消费；家具=false 走正常落格
+            清除拖拽高亮();
         }
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸))
         {
@@ -238,7 +233,7 @@ public abstract partial class 网格面板基类
         var 源 = 拖拽源;
         拖拽源 = null;
         清理所有面板投影();
-        装备区.实例?.清除全部高亮();
+        清除拖拽高亮();
         if (拖拽代理 != null) { Destroy(拖拽代理.gameObject); 拖拽代理 = null; }
         if (落点投影 != null) { Destroy(落点投影.gameObject); 落点投影 = null; }
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }

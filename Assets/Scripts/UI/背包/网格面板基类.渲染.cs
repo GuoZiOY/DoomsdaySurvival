@@ -71,18 +71,18 @@ public abstract partial class 网格面板基类
         物品框表.Clear();
     }
 
-    // 增量刷新实体框：遍历 服务.背包 —— 新增创建（钩子）/ 已有更新（钩子）/ 移除销毁
+    // 增量刷新实体框：遍历 服务.网格物品 —— 新增创建（钩子）/ 已有更新（钩子）/ 移除销毁
     private void 刷新物品()
     {
         if (物品层 == null) return;
         if (当前列 != 服务.网格列 || 当前行 != 服务.网格行 || Mathf.Abs(上次格尺寸 - 格尺寸) > 0.01f) { 刷新网格(); return; }
         bool 布局变化 = false;
-        if (上次布局.Count != 服务.背包.Count) 布局变化 = true;
+        if (上次布局.Count != 服务.网格物品.Count) 布局变化 = true;
         else
         {
-            for (int i = 0; i < 服务.背包.Count && !布局变化; i++)
+            for (int i = 0; i < 服务.网格物品.Count && !布局变化; i++)
             {
-                var s = 服务.背包[i];
+                var s = 服务.网格物品[i];
                 if (s == null) continue;
                 if (!上次布局.TryGetValue(s, out var 上次)) { 布局变化 = true; break; }
                 if (上次.列 != s.列 || 上次.行 != s.行 || 上次.旋转 != s.旋转) 布局变化 = true;
@@ -90,7 +90,7 @@ public abstract partial class 网格面板基类
         }
         if (布局变化) { 重画分隔线(); 更新布局快照(); }
         foreach (var kv in 物品框表) kv.Value.存活 = false;
-        foreach (var 堆叠 in 服务.背包)
+        foreach (var 堆叠 in 服务.网格物品)
         {
             if (堆叠 == null || 堆叠.列 < 0) continue;
             if (物品框表.TryGetValue(堆叠, out var 框)) { 框.存活 = true; 更新实体框(框, 堆叠); }
@@ -111,7 +111,7 @@ public abstract partial class 网格面板基类
     protected void 更新布局快照()
     {
         上次布局.Clear();
-        foreach (var s in 服务.背包)
+        foreach (var s in 服务.网格物品)
             if (s != null) 上次布局[s] = (s.列, s.行, s.旋转);
     }
 
@@ -235,7 +235,7 @@ public abstract partial class 网格面板基类
         var 块们 = 服务.形状块;
         if (块们 == null || 块索引 < 0 || 块索引 >= 块们.Count) return false;
         var 块 = 块们[块索引];
-        foreach (var s in 服务.背包)
+        foreach (var s in 服务.网格物品)
         {
             if (s == null || s.列 < 0) continue;
             var (宽, 高) = 服务.物品占格(s);

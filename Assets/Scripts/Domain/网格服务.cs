@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
 
-    // 背包服务：通用网格容器逻辑（纯 C#，零 UnityEngine 依赖）——主背包/仓库/容器内部/穿戴容器 全部复用本服务承载网格数据与算法。
-    // 职责：持有 网格尺寸 + 本网格物品列表（背包 字段）；网格放置/换位/区域交换/堆叠规则/放入移除 全部内聚于此。
-    // 命名注：类名与 背包 字段沿袭"背包"叫法，实际是通用网格——仓库视图 的 背包 = 仓库物品，容器视图 的 背包 = 容器内部物品。
-    // 玩家档案 通过委托转发同名方法（档案.放入网格(...) 等继续可用），对外暴露 档案.背包服务 引用。
+    // 网格服务：通用网格容器逻辑（纯 C#，零 UnityEngine 依赖）——主背包/仓库/容器内部/穿戴容器/安全屋家具 全部复用本服务承载网格数据与算法。
+    // 职责：持有 网格尺寸 + 本网格物品列表（网格物品 字段）；网格放置/换位/区域交换/堆叠规则/放入移除 全部内聚于此。
+    // 命名注：类名与 网格物品 字段即"网格"语义——仓库视图 的 网格物品 = 仓库物品，容器视图 的 网格物品 = 容器内部物品，
+    //       安全屋 家具网格 的 网格物品 = 玩家.家具。旧名"背包/背包服务"沿袭 主背包 叫法（已 弃）。
+    // 用法：各 视图（主背包/仓库/容器/穿戴/家具）各自 持有 一个 网格服务 实例（注入 解析器 + 网格物品 列表）；
+    //       玩家档案 暴露 档案.网格服务（主背包 网格）引用；外部 视图 用 各自 网格服务，不经 玩家档案 转发。
     [Serializable]
-    public class 背包服务
+    public class 网格服务
     {
         // —— 数据 ——
-        public int 网格列 = 5;       // 默认背包 50 格（5列×10行）——测试用大背包；背包装备可扩展/缩小
+        public int 网格列 = 5;       
         public int 网格行 = 10;
-        public List<物品堆叠> 背包 = new List<物品堆叠>();   // 本网格物品列表（主背包=主背包物品；仓库视图=仓库物品；容器视图=容器内部物品）
+        public List<物品堆叠> 网格物品 = new List<物品堆叠>();   // 本网格物品列表（主背包=主背包物品；仓库视图=仓库物品；容器视图=容器内部物品；家具网格=玩家.家具）
 
         // —— 注入解析器（装配层接到 DataService；标识 -> 数值）。委托不可序列化，随 玩家档案 接线时注入 ——
         [NonSerialized] public Func<string, 物品形状> 形状解析;        // 标识 -> 物品形状（宽×高）
@@ -73,7 +75,7 @@ using System.Collections.Generic;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
             // 形状校验：物品覆盖的每一格都必须在可用区域内（且同一块内，不跨口袋）
             if (!覆盖格合法(列, 行, 宽, 高)) return false;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠 == 排除 || 堆叠.列 < 0) continue;
                 if (占据(堆叠, 列, 行, 宽, 高)) return false;
@@ -90,7 +92,7 @@ using System.Collections.Generic;
             int 高 = 旋转 ? 形状.宽 : 形状.高;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
             if (!覆盖格合法(列, 行, 宽, 高)) return false;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠 == 排除A || 堆叠 == 排除B || 堆叠.列 < 0) continue;
                 if (占据(堆叠, 列, 行, 宽, 高)) return false;
@@ -144,7 +146,7 @@ using System.Collections.Generic;
         public 物品堆叠 该格物品(int 列, int 行)
         {
             if (形状解析 == null) return null;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠.列 < 0) continue;
                 var 形状 = 形状解析(堆叠.标识);
@@ -212,7 +214,7 @@ using System.Collections.Generic;
                 行 = 空位.Value.行,
             };
             源.数量 -= 拆出数量;
-            背包.Add(新);
+            网格物品.Add(新);
             return 新;
         }
 
@@ -223,7 +225,7 @@ using System.Collections.Generic;
             if (!可放置(堆叠.标识, 列, 行, 堆叠.旋转)) return false;
             堆叠.列 = 列;
             堆叠.行 = 行;
-            背包.Add(堆叠);
+            网格物品.Add(堆叠);
             return true;
         }
 
@@ -232,7 +234,7 @@ using System.Collections.Generic;
         {
             int 已用 = 0;
             if (形状解析 == null) return 已用;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
                 if (堆叠 != null && 堆叠.列 >= 0)
                 {
                     var (宽, 高) = 物品占格(堆叠);
@@ -241,12 +243,12 @@ using System.Collections.Generic;
             return 已用;
         }
 
-        // 收集与 (列,行,宽,高) 相交的背包物品
+        // 收集与 (列,行,宽,高) 相交的网格物品
         public List<物品堆叠> 区域内物品(int 列, int 行, int 宽, int 高)
         {
             var 结果 = new List<物品堆叠>();
             if (形状解析 == null) return 结果;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠.列 < 0) continue;
                 var 形状 = 形状解析(堆叠.标识);
@@ -266,7 +268,7 @@ using System.Collections.Generic;
             int 高 = 旋转 ? 形状.宽 : 形状.高;
             if (列 < 0 || 行 < 0 || 列 + 宽 > 网格列 || 行 + 高 > 网格行) return false;
             if (!覆盖格合法(列, 行, 宽, 高)) return false;
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠 == 忽略A || 堆叠.列 < 0) continue;
                 if (忽略集 != null && 忽略集.Contains(堆叠)) continue;
@@ -430,12 +432,12 @@ using System.Collections.Generic;
             return false;
         }
 
-        // 校验整个背包布局：所有物品不越界、两两不重叠（区域交换后安全验证）
+        // 校验整个网格布局：所有物品不越界、两两不重叠（区域交换后安全验证）
         public bool 布局安全()
         {
             if (形状解析 == null) return false;
             var 物品 = new List<物品堆叠>();
-            foreach (var s in 背包) if (s != null && s.列 >= 0) 物品.Add(s);
+            foreach (var s in 网格物品) if (s != null && s.列 >= 0) 物品.Add(s);
             for (int i = 0; i < 物品.Count; i++)
             {
                 var a = 物品[i];
@@ -487,7 +489,7 @@ using System.Collections.Generic;
             if (并入 <= 0) return 0;
             目标.数量 += 并入;
             来源.数量 -= 并入;
-            if (来源.数量 <= 0) 背包.Remove(来源);
+            if (来源.数量 <= 0) 网格物品.Remove(来源);
             return 并入;
         }
 
@@ -498,7 +500,7 @@ using System.Collections.Generic;
             int 原数量 = 数量;
             int 上限 = 堆叠上限(标识);
             // ① 先填已入格的未满堆叠（仅 列>=0、无词缀）
-            foreach (var 堆叠 in 背包)
+            foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠.列 < 0 || 堆叠.标识 != 标识) continue;
                 if (堆叠.词缀 != null && 堆叠.词缀.Count > 0) continue;
@@ -520,27 +522,27 @@ using System.Collections.Generic;
                         if (可放置(标识, 列, 行, false))
                         {
                             新堆叠.列 = 列; 新堆叠.行 = 行;
-                            背包.Add(新堆叠);
+                            网格物品.Add(新堆叠);
                             放下 = true;
                         }
-                if (!放下) return 原数量 - 数量;   // 背包满了：返回实际放入数（部分已放入）
+                if (!放下) return 原数量 - 数量;   // 网格满了：返回实际放入数（部分已放入）
                 数量 -= 本次;
             }
             return 原数量;
         }
 
-        // 放入一个已有堆叠实例（含词缀的装备/掉落物/换装回包/旧存档迁移）：找空位放置并写入坐标；背包满返回 false（不改变该堆叠）
+        // 放入一个已有堆叠实例（含词缀的装备/掉落物/换装回包/旧存档迁移）：找空位放置并写入坐标；网格满返回 false（不改变该堆叠）
         public bool 放入网格堆叠(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识) || 堆叠.数量 <= 0 || 形状解析 == null) return false;
             if (堆叠.列 >= 0) return true;   // 已在网格中
-            bool 已在背包 = 背包.Contains(堆叠);   // 旧存档迁移的堆叠已在列表里（列=-1），勿重复添加
+            bool 已在网格 = 网格物品.Contains(堆叠);   // 旧存档迁移的堆叠已在列表里（列=-1），勿重复添加
             for (int 行 = 0; 行 < 网格行; 行++)
                 for (int 列 = 0; 列 < 网格列; 列++)
                     if (可放置(堆叠.标识, 列, 行, false))
                     {
                         堆叠.列 = 列; 堆叠.行 = 行;
-                        if (!已在背包) 背包.Add(堆叠);
+                        if (!已在网格) 网格物品.Add(堆叠);
                         return true;
                     }
             return false;
@@ -552,16 +554,16 @@ using System.Collections.Generic;
             var 堆叠 = 找堆叠(标识);
             if (堆叠 == null) return;
             堆叠.数量 -= 数量;
-            if (堆叠.数量 <= 0) 背包.Remove(堆叠);
+            if (堆叠.数量 <= 0) 网格物品.Remove(堆叠);
         }
 
         private 物品堆叠 找堆叠(string 标识)
         {
-            foreach (var 堆叠 in 背包) if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠;
+            foreach (var 堆叠 in 网格物品) if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠;
             return null;
         }
 
-        // ================= 背包基础操作 =================
+        // ================= 网格基础操作 =================
 
         // 添加物品（网格版）：等价于 放入网格 —— 先并入已有未满堆叠，再开新堆叠；返回实际放入数量
         public int 添加物品(string 标识, int 数量 = 1) => 放入网格(标识, 数量);
@@ -569,19 +571,19 @@ using System.Collections.Generic;
         public void 添加堆叠(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return;
-            背包.Add(堆叠);
+            网格物品.Add(堆叠);
         }
 
         public bool 移除物品(string 标识, int 数量 = 1)
         {
             if (string.IsNullOrEmpty(标识)) return false;
-            for (int i = 0; i < 背包.Count; i++)
+            for (int i = 0; i < 网格物品.Count; i++)
             {
-                var 堆叠 = 背包[i];
+                var 堆叠 = 网格物品[i];
                 if (堆叠.标识 == 标识 && 堆叠.数量 >= 数量)
                 {
                     堆叠.数量 -= 数量;
-                    if (堆叠.数量 <= 0) 背包.RemoveAt(i);
+                    if (堆叠.数量 <= 0) 网格物品.RemoveAt(i);
                     return true;
                 }
             }
@@ -591,25 +593,11 @@ using System.Collections.Generic;
         public int 物品数量(string 标识)
         {
             if (string.IsNullOrEmpty(标识)) return 0;
-            foreach (var 堆叠 in 背包) if (堆叠.标识 == 标识) return 堆叠.数量;
+            foreach (var 堆叠 in 网格物品) if (堆叠.标识 == 标识) return 堆叠.数量;
             return 0;
         }
 
         public bool 持有物品(string 标识) => 物品数量(标识) > 0;
-
-        public List<词缀条> 背包词缀(string 标识)
-        {
-            foreach (var 堆叠 in 背包)
-                if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.词缀;
-            return null;
-        }
-
-        public int 背包当前耐久(string 标识)
-        {
-            foreach (var 堆叠 in 背包)
-                if (堆叠.标识 == 标识 && 堆叠.数量 > 0) return 堆叠.当前耐久;
-            return 0;
-        }
 
         // 背包装备 → 网格尺寸（默认背包 50 格 10×5 / 战术背包 5×4 / 登山包 6×5 / 腰包 4×2）
         public (int 列, int 行) 背包网格尺寸(string 包标识 = null)

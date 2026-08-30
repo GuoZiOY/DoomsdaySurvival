@@ -121,7 +121,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             if (面板 is 家具网格面板) continue;   // 家具 网格（安全屋 房间）：装备 不 能 卸 进去
             if (!面板.gameObject.activeInHierarchy || !面板.屏幕命中(事件.position)) continue;
             // 保护：穿戴容器不能放进自己的容器里（目标网格的背包列表 == 本槽穿戴容器的 容器物品 同一引用 = 自己装自己）
-            if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品)
+            if (拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.网格物品 == 拖拽记录.容器物品)
             {
                 音效管理器.实例?.播放失败();
                 if (装备区.实例 != null) 装备区.实例.请求刷新();   // 脏标记合并（事件驱动 Update 统一刷新）
@@ -185,7 +185,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             if (面板 is 家具网格面板) continue;   // 家具 网格：装备 不 显示 投影
             if (面板.gameObject.activeInHierarchy && 面板.屏幕命中(事件.position))
             {
-                bool 自己容器 = 拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.背包 == 拖拽记录.容器物品;
+                bool 自己容器 = 拖拽记录.容器物品 != null && 面板.视图服务 != null && 面板.视图服务.网格物品 == 拖拽记录.容器物品;
                 面板.显示装备拖拽投影(拖拽堆叠, 事件.position, 自己容器);
                 return;
             }
@@ -224,7 +224,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         // 统一规格：代理 = 物品占格 × 统一格尺寸（物品网格面板.格尺寸=90，与网格内拖拽同规格）
         float 格 = 物品网格面板.格尺寸;
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
-        var 形状 = 档案?.背包服务?.形状解析?.Invoke(标识) ?? new 物品形状(1, 1);
+        var 形状 = 档案?.网格服务?.形状解析?.Invoke(标识) ?? new 物品形状(1, 1);
         var 矩 = 物体.GetComponent<RectTransform>();
         矩.sizeDelta = new Vector2(形状.宽 * 格, 形状.高 * 格);
         矩.pivot = new Vector2(0.5f, 0.5f);

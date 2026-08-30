@@ -81,7 +81,7 @@ public sealed class 搜索面板 : MonoBehaviour
     }
 
     // 注入视图 + 强制 单点 左上锚（sizeDelta 才生效）+ 已搜完 → 跳过 搜索 直接 显示
-    private void 显示视图(背包服务 视图, 物品堆叠 所属, float 搜索时间)
+    private void 显示视图(网格服务 视图, 物品堆叠 所属, float 搜索时间)
     {
         UI工具.设锚点(网格容器, new Vector2(0, 1), new Vector2(0, 1));   // 强制 单点 左上锚：sizeDelta 才生效
         网格容器.anchoredPosition = Vector2.zero;
@@ -91,7 +91,7 @@ public sealed class 搜索面板 : MonoBehaviour
         面板.配置视图显示();
         面板.立即刷新();
         bool 有未搜索 = false;
-        foreach (var 堆叠 in 视图.背包)
+        foreach (var 堆叠 in 视图.网格物品)
             if (堆叠 != null && 堆叠.列 >= 0 && !服务.已搜索物品(当前标识, 堆叠)) 
             { 
                 有未搜索 = true; 
@@ -175,7 +175,7 @@ public sealed class 搜索面板 : MonoBehaviour
         if (string.IsNullOrEmpty(当前标识) || 面板.数据源 == null) return;
         // 顺序：从上到下、从左到右（行优先）——塔科夫式 逐个 揭开
         var 列表 = new List<物品堆叠>();
-        foreach (var 堆叠 in 面板.数据源.背包)
+        foreach (var 堆叠 in 面板.数据源.网格物品)
             if (堆叠 != null && 堆叠.列 >= 0 && !服务.已搜索物品(当前标识, 堆叠)) 列表.Add(堆叠);
         列表.Sort((a, b) => a.行 != b.行 ? a.行.CompareTo(b.行) : a.列.CompareTo(b.列));
         var 镜图 = 放大镜图();
