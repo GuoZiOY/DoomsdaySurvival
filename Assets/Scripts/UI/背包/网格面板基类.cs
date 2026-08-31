@@ -125,7 +125,7 @@ public abstract partial class 网格面板基类 : 面板基类
     protected virtual bool 目标禁放入(物品堆叠 拖入) => false;
     /// 接收 跨面板 转移（物品=实现；家具/探索=false 拒绝）
     public virtual bool 接收跨面板转移(网格服务 源服务, 物品堆叠 堆叠, PointerEventData 事件, bool 拖拽旋转 = false) => false;
-    // 右键菜单 公开 操作（物品=使用/装备/打开/丢弃/拆分/详情；家具=升级/拆除）——子类 覆盖 需要的
+    // 右键菜单 公开 操作（物品=使用/装备/打开/丢弃/拆分/详情；家具=打开/升级/拆除）——子类 覆盖 需要的
     public virtual void 菜单使用() { }
     public virtual void 菜单装备() { }
     public virtual void 菜单打开() { }

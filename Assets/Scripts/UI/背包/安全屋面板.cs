@@ -22,13 +22,20 @@ public sealed class 安全屋面板 : 面板基类
     [SerializeField] private RectTransform 网格容器;   // 房间网格 区域（家具网格面板 动态 挂载；代码 设 锚点 居中）
     [SerializeField] private Button 建造按钮;          // 建造（编辑）按钮：编辑 模式 开关
     [SerializeField] private TMP_Text 建造按钮文本;    // 建造按钮 文本（编辑 模式 切换 时 更新；可选）
+    [SerializeField] private Button 拆除按钮;          // 拆除 按钮：拆墙 模式 开关（点击 后 左键 点 墙 拆）
+    [SerializeField] private TMP_Text 拆除按钮文本;    // 拆除按钮 文本（拆墙 模式 切换 时 更新；可选）
     [SerializeField] private 建造面板 建造面板;        // 建造面板：显示 家具 信息 + 建造/升级
+    [SerializeField] private 制作面板 制作面板;        // 制作面板：工作台/灶台/医疗站 制作（右键 家具「打开」→ 打开制作）
 
     // ===== 房间网格（家具网格面板：家具 模式 子类） =====
     private 家具网格面板 房间网格;
 
     // ===== 编辑模式（建造/移动/旋转 开关）：非 编辑 模式 家具 静态（不可 拖拽/旋转/建造） =====
     public bool 编辑模式 { get; private set; }
+
+    // ===== 拆墙 模式（拆除 按钮 切换）：左键 点 墙 格 → 拆除（打通 房间 / 扩大） =====
+    public bool 拆除模式 { get; private set; }
+    private Image 拆除投影;          // 拆除 模式：鼠标 悬停 墙 格 投影（绿色）
 
     // ===== 摆放模式（建造） =====
     private GameObject 摆放预览;
@@ -39,7 +46,9 @@ public sealed class 安全屋面板 : 面板基类
     void Awake()
     {
         if (建造面板 != null) 建造面板.gameObject.SetActive(false);   // 建造面板 初始 隐藏（点 建造 才 出现）
+        if (制作面板 != null) 制作面板.关闭();   // 制作面板 初始 隐藏（右键 家具「打开」才 出现）
         if (建造按钮 != null) 建造按钮.onClick.AddListener(切换编辑模式);
+        if (拆除按钮 != null) 拆除按钮.onClick.AddListener(切换拆除模式);
     }
 
     protected override void 刷新(object 上下文)
@@ -62,6 +71,7 @@ public sealed class 安全屋面板 : 面板基类
     public override void 隐藏面板(bool 上下互切 = false, bool 返回方向 = false)
     {
         退出摆放();
+        if (制作面板 != null) 制作面板.关闭();   // 制作面板 由 安全屋面板 管控：随 营地 关闭
         背景模糊层.隐藏模糊();
         base.隐藏面板(上下互切, 返回方向);
     }
@@ -69,6 +79,7 @@ public sealed class 安全屋面板 : 面板基类
     public override bool 回退()
     {
         if (摆放预览 != null) { 退出摆放(); 重建(); return true; }
+        if (制作面板 != null && 制作面板.gameObject.activeSelf) { 制作面板.关闭(); return true; }   // 制作面板 开 → 先 关（回 营地）
         if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
         return true;
     }
@@ -122,6 +133,17 @@ public sealed class 安全屋面板 : 面板基类
         if (房间网格 != null) 房间网格.强制重建();
     }
 
+    // 打开 制作面板（工作台/灶台/医疗站 右键「打开」→ 家具网格面板 调用）：由 安全屋面板 直接 管控（子面板，不走 面板管理器）
+    public void 打开制作(string 家具标识)
+    {
+        if (制作面板 == null)
+        {
+            事件.发布(new 日志事件(日志类型.反馈坏, "制作面板未接线（安全屋面板 → 制作面板）。"));
+            return;
+        }
+        制作面板.打开(家具标识);
+    }
+
     // 切换 编辑模式（建造按钮）：允许 建造/移动/旋转 家具；非 编辑 模式 家具 静态
     private void 切换编辑模式()
     {
@@ -135,6 +157,41 @@ public sealed class 安全屋面板 : 面板基类
             建造面板.gameObject.SetActive(编辑模式);   // 点 建造 → 面板 出现；退出 编辑 → 隐藏
             建造面板.刷新();
         }
+    }
+
+    // 切换 拆墙 模式（拆除 按钮）：点击 后 鼠标 悬停 墙 格 投影 → 左键 拆除；再 点 退出
+    private void 切换拆除模式()
+    {
+        拆除模式 = !拆除模式;
+        if (拆除按钮文本 != null) 拆除按钮文本.text = 拆除模式 ? "退出拆除" : "拆除墙";
+        事件.发布(new 日志事件(日志类型.反馈, 拆除模式
+            ? "拆除模式：鼠标 悬停 墙 格 变 绿，左键 点击 拆除（打通 房间 / 扩大 可用 范围）。"
+            : "退出拆除模式。"));
+        if (!拆除模式) 隐藏拆除投影();
+    }
+
+    // 拆除 投影（鼠标 悬停 墙 格）：绿色 单 格（可 拆 提示）
+    private void 确保拆除投影()
+    {
+        if (拆除投影 != null) return;
+        var 物体 = UI工具.创建图(网格容器, "拆除投影", null, 网格面板配色.放置可色, new Vector2(0, 1), new Vector2(0, 1));
+        物体.raycastTarget = false;
+        物体.rectTransform.sizeDelta = new Vector2(格, 格);
+        物体.transform.SetAsLastSibling();
+        拆除投影 = 物体;
+    }
+
+    private void 显示拆除投影(int 列, int 行)
+    {
+        确保拆除投影();
+        if (拆除投影 == null) return;
+        拆除投影.gameObject.SetActive(true);
+        拆除投影.rectTransform.anchoredPosition = new Vector2(列 * 格, -行 * 格);
+    }
+
+    private void 隐藏拆除投影()
+    {
+        if (拆除投影 != null) 拆除投影.gameObject.SetActive(false);
     }
 
     // 进入 摆放模式（建造面板「建造」调用）：需 编辑 模式
@@ -188,7 +245,30 @@ public sealed class 安全屋面板 : 面板基类
             }
             return;
         }
+        // 拆除 模式：鼠标 悬停 墙 格 投影 → 左键 拆除（家具 格 由 组件 处理）
+        if (拆除模式 && 房间网格 != null)
+        {
+            bool 悬停墙 = false;
+            if (房间网格.屏幕到格(鼠标位置(), 单格堆叠, out int 悬停列, out int 悬停行))
+            {
+                var 网格 = 安全屋.网格();
+                if (网格.格所属块(悬停列, 悬停行) == -2)   // 墙 格（可 拆）
+                {
+                    悬停墙 = true;
+                    显示拆除投影(悬停列, 悬停行);
+                    if (左键按下() && 安全屋.拆除墙(悬停列, 悬停行))
+                    {
+                        音效管理器.实例?.播放家具放下();
+                        房间网格.强制重建();   // 墙 格 变 可用 → 底格 重画
+                        建造面板?.刷新();
+                    }
+                }
+            }
+            if (!悬停墙) 隐藏拆除投影();
+        }
     }
+
+    private static readonly 物品堆叠 单格堆叠 = new 物品堆叠("收音机", 1);   // 1×1 占格（墙 格 屏幕 → 格 换算）
 
     // 鼠标 屏幕 位置（新输入系统优先；旧 Input 兜底——新输入 激活 时 绝不 触碰 Input 类）
     private Vector2 鼠标位置()

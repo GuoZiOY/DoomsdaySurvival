@@ -52,6 +52,9 @@ using UnityEngine;
             // —— 安全屋（家具 建造/升级 + 房间网格；收音机 情报/天气预知）——
             ServiceRegistry.Register(new 安全屋管理器(事件, 数据));
 
+            // —— 制作（工作台/灶台/医疗站：按配方 制作 物品）——
+            ServiceRegistry.Register(new 工作台制作服务(事件, 数据));
+
             // —— 对话引擎（剧情驱动）——
             var 对话 = new DialogueService(事件, 数据, 玩家);
             ServiceRegistry.Register(对话);

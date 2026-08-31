@@ -138,11 +138,11 @@
         public 致命伤害事件(战斗单位 玩家) { this.玩家 = 玩家; }
     }
 
-    // 制作完成事件：制作设施产出后发（天赋服务 检查 美食家）
+    // 制作完成事件：安全屋制作家具（工作台/灶台/医疗站）产出后发（天赋服务 检查 美食家）
     public readonly struct 制作完成事件
     {
         public readonly string 产物;   // 产物物品标识
         public readonly int 数量;      // 本次产出数量
-        public readonly string 类型;   // "装备"/"食物"/"药剂"
+        public readonly string 类型;   // 制作家具类型："工作台"/"灶台"/"医疗站"（美食家 = 灶台 饮食 双倍）
         public 制作完成事件(string 产物, int 数量, string 类型) { this.产物 = 产物; this.数量 = 数量; this.类型 = 类型; }
     }

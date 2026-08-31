@@ -26,8 +26,6 @@ public static class 设施工厂
         }
         var 实例 = (设施逻辑)System.Activator.CreateInstance(类型);
         实例.装配(定义.标识, 定义.名称, ServiceRegistry.Get<PlayerService>().档案, 数据, ServiceRegistry.Get<EventBus>());
-        // 制作设施：从 定义.数据 注入制作类型（装备/食物/药剂）
-        if (实例 is 制作设施 制作 && !string.IsNullOrEmpty(定义.数据)) 制作.类型 = 定义.数据;
         return 实例;
     }
 }

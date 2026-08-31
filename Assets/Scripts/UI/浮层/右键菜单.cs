@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -16,14 +17,13 @@ public sealed class 右键菜单 : MonoBehaviour
     public static 右键菜单 实例;   // 场景挂载自动登记
 
     [SerializeField] private RectTransform 菜单根;   // 面板根（初始隐藏；显示时 SetAsLastSibling 置顶 + 定位到物品右侧）
-    [SerializeField] private Button 使用按钮;        // 恢复品：使用
-    [SerializeField] private Button 装备按钮;        // 槽位物品：装备
-    [SerializeField] private Button 打开按钮;        // 容器：打开
+    [SerializeField] private Button 使用按钮;        // 恢复品：使用（消费语义；物品模式）
+    [SerializeField] private Button 装备按钮;        // 物品=装备 / 装备槽=卸下（同一按钮：同维逆操作，按模式切文字+分派）
+    [SerializeField] private Button 打开按钮;        // 打开内部界面：物品容器 / 家具（储物箱=仓库、工作台/灶台/医疗站=制作面板）
     [SerializeField] private Button 拆分按钮;        // 数量>1：拆分（数量>1 才显示）
     [SerializeField] private Button 分解按钮;        // 分解（系统未设计，暂隐藏）
     [SerializeField] private Button 丢弃按钮;        // 丢弃（任何入格物品均可，始终显示）
-    [SerializeField] private Button 详情按钮;        // 信息展示面板（任何物品/装备槽均显示）
-    [SerializeField] private Button 卸下按钮;        // 卸下（仅 装备槽模式 显示：已装备物品卸下回背包）
+    [SerializeField] private Button 详情按钮;        // 信息展示面板（任何物品/装备槽/家具 均显示）
     [SerializeField] private Button 家具升级按钮;    // 家具 模式：升级（安全屋 房间网格 右键 家具）
     [SerializeField] private Button 家具拆除按钮;    // 家具 模式：拆除（家具 移出 房间网格）
 
@@ -38,14 +38,20 @@ public sealed class 右键菜单 : MonoBehaviour
         foreach (var 面板 in FindObjectsOfType<网格面板基类>())
             if (面板.数据源 == null) { 背包面板 = 面板; break; }   // 主背包面板 = 兜底操作目标
         if (使用按钮 != null) 使用按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单使用(); });
-        if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单装备(); });
+        if (装备按钮 != null) 装备按钮.onClick.AddListener(() => { 隐藏(); 点击装备(); });   // 装备/卸下 同一按钮：按 目标槽位 分派
         if (打开按钮 != null) 打开按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开(); });
         if (拆分按钮 != null) 拆分按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单打开拆分(); });
         if (丢弃按钮 != null) 丢弃按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.菜单丢弃(); });
         if (详情按钮 != null) 详情按钮.onClick.AddListener(() => { 隐藏(); 查看详情(); });
-        if (卸下按钮 != null) 卸下按钮.onClick.AddListener(() => { 隐藏(); 卸下装备(); });
         if (家具升级按钮 != null) 家具升级按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.家具升级(); });   // 家具：升级（作用于 选中）
         if (家具拆除按钮 != null) 家具拆除按钮.onClick.AddListener(() => { 隐藏(); (目标面板 ?? 背包面板)?.家具拆除(); });
+    }
+
+    // 装备按钮 点击：物品模式 = 装备（入槽）；装备槽模式 = 卸下（出槽）——同维逆操作共用一个按钮
+    private void 点击装备()
+    {
+        if (!string.IsNullOrEmpty(目标槽位)) { 卸下装备(); return; }
+        (目标面板 ?? 背包面板)?.菜单装备();
     }
 
     // 详情：装备槽模式 → 信息面板.显示槽位；物品模式 → 目标面板.菜单查看详情
@@ -146,6 +152,7 @@ public sealed class 右键菜单 : MonoBehaviour
             {
                 bool 可用 = !string.IsNullOrEmpty(物品.槽位);
                 装备按钮.gameObject.SetActive(可用);
+                设按钮文字(装备按钮, "装备");   // 物品模式：装备（入槽）
                 if (可用) 有操作 = true;
             }
             if (打开按钮 != null)
@@ -164,7 +171,6 @@ public sealed class 右键菜单 : MonoBehaviour
         if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);   // 分解系统未设计（预留）
         if (丢弃按钮 != null) { 丢弃按钮.gameObject.SetActive(true); 有操作 = true; }   // 丢弃始终可用（入格物品）
         if (详情按钮 != null) { 详情按钮.gameObject.SetActive(true); 有操作 = true; }   // 详情始终可用
-        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(false);   // 物品模式无卸下
         if (!有操作) { 隐藏(); return; }
         目标槽位 = null;   // 物品模式
         音效管理器.实例?.播放成功();   // 右键呼出菜单 → 按钮成功音效
@@ -173,19 +179,22 @@ public sealed class 右键菜单 : MonoBehaviour
         定位到物品右侧(物品框);
     }
 
-    // 装备槽模式：菜单只显示 详情/卸下，操作对象 = 槽位（已装备物品）；定位到槽位框右侧
+    // 装备槽模式：菜单只显示 详情/卸下（装备按钮 复用，文字「卸下」），操作对象 = 槽位（已装备物品）；定位到槽位框右侧
     public void 显示装备槽(string 槽位, RectTransform 框)
     {
         if (菜单根 == null) return;
         目标槽位 = 槽位;
         if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);
-        if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
+        if (装备按钮 != null)
+        {
+            装备按钮.gameObject.SetActive(true);
+            设按钮文字(装备按钮, "卸下");   // 装备槽模式：卸下（出槽）
+        }
         if (打开按钮 != null) 打开按钮.gameObject.SetActive(false);
         if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);
         if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);
         if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
         if (详情按钮 != null) 详情按钮.gameObject.SetActive(true);
-        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(true);
         if (家具升级按钮 != null) 家具升级按钮.gameObject.SetActive(false);
         if (家具拆除按钮 != null) 家具拆除按钮.gameObject.SetActive(false);
         音效管理器.实例?.播放成功();   // 右键呼出菜单（装备槽模式）→ 按钮成功音效
@@ -194,30 +203,29 @@ public sealed class 右键菜单 : MonoBehaviour
         定位到物品右侧(框);
     }
 
-    // 家具模式（安全屋 房间网格 右键 家具）：升级/拆除/详情（旋转 = R 键，移动 = 拖拽，不进菜单）。
+    // 家具模式（安全屋 房间网格 右键 家具）：打开（储物箱=仓库、工作台/灶台/医疗站=制作面板）/升级/拆除/详情。
     // 操作对象 = 目标面板（物品网格面板）的 选中；菜单定位到 家具框 右侧。
     public void 显示家具(物品堆叠 堆叠, RectTransform 框)
     {
         if (菜单根 == null || 堆叠 == null) return;
         目标槽位 = null;   // 家具 模式：物品 堆叠 操作（非 槽位）
-        if (使用按钮 != null)
+        var (定义标识, _) = 家具工具.解码(堆叠.标识);
+        if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);   // 使用 = 纯消费（恢复品）；家具 不 走 使用
+        if (打开按钮 != null)
         {
-            // 使用：储物箱 → 打开 仓库（其余 家具 暂 无 使用 动作）
-            var (定义标识, _) = 家具工具.解码(堆叠.标识);
-            bool 可使用 = 定义标识 == "储物箱";
-            使用按钮.gameObject.SetActive(可使用);
+            // 打开：储物箱 → 仓库；工作台/灶台/医疗站 → 制作面板（都是「打开 内部界面」语义）
+            bool 可打开 = 定义标识 == "储物箱" || 定义标识 == "工作台" || 定义标识 == "灶台" || 定义标识 == "医疗站";
+            打开按钮.gameObject.SetActive(可打开);
         }
         if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
-        if (打开按钮 != null) 打开按钮.gameObject.SetActive(false);
         if (拆分按钮 != null) 拆分按钮.gameObject.SetActive(false);
         if (分解按钮 != null) 分解按钮.gameObject.SetActive(false);
         if (丢弃按钮 != null) 丢弃按钮.gameObject.SetActive(false);
-        if (卸下按钮 != null) 卸下按钮.gameObject.SetActive(false);
         // 升级：未满级 才显示（满级 = 隐藏）
         bool 可升级 = false;
         if (家具升级按钮 != null)
         {
-            var (定义标识, 等级) = 家具工具.解码(堆叠.标识);
+            var (_, 等级) = 家具工具.解码(堆叠.标识);
             if (ServiceRegistry.Get<DataService>().家具.TryGetValue(定义标识, out var 定义))
                 可升级 = 等级 < 定义.最大等级;
             家具升级按钮.gameObject.SetActive(可升级);
@@ -228,6 +236,14 @@ public sealed class 右键菜单 : MonoBehaviour
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();
         定位到物品右侧(框);
+    }
+
+    // 按钮 文字 设置（装备/卸下 共用按钮 切文字用；空引用 安全）
+    private static void 设按钮文字(Button 按钮, string 文字)
+    {
+        if (按钮 == null) return;
+        var 文本 = 按钮.GetComponentInChildren<TMP_Text>();
+        if (文本 != null) 文本.text = 文字;
     }
 
     // 隐藏菜单（点击菜单外/滚轮/左键点物品/拖拽/执行操作 均走这里）
