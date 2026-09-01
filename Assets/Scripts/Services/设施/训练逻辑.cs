@@ -79,7 +79,7 @@ public sealed class 训练逻辑
         return true;
     }
 
-    private string 食物名() => 数据.物品.TryGetValue(训练食物, out var 物品) ? 物品.名称 : 训练食物;
+    private string 食物名() => 数据.物品.TryGetValue(训练食物, out var 物品) ? 物品.标识 : 训练食物;
 
     // 属性名 → 属性类型
     private static 属性类型 解析属性(string 名)

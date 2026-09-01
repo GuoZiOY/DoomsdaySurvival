@@ -120,6 +120,6 @@ public sealed class 制作面板 : MonoBehaviour
         刷新();   // 成功/失败 都 重建（材料/状态 变化）
     }
 
-    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
     private string 家具名(string 标识) => 数据.家具.TryGetValue(标识, out var 家具) ? 家具.名称 : 标识;
 }

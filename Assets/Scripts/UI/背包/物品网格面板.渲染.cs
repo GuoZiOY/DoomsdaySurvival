@@ -17,7 +17,7 @@ public sealed partial class 物品网格面板
         var 框 = new 物品框();
         var (宽, 高) = 服务.物品占格(堆叠);
         // ① 物品框 根：全尺寸贴格（品质底层色 + 黑描边 + cover 裁剪）
-        var 物体 = new GameObject($"物品_{物品.名称}", typeof(RectTransform), typeof(Image));
+        var 物体 = new GameObject($"物品_{物品.标识}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(物品层, false);
         框.根 = 物体.GetComponent<RectTransform>();
         框.框图 = 物体.GetComponent<Image>();
@@ -45,7 +45,7 @@ public sealed partial class 物品网格面板
         float 内容宽 = 未旋转.宽 * 格尺寸 - 网格面板配色.物品边距 * 2f;
         float 内容高 = 未旋转.高 * 格尺寸 - 网格面板配色.物品边距 * 2f;
         Vector2 内容中心 = new Vector2(0.5f, 0.5f);
-        var 图标 = 物品图标服务.获取(物品.图片);
+        var 图标 = 物品图标服务.获取(物品.标识);
         if (图标 != null)
         {
             内容图.sprite = 图标;
@@ -70,7 +70,7 @@ public sealed partial class 物品网格面板
     // 数量 总是创建（≤1 隐藏、>1 显示）——否则 合并/拆回 数量>1 无法补显
     private void 创建文本角标(Transform 父, 物品堆叠 堆叠, 物品数据 物品, 物品框 框)
     {
-        var 名称 = UI工具.创建文本(父, "名称", 物品.名称, Mathf.Clamp(格尺寸 * 0.22f, 14f, 44f), TextAlignmentOptions.Center);
+        var 名称 = UI工具.创建文本(父, "名称", 物品.标识, Mathf.Clamp(格尺寸 * 0.22f, 14f, 44f), TextAlignmentOptions.Center);
         UI工具.铺满(名称.rectTransform);
         名称.enableWordWrapping = true;
         框.名称 = 名称;

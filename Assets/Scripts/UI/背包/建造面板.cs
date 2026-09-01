@@ -117,5 +117,5 @@ public sealed class 建造面板 : MonoBehaviour
         return string.Join(" ", 段);
     }
 
-    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
 }

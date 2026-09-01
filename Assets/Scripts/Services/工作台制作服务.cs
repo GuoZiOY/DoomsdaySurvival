@@ -126,7 +126,7 @@ public sealed class 工作台制作服务
         玩家.水分度 = System.Math.Min(100, 玩家.水分度 + 扣水分);
     }
 
-    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+    private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
     private string 家具名(string 标识) => 数据.家具.TryGetValue(标识, out var 家具) ? 家具.名称 : 标识;
     private void 提示(string 文本) => 事件.发布(new 日志事件(日志类型.反馈坏, 文本));
 }

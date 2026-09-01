@@ -75,10 +75,10 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         if (面板根 == null || 堆叠 == null) return;
         var 档案 = ServiceRegistry.Get<PlayerService>().档案;
         var 数据 = ServiceRegistry.Get<DataService>();
-        // 物品图标：按 物品数据.图片 引用加载（无图/未配置 = 透明占位，不破坏布局）
+        // 物品图标：按 物品标识 加载（无图/未配置 = 透明占位，不破坏布局）
         if (物品图片 != null && 数据.物品.TryGetValue(堆叠.标识, out var 物品))
         {
-            var 图标 = 物品图标服务.获取(物品.图片);
+            var 图标 = 物品图标服务.获取(物品.标识);
             物品图片.sprite = 图标;
             物品图片.color = 图标 != null ? new Color(1f, 1f, 1f, 1f) : new Color(1f, 1f, 1f, 0f);
         }
@@ -136,7 +136,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         return string.Join(" ", 段);
     }
 
-    private string 物品名(DataService 数据, string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+    private string 物品名(DataService 数据, string 标识) => 数据.物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
 
     public void 关闭()
     {

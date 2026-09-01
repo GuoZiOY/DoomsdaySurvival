@@ -15,7 +15,7 @@ public sealed class 配方行 : MonoBehaviour, IPointerClickHandler
     [SerializeField] private Image 选中背景;      // 行 背景（选中 高亮；未选中 = 面板 底 色）
 
     private static readonly Color 背景正常色 = 游戏主题.面板;
-    private static readonly Color 背景选中色 = new Color(0.42f, 0.66f, 0.82f, 0.35f);   // 钢蓝 半透明 高亮
+    private static readonly Color 背景选中色 = new Color(0.42f, 0.66f, 0.82f, 0.1f);   // 钢蓝 半透明 高亮
 
     private UnityEngine.Events.UnityAction 点击回调;
 
@@ -38,7 +38,7 @@ public sealed class 配方行 : MonoBehaviour, IPointerClickHandler
             float 目标宽 = 物品图.rectTransform.rect.width;
             float 目标高 = 物品图.rectTransform.rect.height;
             var 物品 = ServiceRegistry.Get<DataService>().物品.TryGetValue(物品标识, out var 物) ? 物 : null;
-            var 图标 = 物品 != null ? 物品图标服务.获取(物品.图片) : null;
+            var 图标 = 物品 != null ? 物品图标服务.获取(物品.标识) : null;
             if (图标 != null)
             {
                 物品图.sprite = 图标;

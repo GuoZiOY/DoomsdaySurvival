@@ -95,9 +95,9 @@ public sealed class 装备背包子面板 : MonoBehaviour
         if (string.IsNullOrEmpty(标识)) return "";
         var 数据 = ServiceRegistry.Get<DataService>();
         if (!数据.物品.TryGetValue(标识, out var 物品)) return 标识;
-        if (物品.品质档 == 品质.普通) return 物品.名称;
+        if (物品.品质档 == 品质.普通) return 物品.标识;
         string 色 = ColorUtility.ToHtmlStringRGB(品质工具.颜色(物品.品质档));
-        return $"<color=#{色}>{物品.名称}</color>";
+        return $"<color=#{色}>{物品.标识}</color>";
     }
 
     // ===== 装备槽点击（双击 = 快速卸下 / 单击 = 选中进详情） =====
@@ -130,7 +130,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
             if (序 != 0) return 序;
             序 = 物品B.品质档.CompareTo(物品A.品质档);   // 品质降序（传奇在前）
             if (序 != 0) return 序;
-            return string.CompareOrdinal(物品A.名称, 物品B.名称);
+            return string.CompareOrdinal(物品A.标识, 物品B.标识);
         });
         foreach (var 堆叠 in 列表)
         {
@@ -146,7 +146,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
         if (背包行模板 == null) return null;
         var 行 = 面板基类.创建模板<背包行>(列表容器, 背包行模板);
         if (行 == null) return 行;
-        if (行.名字 != null) 行.名字.text = 物品工具.品质名称(物品.品质档, 物品.名称);
+        if (行.名字 != null) 行.名字.text = 物品工具.品质名称(物品.品质档, 物品.标识);
         if (行.数量 != null) 行.数量.text = 堆叠.数量 > 1 ? $"×{堆叠.数量}" : "";
         if (行.选中图 != null) 行.选中图.gameObject.SetActive(选中标识 == 堆叠.标识);
         var 按钮 = 行.GetComponent<Button>();
@@ -185,7 +185,7 @@ public sealed class 装备背包子面板 : MonoBehaviour
             显示未选中();
             return;
         }
-        面板基类.设文本(详情名称, 物品工具.品质名称(物品.品质档, 物品.名称));   // 品质+名称 合并一个文本
+        面板基类.设文本(详情名称, 物品工具.品质名称(物品.品质档, 物品.标识));   // 品质+名称 合并一个文本
         面板基类.设文本(详情描述, 物品.描述);
         // 详情数值 = 基础加成 + 实例词缀（在背包取该堆叠词缀，已装备取装备记录词缀）
         var 实例词缀 = 已装备 ? 玩家.装备词缀(选中标识) : 玩家.背包词缀(选中标识);
@@ -262,10 +262,10 @@ public sealed class 装备背包子面板 : MonoBehaviour
         switch (分类项)
         {
             case 分类.全部: return true;
-            case 分类.装备: return 类型 == "武器" || 类型 == "防具" || 类型 == "饰品";
-            case 分类.消耗: return 类型 == "恢复" || 类型 == "食物" || 类型 == "药剂" || 类型 == "战斗" || 类型 == "技能书" || 类型 == "图纸";
+            case 分类.装备: return 类型 == "武器" || 类型 == "防具";
+            case 分类.消耗: return 类型 == "饮食" || 类型 == "医疗" || 类型 == "弹药" || 类型 == "技能书" || 类型 == "图纸";
             case 分类.材料: return 类型 == "材料";
-            case 分类.任务: return 类型 == "任务";
+            case 分类.任务: return 类型 == "任务品";
             default: return true;
         }
     }
@@ -276,15 +276,13 @@ public sealed class 装备背包子面板 : MonoBehaviour
         {
             case "武器": return 0;
             case "防具": return 1;
-            case "饰品": return 2;
-            case "恢复": return 3;
-            case "食物": return 3;
-            case "药剂": return 3;
-            case "战斗": return 4;
+            case "饮食": return 3;
+            case "医疗": return 3;
+            case "弹药": return 3;
             case "技能书": return 4;
             case "图纸": return 4;
             case "材料": return 5;
-            case "任务": return 6;
+            case "任务品": return 6;
             default: return 9;
         }
     }

@@ -295,7 +295,7 @@ public sealed partial class 战斗面板 : 面板基类
         if (道具行模板 == null) { Debug.LogError("[战斗面板] 未设置 道具行模板——道具子菜单无法实例化"); return; }
         var 行 = 面板基类.创建模板<道具行>(列表容器, 道具行模板);
         if (行 == null) return;
-        if (行.名字 != null) 行.名字.text = 物品工具.品质名称(物品.品质档, 物品.名称);
+        if (行.名字 != null) 行.名字.text = 物品工具.品质名称(物品.品质档, 物品.标识);
         if (行.数量 != null) 行.数量.text = 堆叠.数量 > 1 ? $"×{堆叠.数量}" : "";
         挂菜单点击(行.GetComponent<Button>(), 点击);
     }

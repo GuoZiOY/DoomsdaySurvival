@@ -179,7 +179,7 @@ using UnityEngine;
             return 段.Count == 0 ? null : "获得 " + string.Join("、", 段);
         }
 
-        private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.名称 : 标识;
+        private string 物品名(string 标识) => 数据.物品.TryGetValue(标识, out var 物品) ? 物品.标识 : 标识;
 
         // ===== 遭遇（天气影响） =====
 

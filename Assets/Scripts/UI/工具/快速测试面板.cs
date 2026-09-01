@@ -303,7 +303,7 @@ public sealed class 快速测试面板 : MonoBehaviour
         var 标识 = 表[Random.Range(0, 表.Count)];
         int 实际 = 档案().放入物品(标识, 1);   // 统一入口：穿戴容器 → 仓库
         事件().发布(new 背包变化事件(标识, 实际, 变化原因.获得));
-        string 名称 = 数据().物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+        string 名称 = 数据().物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
         if (实际 <= 0) 日志($"[测试] 穿戴容器与仓库均无空位，{名称} 放不下了！", true);
         else 日志($"[测试] 获得 {名称} ×{实际}");
     }
@@ -438,7 +438,7 @@ public sealed class 快速测试面板 : MonoBehaviour
         var 标识 = 表[Random.Range(0, 表.Count)];
         int 实际 = 档案().仓库视图().放入网格(标识, Random.Range(1, 4));   // 仓库视图 背包绑定 仓库物品 同一引用
         事件().发布(new 背包变化事件(标识, 实际, 变化原因.获得));
-        string 名称 = 数据().物品.TryGetValue(标识, out var 物) ? 物.名称 : 标识;
+        string 名称 = 数据().物品.TryGetValue(标识, out var 物) ? 物.标识 : 标识;
         if (实际 <= 0) 日志("[测试] 仓库已满，放不下了！", true);
         else 日志($"[测试] 仓库获得 {名称} ×{实际}");
     }
@@ -449,7 +449,7 @@ public sealed class 快速测试面板 : MonoBehaviour
         if (数据() == null || 档案() == null || 事件() == null) return;
         int 已加 = 0;
         foreach (var 物 in 数据().物品.Values)
-            if (物.类型 == "食物")
+            if (物.类型 == "饮食")
             {
                 已加 += 放入任一穿戴容器(物.标识, 5);
                 if (已加 >= 30) break;
@@ -465,7 +465,7 @@ public sealed class 快速测试面板 : MonoBehaviour
         if (数据() == null || 档案() == null || 事件() == null) return;
         int 已加 = 0;
         foreach (var 物 in 数据().物品.Values)
-            if (物.类型 == "医疗品")
+            if (物.类型 == "医疗")
             {
                 已加 += 放入任一穿戴容器(物.标识, 5);
                 if (已加 >= 30) break;

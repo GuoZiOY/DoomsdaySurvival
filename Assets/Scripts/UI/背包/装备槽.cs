@@ -48,11 +48,11 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             if (品质图 != null) 品质图.color = 品质工具.颜色(物品.品质档);   // 品质色底
             if (物品图 != null)
             {
-                var 图标 = 物品图标服务.获取(物品.图片);
+                var 图标 = 物品图标服务.获取(物品.标识);
                 物品图.sprite = 图标;
                 物品图.color = 图标 != null ? new Color(1f, 1f, 1f, 1f) : new Color(1f, 1f, 1f, 0f);
             }
-            面板基类.设文本(物品名, 物品.名称);
+            面板基类.设文本(物品名, 物品.标识);
         }
         else
         {
@@ -214,7 +214,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         内容体.transform.SetParent(物体.transform, false);
         var 图 = 内容体.GetComponent<Image>();
         图.raycastTarget = false;   // 关键：不拦截 滚轮/点击（否则 Canvas 顶层大代理 挡住 下层 ScrollRect 滚动）
-        var 图标 = 物品图标服务.获取(物品.图片);
+        var 图标 = 物品图标服务.获取(物品.标识);
         图.sprite = 图标;
         图.preserveAspect = false;   // cover：等比放大铺满，不拉伸变形
         图.color = 图标 != null ? new Color(1f, 1f, 1f, 0.7f) : new Color(0.6f, 0.6f, 0.7f, 0.7f);

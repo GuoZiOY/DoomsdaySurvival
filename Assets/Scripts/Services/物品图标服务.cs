@@ -1,11 +1,11 @@
 using UnityEngine;
 
-// 物品图标服务：按 物品数据.图片 引用加载 Sprite（JSON 只存引用字符串，真实图由 Resources 提供）。
-// 两种手动挂图方式（任选其一，引用名 都填在 items.json 的 "图片" 字段）：
+// 物品图标服务：按 物品标识 加载 Sprite（图标引用约定 = 物品标识，无需 图片 字段）。
+// 两种挂图方式（任选其一，命名都 = 物品标识）：
 //   ① 整张精灵图：把 武器精灵图.png 放 Assets/Resources/物品图标/，Sprite Editor 切成子精灵并命名 = 物品标识；
 //      运行时 Resources.LoadAll<Sprite>("物品图标/武器精灵图") 按子精灵名匹配。
 //   ② 单文件：把 木棍.png 等放 Assets/Resources/物品图标/，运行时 Resources.Load<Sprite>("物品图标/木棍")。
-// 找不到（未挂图 / 引用为空）→ 返回 null，内容层回退为原色块（不影响逻辑）。
+// 找不到（未挂图 / 标识无对应图）→ 返回 null，内容层回退为原色块（不影响逻辑）。
 public static class 物品图标服务
 {
     private const string 精灵图路径 = "物品图标/武器精灵图";   // 整张精灵图在 Resources 下的路径（文件名固定）

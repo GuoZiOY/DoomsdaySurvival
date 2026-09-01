@@ -199,7 +199,7 @@ public sealed class 角色创建面板 : 面板基类
         if (职业.初始装备 != null)
             foreach (var 项 in 职业.初始装备)
             {
-                string 名 = 数据.物品.TryGetValue(项.标识, out var 物) ? 物.名称 : 项.标识;
+                string 名 = 数据.物品.TryGetValue(项.标识, out var 物) ? 物.标识 : 项.标识;
                 装备 += 名 + " ";
             }
         // 职业描述不含五维分布（五维看中栏属性列表）

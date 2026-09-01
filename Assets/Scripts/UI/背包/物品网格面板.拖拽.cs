@@ -54,7 +54,7 @@ public sealed partial class 物品网格面板
     private void 物品代理内容(Image 图, 物品堆叠 堆叠)
     {
         var 代理物品 = 数据.物品.TryGetValue(堆叠.标识, out var 代理数据) ? 代理数据 : null;
-        var 代理图标 = 代理物品 != null ? 物品图标服务.获取(代理物品.图片) : null;
+        var 代理图标 = 代理物品 != null ? 物品图标服务.获取(代理物品.标识) : null;
         if (代理图标 != null)
         {
             图.sprite = 代理图标;
