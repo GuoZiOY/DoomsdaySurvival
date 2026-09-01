@@ -42,7 +42,7 @@ public abstract partial class 网格面板基类
         计算块偏移();
         var cf = 网格容器.GetComponent<ContentSizeFitter>();
         if (cf != null) cf.enabled = false;
-        float 网格宽 = 当前列 * 格尺寸 + 最右偏移(), 网格高 = 当前行 * 格尺寸;
+        float 网格宽 = 当前列 * 格尺寸 + 最右偏移(), 网格高 = 当前行 * 格尺寸 + 最下偏移();
         if (数据源 != null)
             网格容器.sizeDelta = new Vector2(网格宽 + 网格面板配色.底盘外扩 * 2f, 网格高 + 网格面板配色.底盘外扩 * 2f);
         else
@@ -153,7 +153,7 @@ public abstract partial class 网格面板基类
             float 外扩 = 网格面板配色.底盘外扩;
             UI工具.设锚(矩形, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, 外扩),
-                new Vector2(当前列 * 格尺寸 + 最右偏移() + 外扩 * 2f, 当前行 * 格尺寸 + 外扩 * 2f));
+                new Vector2(当前列 * 格尺寸 + 最右偏移() + 外扩 * 2f, 当前行 * 格尺寸 + 最下偏移() + 外扩 * 2f));
         }
         底盘 = 矩形;
     }
@@ -162,7 +162,7 @@ public abstract partial class 网格面板基类
     {
         var r = UI工具.创建物体(网格容器, 名字, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
         r.anchoredPosition = new Vector2(0f, 数据源 != null ? -网格面板配色.底盘外扩 : 0f);
-        r.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸);
+        r.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸 + 最下偏移());
         return r;
     }
 
@@ -248,7 +248,14 @@ public abstract partial class 网格面板基类
     }
 
     private void 画竖缝隙(int 列, int 行) { }
-    private void 画横缝隙(int 列, int 行) { }
+    // 上下 口袋 缝：上块 底边（参考行 = 行-1，y 到 底）+ 下块 顶边（参考行 = 行，y 到 顶）两条 横线（缝 留白）
+    private void 画横缝隙(int 列, int 行)
+    {
+        int 上块 = 行 > 0 ? 服务.该格块(列, 行 - 1) : -1;
+        int 下块 = 行 < 当前行 ? 服务.该格块(列, 行) : -1;
+        画横线段(列, 行, true, true, 块内有物品(上块), 行 - 1);   // 上块 底边
+        画横线段(列, 行, true, true, 块内有物品(下块), 行);       // 下块 顶边
+    }
 
     private bool 竖线边界(int i, int j)
     {
@@ -280,23 +287,28 @@ public abstract partial class 网格面板基类
         图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
-        UI工具.设锚(矩形, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(x, -(行 + 0.5f) * 格尺寸), new Vector2(线宽判定(亮, 形状线, 加粗), 格尺寸));
+        // y 用 有效 块 格（优先 左格；右格 空洞/越界 时 左格 才是 口袋 内——右边界 线 不 错位）
+        int 有效列 = 左可用 ? 列 - 1 : 列;
+        UI工具.设锚(矩形, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(x, -格y(有效列, 行) - 格尺寸 / 2f), new Vector2(线宽判定(亮, 形状线, 加粗), 格尺寸));
     }
 
-    private void 画横线段(int 列, int 行, bool 亮, bool 形状线 = false, bool 加粗 = false)
+    private void 画横线段(int 列, int 行, bool 亮, bool 形状线 = false, bool 加粗 = false, int 参考行覆盖 = -1)
     {
         bool 上可用 = 行 > 0 && 服务.该格可用(列, 行 - 1);
         bool 下可用 = 行 < 当前行 && 服务.该格可用(列, 行);
         if (!上可用 && !下可用)
             return;
-        int 参考行 = 行 < 当前行 ? 行 : 行 - 1;
+        // 参考行：默认 = 下格 有效 ? 行 : 行-1（口袋 底边 下格 空洞/越界 时 用 上格——边界 线 不 错位）；缝隙 调用 覆盖
+        int 参考行 = 参考行覆盖 >= 0 ? 参考行覆盖 : (下可用 ? 行 : 行 - 1);
         var 物体 = new GameObject($"横线_{行}_{列}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(线层, false);
         var 图 = 物体.GetComponent<Image>();
         图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
-        UI工具.设锚(矩形, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(格x(列, 参考行) + 格尺寸 / 2f, -行 * 格尺寸), new Vector2(格尺寸, 线宽判定(亮, 形状线, 加粗)));
+        // y = 参考行 顶部（含 块 y 偏移）；参考行 < 行（上块 底边）时 再 + 格尺寸 到 底部
+        float y = -格y(列, 参考行) - (参考行 < 行 ? 格尺寸 : 0f);
+        UI工具.设锚(矩形, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(格x(列, 参考行) + 格尺寸 / 2f, y), new Vector2(格尺寸, 线宽判定(亮, 形状线, 加粗)));
     }
 
     private static float 线宽判定(bool 亮, bool 形状线, bool 加粗)
@@ -305,22 +317,30 @@ public abstract partial class 网格面板基类
     // 该格被哪个实体覆盖（领域判定，UI 只查询不计算）
     protected 物品堆叠 该格物品(int 列, int 行) => 服务.该格物品(列, 行);
 
-    // 左上锚定定位：列/行 起点 + 宽×高 跨格（x 含 块偏移）
+    // 左上锚定定位：列/行 起点 + 宽×高 跨格（x/y 均 含 块偏移——左右/上下 口袋 缝）
     protected void 定位(RectTransform 矩形, int 列, int 行, int 宽, int 高)
     {
         矩形.anchorMin = new Vector2(0, 1);
         矩形.anchorMax = new Vector2(0, 1);
         矩形.pivot = new Vector2(0, 1);
-        矩形.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
+        矩形.anchoredPosition = new Vector2(格x(列, 行), -格y(列, 行));
         矩形.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
     }
 
-    // 格 (列,行) 的 视觉 x：列×格尺寸 + 所属块的累计偏移
+    // 格 (列,行) 的 视觉 x：列×格尺寸 + 所属块的 x 偏移（右缝）
     protected float 格x(int 列, int 行)
     {
         if (块偏移 == null) return 列 * 格尺寸;
         int 块 = 服务.该格块(列, 行);
-        return 列 * 格尺寸 + (块 >= 0 && 块 < 块偏移.Length ? 块偏移[块] : 0f);
+        return 列 * 格尺寸 + (块 >= 0 && 块 < 块偏移.Length ? 块偏移[块].x : 0f);
+    }
+
+    // 格 (列,行) 的 视觉 y：行×格尺寸 + 所属块的 y 偏移（下缝）
+    protected float 格y(int 列, int 行)
+    {
+        if (块偏移 == null) return 行 * 格尺寸;
+        int 块 = 服务.该格块(列, 行);
+        return 行 * 格尺寸 + (块 >= 0 && 块 < 块偏移.Length ? 块偏移[块].y : 0f);
     }
 
     private void 计算块偏移()
@@ -328,14 +348,18 @@ public abstract partial class 网格面板基类
         块偏移 = null;
         var 块们 = 服务.形状块;
         if (块们 == null || 块们.Count == 0) return;
-        块偏移 = new float[块们.Count];
+        块偏移 = new Vector2[块们.Count];
         for (int i = 0; i < 块们.Count; i++)
             for (int j = 0; j < 块们.Count; j++)
             {
                 if (i == j) continue;
                 var A = 块们[j]; var B = 块们[i];
+                // 左右 缝：B 在 A 正右侧 且 行 重叠 → B 向右 让 缝隙
                 if (A.列 + A.宽 == B.列 && A.行 < B.行 + B.高 && B.行 < A.行 + A.高)
-                    块偏移[i] = Mathf.Max(块偏移[i], 块偏移[j] + 块缝隙宽);
+                    块偏移[i].x = Mathf.Max(块偏移[i].x, 块偏移[j].x + 块缝隙宽);
+                // 上下 缝：B 在 A 正下方 且 列 重叠 → B 向下 让 缝隙
+                if (A.行 + A.高 == B.行 && A.列 < B.列 + B.宽 && B.列 < A.列 + A.宽)
+                    块偏移[i].y = Mathf.Max(块偏移[i].y, 块偏移[j].y + 块缝隙宽);
             }
     }
 
@@ -345,8 +369,19 @@ public abstract partial class 网格面板基类
         float 最右 = 0f;
         for (int i = 0; i < 服务.形状块.Count; i++)
             if (服务.形状块[i].列 + 服务.形状块[i].宽 == 当前列)
-                最右 = Mathf.Max(最右, 块偏移[i]);
+                最右 = Mathf.Max(最右, 块偏移[i].x);
         return 最右;
+    }
+
+    // 最下偏移（对称 最右偏移）：底部 贴 网格 下边 的 块 的 y 偏移（上下 口袋 缝——网格 高度 含 下排 偏移）
+    private float 最下偏移()
+    {
+        if (块偏移 == null || 服务.形状块 == null || 服务.形状块.Count == 0) return 0f;
+        float 最下 = 0f;
+        for (int i = 0; i < 服务.形状块.Count; i++)
+            if (服务.形状块[i].行 + 服务.形状块[i].高 == 当前行)
+                最下 = Mathf.Max(最下, 块偏移[i].y);
+        return 最下;
     }
 
     protected void 清空层(RectTransform 层)

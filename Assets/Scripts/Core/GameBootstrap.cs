@@ -9,7 +9,19 @@ using UnityEngine;
         private static bool 已装配;
         public static bool 装配失败 { get; private set; }
 
-        private void Awake() => 装配();
+        private void Awake()
+        {
+            装配();
+            确保时间驱动();   // 世界时间 自推进 + 每小时 生存结算（饱食/水分/伤病/天气）
+        }
+
+        // 世界时间管理器 驱动 挂 本物体（场景 常驻「框架引导」）：装配后 自动 挂载——时间 才 会 走。
+        // 全局 判重：场景 任意 位置 已 有 驱动 则 跳过（防 双 时钟 双倍 推进）。
+        private void 确保时间驱动()
+        {
+            if (FindFirstObjectByType<世界时间管理器.驱动>() == null)
+                gameObject.AddComponent<世界时间管理器.驱动>();
+        }
 
         // 装配顺序：事件总线 → 数据服务 → 存档服务 → 玩家/对话/背包/任务/战斗服务
         public static void 装配()
@@ -19,7 +31,6 @@ using UnityEngine;
 
             var 事件 = new EventBus();
             ServiceRegistry.Register(事件);
-
             var 数据 = new DataService(事件);
             ServiceRegistry.Register(数据);
 
@@ -38,6 +49,9 @@ using UnityEngine;
             var 玩家 = new PlayerService(事件, 数据, ServiceRegistry.Get<SaveService>());
             玩家.初始化();
             ServiceRegistry.Register(玩家);
+
+            // —— 世界时间管理器（统一 时间 推进/结算/跳时；驱动 由 确保时间驱动 挂载）——
+            ServiceRegistry.Register(new 世界时间管理器(事件));
 
             // —— 容器（塔科夫式嵌套容器）——
             var 容器 = new 容器服务 { 物品数据解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物) ? 物 : null };

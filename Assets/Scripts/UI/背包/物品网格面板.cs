@@ -27,7 +27,7 @@ public sealed partial class 物品网格面板 : 网格面板基类
     {
         if (装备区.实例 == null || !装备区.实例.命中槽位(事件.position, out var 槽位名)) return false;
         落点有效 = false;
-        if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+        隐藏全部投影();
         bool 匹配 = 数据.物品.TryGetValue(拖拽源.标识, out var 装备) && 面板操作.槽位匹配(装备.槽位, 槽位名);
         装备区.实例.高亮槽位(槽位名, 匹配);
         return true;

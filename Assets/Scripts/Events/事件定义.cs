@@ -32,7 +32,7 @@
         public 金币变化事件(int 当前, int 变化量) { this.当前 = 当前; this.变化量 = 变化量; }
     }
 
-    // 时间变化：游戏内分钟数推进（游戏时钟 每分钟发布一次，UI 据此刷新）
+    // 时间变化：游戏内分钟数推进（世界时间管理器 整点结算/跳时 后发布，UI 据此刷新）
     public readonly struct 时间变化事件
     {
         public readonly float 游戏分钟数;
@@ -57,11 +57,11 @@
             : this(体力, 力量, 智力, 敏捷, 5, 自由属性点) { }
     }
 
-    // 生存状态变化：饱食度/水分度（HUD 与状态栏刷新）
+    // 生存状态变化：饱食度/水分度（HUD 与状态栏刷新；float 精确 0.1）
     public readonly struct 生存状态变化事件
     {
-        public readonly 生存状态类型 类型; public readonly int 当前; public readonly int 变化量;
-        public 生存状态变化事件(生存状态类型 类型, int 当前, int 变化量) { this.类型 = 类型; this.当前 = 当前; this.变化量 = 变化量; }
+        public readonly 生存状态类型 类型; public readonly float 当前; public readonly float 变化量;
+        public 生存状态变化事件(生存状态类型 类型, float 当前, float 变化量) { this.类型 = 类型; this.当前 = 当前; this.变化量 = 变化量; }
     }
 
     // 伤病变化：疲劳/中毒/感冒/流血/骨折/发烧（严重度 0~100，0=无）

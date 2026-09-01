@@ -100,7 +100,7 @@ public sealed partial class 物品网格面板
     {
         if (框 == null || 框.根 == null) return;
         var (宽, 高) = 服务.物品占格(堆叠);
-        框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -堆叠.行 * 格尺寸);
+        框.根.anchoredPosition = new Vector2(格x(堆叠.列, 堆叠.行), -格y(堆叠.列, 堆叠.行));
         float 新宽 = 宽 * 格尺寸, 新高 = 高 * 格尺寸;
         if (Mathf.Abs(框.根.sizeDelta.x - 新宽) > 0.01f || Mathf.Abs(框.根.sizeDelta.y - 新高) > 0.01f)
             框.根.sizeDelta = new Vector2(新宽, 新高);

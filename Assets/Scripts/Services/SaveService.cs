@@ -1,13 +1,14 @@
 using System;
 using UnityEngine;
 
-    // 极简存档（末日版）：PlayerPrefs 存 JSON 快照（v3 键，与奇幻版 v2 隔离）。
+    // 极简存档（末日版）：PlayerPrefs 存 JSON 快照（v4 键，与旧版 v3 隔离）。
+    // v4：饱食/水分 改 float（精确 0.1）+ 世界时间管理器 统一结算——旧 v3 存档 结构 不 兼容，换 键 天然 失效（读档 失败 → 新游戏 重置）。
     public sealed class SaveService
     {
-        private const string 存档键 = "last87days_save_v3";
+        private const string 存档键 = "last87days_save_v4";
 
         // 存档结构版本：结构变动时递增；读取时据 版本 做兼容/迁移
-        public const int 当前版本 = 3;
+        public const int 当前版本 = 4;
 
         // 存档快照：玩家档案 + 版本 + 保存时间
         [Serializable]

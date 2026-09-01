@@ -79,7 +79,8 @@ public abstract partial class 网格面板基类 : 面板基类
     // ===== 拖拽状态（实例） =====
     protected 物品堆叠 拖拽源;
     protected RectTransform 拖拽代理;
-    protected Image 落点投影;
+    protected Image 落点投影;                              // 全网格 禁放 红框（装备槽 拖拽 到自己 容器 用；含 最右/最下 偏移）
+    protected readonly List<Image> 投影格 = new List<Image>();   // 逐格 落点 投影（口袋 容器：每格 独立 定位，缝隙 天然 留空）
     protected GameObject 原位置影子;
     protected static bool 拖拽旋转;
     protected int 落点列, 落点行;
@@ -88,11 +89,11 @@ public abstract partial class 网格面板基类 : 面板基类
     // ===== 布局快照（分隔线 重画 判定） =====
     protected readonly Dictionary<物品堆叠, (int 列, int 行, bool 旋转)> 上次布局 = new Dictionary<物品堆叠, (int, int, bool)>();
 
-    // ===== 容器形状 块偏移（口袋 缝隙） =====
+    // ===== 容器形状 块偏移（口袋 缝隙：x=右缝、y=下缝——左右/上下 并排 口袋 之间 留 缝隙） =====
     private const float 块缝隙宽 = 10f;
     protected static readonly Color 物品描边色 = new Color(0f, 0f, 0f, 0.6f);   // 实体框 黑描边（物品/家具 通用）
     protected static readonly Vector2 物品描边距离 = new Vector2(3f, -3f);
-    protected float[] 块偏移;
+    protected Vector2[] 块偏移;
 
     // ============================================================
     // 差异点 钩子（子类 实现 实体 语义）
@@ -221,20 +222,18 @@ public abstract partial class 网格面板基类 : 面板基类
 
         var 下方 = 事件下方面板(伪事件);
         if (下方 != this)
-            { 落点投影.gameObject.SetActive(false); return; }
+            { 隐藏全部投影(); return; }
         if (鼠标在容器面板底座上(伪事件))
-            { 落点投影.gameObject.SetActive(false); return; }
+            { 隐藏全部投影(); return; }
         if (!屏幕到容器相对(伪事件, out var 相对, out var 尺寸))
-            { 落点投影.gameObject.SetActive(false); return; }
+            { 隐藏全部投影(); return; }
 
         var (物宽, 物高) = 预览占格(拖拽中堆叠);
         float 相对顶 = 尺寸.y - 相对.y;
         if (!落格(相对.x, 相对顶, 物宽, 物高, out int 列, out int 行))
-            { 落点投影.gameObject.SetActive(false); return; }
+            { 隐藏全部投影(); return; }
 
-        落点投影.gameObject.SetActive(true);
-        落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
-        落点投影.rectTransform.sizeDelta = new Vector2(物宽 * 格尺寸, 物高 * 格尺寸);
+        同步投影格(物宽, 物高);
         bool 可放 = 目标允许放入(拖拽中堆叠.标识) && !目标禁放入(拖拽中堆叠);
         if (可放)
         {
@@ -243,7 +242,7 @@ public abstract partial class 网格面板基类 : 面板基类
                 || 可存入容器(落点物品, 拖拽中堆叠)
                 || 服务.可放置(拖拽中堆叠.标识, 列, 行, 拖拽旋转, 拖拽中堆叠);
         }
-        落点投影.color = 可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色;
+        显示投影格(列, 行, 物宽, 物高, 可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色);
     }
 
     // ============================================================

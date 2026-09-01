@@ -126,8 +126,8 @@ using System.Collections.Generic;
         // —— 生命与生存状态 ——
         public int 生命 = 100;        // 当前生命（健康）
         public int 行动点 = 100;      // 当前行动点（探索/战斗消耗）
-        public int 饱食度 = 100;      // 0~100：高=饱，低=饿
-        public int 水分度 = 100;      // 0~100：高=水足，低=渴
+        public float 饱食度 = 100f;   // 0~100：高=饱，低=饿（float 精确 0.1）
+        public float 水分度 = 100f;   // 0~100：高=水足，低=渴（float 精确 0.1）
 
         // —— 伤病（6 种，严重度 0~100，0=无） ——
         public int 疲劳 = 0;          // 行动/战斗累积，睡觉恢复
@@ -203,13 +203,16 @@ using System.Collections.Generic;
             return 实例 != null ? 家具工具.解码(实例.标识).等级 : 0;
         }
 
-        // 指定家具 当前等级 效果值（未建/无效果 = 0；含义按 功能类型：床=恢复系数×100 / 储物箱=仓库行加成 / 灶台=寒潮豁免等级 / 收音机=电池次数 / 工作台=词缀概率加成%）
+        // 指定家具 当前等级 效果值（含义按 功能类型：床=恢复系数×100 / 储物箱=仓库行加成 / 灶台=寒潮豁免等级 / 收音机=电池次数 / 工作台=词缀概率加成%）。
+        // 未建 = 0（无效果）；破损（0 级）= 功能 可用 但 效果 减半（1 级 效果 ÷2）；储物箱 例外——0 级 无 加成（仓库 行数 不 缩水，防 物品 显示 不下/丢失）。
         public int 家具效果(string 定义标识)
         {
-            int 等级 = 家具等级(定义标识);
-            if (等级 <= 0 || 家具定义解析 == null) return 0;
+            if (家具实例(定义标识) == null || 家具定义解析 == null) return 0;   // 未建 = 无效果
             var 定义 = 家具定义解析(定义标识);
             if (定义?.效果 == null || 定义.效果.Length == 0) return 0;
+            int 等级 = 家具等级(定义标识);
+            if (等级 <= 0)
+                return 定义标识 == "储物箱" ? 0 : 定义.效果[0] / 2;   // 破损 减半（储物箱 保持 无加成）
             return 等级 <= 定义.效果.Length ? 定义.效果[等级 - 1] : 定义.效果[定义.效果.Length - 1];
         }
 
@@ -220,7 +223,7 @@ using System.Collections.Generic;
         public List<string> 抉择记录 = new List<string>();
 
         // —— 时间与天气 ——
-        public float 游戏分钟数 = 420f;      // 6:00 开始；1 现实秒 = 2 游戏分钟
+        public float 游戏分钟数 = 420f;      // 6:00 开始；1 现实分钟 = 30 游戏分钟（一天 24 小时 = 48 现实分钟）
         public int 天气 = (int)天气类型.晴;  // 当前天气（每日随机）
         public int 游戏天数 => (int)(游戏分钟数 / 1440f);
 
@@ -298,11 +301,10 @@ using System.Collections.Generic;
         public void 受到伤害(int 数值) => 生存管理.受到伤害(数值);
         public bool 消耗行动点(int 数值) => 生存管理.消耗行动点(数值);
         public void 恢复行动点(int 数值) => 生存管理.恢复行动点(数值);
-        public void 进食(int 数值) => 生存管理.进食(数值);
-        public void 饮水(int 数值) => 生存管理.饮水(数值);
+        public void 进食(float 数值) => 生存管理.进食(数值);
+        public void 饮水(float 数值) => 生存管理.饮水(数值);
         public void 调整伤病(伤病类型 类型, int 数值) => 生存管理.调整伤病(类型, 数值);
         public int 伤病值(伤病类型 类型) => 生存管理.伤病值(类型);
-        public void 每小时结算(天气类型 天气) => 生存管理.每小时结算(天气);
         public void 睡觉() => 生存管理.睡觉();
 
         // ================= 装备（门面转发：装备管理器） =================
@@ -395,8 +397,8 @@ using System.Collections.Generic;
         public int 最大精力 => 最大行动点;
         public int 速度加成 => 装备管理.速度加成;
         public float 命中加成 => 0f;
-        public int 饥饿 { get => 100 - 饱食度; set => 饱食度 = 100 - value; }
-        public int 口渴 { get => 100 - 水分度; set => 水分度 = 100 - value; }
+        public float 饥饿 { get => 100 - 饱食度; set => 饱食度 = 100 - value; }
+        public float 口渴 { get => 100 - 水分度; set => 水分度 = 100 - value; }
         public int 感染度 { get => 中毒; set => 中毒 = value; }
         public int 士气 { get => 100 - 疲劳; set => 疲劳 = 100 - value; }
         public int 噪音值 { get; set; }

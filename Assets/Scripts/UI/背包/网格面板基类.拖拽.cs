@@ -24,6 +24,52 @@ public abstract partial class 网格面板基类
         落点投影.gameObject.SetActive(false);
     }
 
+    // 同步 投影格 数量（宽×高 个；不足 新建，多余 隐藏）——格子投影：每格 独立 定位，缝隙 天然 留空
+    protected void 同步投影格(int 宽, int 高)
+    {
+        if (物品层 == null) return;
+        int 需要 = 宽 * 高;
+        while (投影格.Count < 需要)
+        {
+            var 格体 = new GameObject("投影格{投影格.Count}", typeof(RectTransform), typeof(Image));
+            格体.transform.SetParent(物品层, false);
+            var 格图 = 格体.GetComponent<Image>();
+            格图.color = 网格面板配色.放置可色;
+            格图.raycastTarget = false;
+            UI工具.设锚点(格图.rectTransform, new Vector2(0, 1), new Vector2(0, 1));
+            格图.rectTransform.sizeDelta = new Vector2(格尺寸, 格尺寸);
+            格体.SetActive(false);
+            投影格.Add(格图);
+        }
+        for (int i = 需要; i < 投影格.Count; i++)
+            if (投影格[i] != null) 投影格[i].gameObject.SetActive(false);
+    }
+
+    // 显示 逐格 投影：每格 定位（格x/格y 含 块偏移——上下/左右 口袋 缝 对齐）+ 统一 颜色
+    protected void 显示投影格(int 列, int 行, int 宽, int 高, Color 颜色)
+    {
+        隐藏全部投影();   // 格子投影 优先；全网格 红框 隐藏
+        for (int j = 0; j < 高; j++)
+            for (int i = 0; i < 宽; i++)
+            {
+                int 索引 = j * 宽 + i;
+                if (索引 >= 投影格.Count) return;
+                var 格 = 投影格[索引];
+                if (格 == null) continue;
+                格.gameObject.SetActive(true);
+                格.rectTransform.anchoredPosition = new Vector2(格x(列 + i, 行 + j), -格y(列 + i, 行 + j));
+                格.color = 颜色;
+            }
+    }
+
+    // 隐藏 全部 投影（落点投影 + 全部 投影格）
+    protected void 隐藏全部投影()
+    {
+        if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+        for (int i = 0; i < 投影格.Count; i++)
+            if (投影格[i] != null) 投影格[i].gameObject.SetActive(false);
+    }
+
     protected Vector2 输入鼠标位置()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -38,7 +84,7 @@ public abstract partial class 网格面板基类
     protected static void 清理所有面板投影()
     {
         foreach (var 面板 in 全部面板)
-            if (面板.落点投影 != null) 面板.落点投影.gameObject.SetActive(false);
+            面板.隐藏全部投影();
     }
 
     protected void 开始拖拽(物品堆叠 堆叠, PointerEventData 事件)
@@ -82,7 +128,7 @@ public abstract partial class 网格面板基类
         var 影矩形 = 影体.GetComponent<RectTransform>();
         var (影宽, 影高) = 服务.物品占格(堆叠);
         UI工具.设锚(影矩形, new Vector2(0, 1), new Vector2(0, 1),
-            new Vector2(格x(堆叠.列, 堆叠.行) + 网格面板配色.物品边距, -堆叠.行 * 格尺寸 - 网格面板配色.物品边距),
+            new Vector2(格x(堆叠.列, 堆叠.行) + 网格面板配色.物品边距, -格y(堆叠.列, 堆叠.行) - 网格面板配色.物品边距),
             new Vector2(影宽 * 格尺寸 - 网格面板配色.物品边距 * 2f, 影高 * 格尺寸 - 网格面板配色.物品边距 * 2f));
         原位置影子 = 影体;
         拖拽代理.SetAsLastSibling();
@@ -114,7 +160,7 @@ public abstract partial class 网格面板基类
             内容矩.sizeDelta = new Vector2(内容宽, 内容高);
             内容矩.localRotation = Quaternion.Euler(0f, 0f, 拖拽旋转 ? 90f : 0f);
         }
-        if (落点投影 != null) 落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
+        同步投影格(宽, 高);
     }
 
     protected (int 宽, int 高) 预览占格(物品堆叠 堆叠)
@@ -173,13 +219,13 @@ public abstract partial class 网格面板基类
             if (最上层容器 != 自己面板)
             {
                 落点有效 = false;
-                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                隐藏全部投影();
                 return;
             }
             if (!最上层容器.命中网格(事件.position))
             {
                 落点有效 = false;
-                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                隐藏全部投影();
                 清除拖拽高亮();
                 return;
             }
@@ -189,7 +235,7 @@ public abstract partial class 网格面板基类
             if (下方面板 != null && 下方面板 != this)
             {
                 落点有效 = false;
-                if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+                隐藏全部投影();
                 return;
             }
             if (处理装备槽落点(事件)) return;   // 粗钩子：物品=命中+匹配+高亮+消费；家具=false 走正常落格
@@ -197,7 +243,7 @@ public abstract partial class 网格面板基类
         }
         if (!屏幕到容器相对(事件, out var 相对, out var 尺寸))
         {
-            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+            隐藏全部投影();
             return;
         }
         var (物宽, 物高) = 预览占格(拖拽源);
@@ -205,7 +251,7 @@ public abstract partial class 网格面板基类
         if (!落格(相对.x, 相对顶, 物宽, 物高, out int 列, out int 行))
         {
             落点有效 = false;
-            if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+            隐藏全部投影();
             上次判定有效 = false;
             return;
         }
@@ -219,12 +265,7 @@ public abstract partial class 网格面板基类
             else if (目标 != null && 目标 != 拖拽源 && ServiceRegistry.Get<容器服务>().是容器(目标)) { 上次可放 = false; 上次可合并 = false; }
             else { 上次可放 = 服务.区域可互换(拖拽源, 列, 行, 拖拽旋转); 上次可合并 = false; }
         }
-        if (落点投影 != null)
-        {
-            落点投影.gameObject.SetActive(true);
-            落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
-            落点投影.color = 上次可合并 ? 网格面板配色.合并色 : (上次可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色);
-        }
+        显示投影格(列, 行, 物宽, 物高, 上次可合并 ? 网格面板配色.合并色 : (上次可放 ? 网格面板配色.放置可色 : 网格面板配色.放置禁色));
     }
 
     // 结束拖拽（内部组件 调用）：清理 视觉 → 钩子 完成拖拽（放置 语义）→ 收尾
@@ -236,6 +277,9 @@ public abstract partial class 网格面板基类
         清除拖拽高亮();
         if (拖拽代理 != null) { Destroy(拖拽代理.gameObject); 拖拽代理 = null; }
         if (落点投影 != null) { Destroy(落点投影.gameObject); 落点投影 = null; }
+        for (int i = 0; i < 投影格.Count; i++)
+            if (投影格[i] != null) Destroy(投影格[i].gameObject);
+        投影格.Clear();
         if (原位置影子 != null) { Destroy(原位置影子); 原位置影子 = null; }
         if (源 == null) { 拖拽发起面板 = null; return; }
         bool 成功 = 完成拖拽(事件, 源);   // 钩子：物品=跨面板/装备槽/合并/存入/区域互换；家具=移动/换位
@@ -307,17 +351,24 @@ public abstract partial class 网格面板基类
         return 最上层 != null && 最上层 != 自己面板;
     }
 
-    // 屏幕相对 点 → 网格落格（物品中心对齐 四舍五入；块偏移 反算）
+    // 屏幕相对 点 → 网格落格（物品中心对齐 四舍五入；块偏移 反算：x=右缝、y=下缝）
     protected bool 落格(float 相对x, float 相对顶, int 物宽, int 物高, out int 列, out int 行)
     {
         行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f) / 格尺寸);
+        // y 块偏移 反算（上下 口袋 缝）：先用 估算行 找 块，减 y 偏移 重算 行
+        if (块偏移 != null && 行 >= 0 && 行 < 当前行)
+        {
+            int 块y = 服务.该格块(0, 行);
+            if (块y >= 0 && 块y < 块偏移.Length)
+                行 = Mathf.RoundToInt((相对顶 - 物高 * 格尺寸 / 2f - 块偏移[块y].y) / 格尺寸);
+        }
         float 估算x = 相对x - 物宽 * 格尺寸 / 2f;
         int 估算列 = Mathf.RoundToInt(估算x / 格尺寸);
         float 偏移 = 0f;
         if (块偏移 != null && 行 >= 0 && 行 < 当前行 && 估算列 >= 0 && 估算列 < 当前列)
         {
             int 块 = 服务.该格块(估算列, 行);
-            if (块 >= 0 && 块 < 块偏移.Length) 偏移 = 块偏移[块];
+            if (块 >= 0 && 块 < 块偏移.Length) 偏移 = 块偏移[块].x;
         }
         列 = Mathf.RoundToInt((估算x - 偏移) / 格尺寸);
         return 列 >= 0 && 行 >= 0 && 列 < 当前列 && 行 < 当前行;
@@ -341,26 +392,25 @@ public abstract partial class 网格面板基类
         if (落点投影 == null) return;
         if (强制禁)
         {
+            隐藏全部投影();   // 先 隐藏 投影格（强制禁 = 全网格 红框 独占）
             落点投影.gameObject.SetActive(true);
             落点投影.rectTransform.anchoredPosition = Vector2.zero;
-            落点投影.rectTransform.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸);
+            落点投影.rectTransform.sizeDelta = new Vector2(当前列 * 格尺寸 + 最右偏移(), 当前行 * 格尺寸 + 最下偏移());
             落点投影.color = 网格面板配色.放置禁色;
             return;
         }
         if (堆叠 == null || !屏幕到格(屏幕点, 堆叠, out var 列, out var 行))
         {
-            落点投影.gameObject.SetActive(false);
+            隐藏全部投影();
             return;
         }
         var (宽, 高) = 服务.物品占格(堆叠);
-        落点投影.gameObject.SetActive(true);
-        落点投影.rectTransform.anchoredPosition = new Vector2(格x(列, 行), -行 * 格尺寸);
-        落点投影.rectTransform.sizeDelta = new Vector2(宽 * 格尺寸, 高 * 格尺寸);
-        落点投影.color = 服务.可放置(堆叠.标识, 列, 行, 堆叠.旋转) ? 网格面板配色.放置可色 : 网格面板配色.放置禁色;
+        同步投影格(宽, 高);
+        显示投影格(列, 行, 宽, 高, 服务.可放置(堆叠.标识, 列, 行, 堆叠.旋转) ? 网格面板配色.放置可色 : 网格面板配色.放置禁色);
     }
 
     public void 隐藏装备拖拽投影()
     {
-        if (落点投影 != null) 落点投影.gameObject.SetActive(false);
+        隐藏全部投影();
     }
 }

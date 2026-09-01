@@ -39,3 +39,8 @@ Thumbs.db
 # 调试/备份产物
 Assets/Screenshots/
 *.bak*
+
+# 临时校验脚本与本地工具产物（不入库）
+check_refs_tmp.py
+Tools/户型验证/bin/
+
