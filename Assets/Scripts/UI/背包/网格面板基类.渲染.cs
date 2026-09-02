@@ -93,8 +93,23 @@ public abstract partial class 网格面板基类
         foreach (var 堆叠 in 服务.网格物品)
         {
             if (堆叠 == null || 堆叠.列 < 0) continue;
-            if (物品框表.TryGetValue(堆叠, out var 框)) { 框.存活 = true; 更新实体框(框, 堆叠); }
-            else { var 新框 = 创建实体框(堆叠); if (新框 != null) { 新框.存活 = true; 物品框表[堆叠] = 新框; } }
+            物品框 框 = null;
+            if (物品框表.TryGetValue(堆叠, out 框))
+            {
+                // 标识 变化（变质 替换 腐坏食物 等）：销毁 旧框 → 走 创建（图标/名称 刷新）
+                if (框.创建标识 != null && 框.创建标识 != 堆叠.标识)
+                {
+                    if (框.根 != null) Destroy(框.根.gameObject);
+                    物品框表.Remove(堆叠);
+                    框 = null;
+                }
+            }
+            if (框 != null) { 框.存活 = true; 更新实体框(框, 堆叠); }
+            else
+            {
+                var 新框 = 创建实体框(堆叠);
+                if (新框 != null) { 新框.存活 = true; 新框.创建标识 = 堆叠.标识; 物品框表[堆叠] = 新框; }
+            }
         }
         if (物品框表.Count == 0) return;
         List<物品堆叠> 待删 = null;
