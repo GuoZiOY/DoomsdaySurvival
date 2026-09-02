@@ -1,15 +1,15 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-// 浮动容器面板基类：浮动面板 的 通用 壳 逻辑（创建/防重/关闭/拖拽移动/点击置顶/屏幕内限制/命中判定）。
+// 浮动面板基类：浮动面板 的 通用 壳 逻辑（创建/防重/关闭/拖拽移动/点击置顶/屏幕内限制/命中判定）。
 // 引用 不 序列化 在 基类——子类 各自 SerializeField（根矩形/标题/关闭 等 留 子类，预制体 引用 不 断），
 // 基类 通过 抽象 属性/虚方法 取用。网格 内容 由 子类 注入。
 // 设计：宿主管壳（创建/防重/拖拽/限屏），子类管内容（网格/按钮/信息）——网格 复用 网格面板基类。
-public abstract class 浮动容器面板基类 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler
+public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler
 {
     // 已打开的容器实例 → 面板基类；同一容器不可重复打开（双击/连点防重）——所有 浮动容器面板 子类 共用 防重表
-    private static readonly System.Collections.Generic.Dictionary<物品堆叠, 浮动容器面板基类> 已打开
-        = new System.Collections.Generic.Dictionary<物品堆叠, 浮动容器面板基类>();
+    private static readonly System.Collections.Generic.Dictionary<物品堆叠, 浮动面板基类> 已打开
+        = new System.Collections.Generic.Dictionary<物品堆叠, 浮动面板基类>();
 
     // ===== 布局常量（子类 定稿 面板 尺寸 用） =====
     protected const float 顶部预留 = 76f;    // 网格 顶部 距 面板 顶部（标题/按钮 区 高度）
@@ -35,7 +35,7 @@ public abstract class 浮动容器面板基类 : MonoBehaviour, IBeginDragHandle
     private Vector2 拖拽偏移;
 
     // 创建（子类 工厂 调用）：加载 子类 预制体 + 注入 容器 + 初始化
-    protected static T 创建<T>(RectTransform 挂载父, 物品堆叠 容器, string 预制体路径) where T : 浮动容器面板基类
+    protected static T 创建<T>(RectTransform 挂载父, 物品堆叠 容器, string 预制体路径) where T : 浮动面板基类
     {
         if (容器 == null) return null;
         // 防重：同一容器已打开 → 提到最上层并复用，不重复创建（所有 子类 共用 防重表）

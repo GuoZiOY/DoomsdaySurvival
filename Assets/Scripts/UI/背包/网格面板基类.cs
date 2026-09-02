@@ -18,7 +18,7 @@ using UnityEngine.InputSystem;
 // 分部文件：网格面板基类.渲染.cs（渲染框架）/ 网格面板基类.拖拽.cs（拖拽框架）/ 网格面板基类.交互.cs（交互分派+内部组件）。
 // 原则：子类 只写 实体 语义；本类 不含 任何 具体 实体 渲染/交互 代码。
 // ============================================================
-public abstract partial class 网格面板基类 : 面板基类
+public abstract partial class 网格面板基类 : MonoBehaviour
 {
     // ===== 网格配置（场景 Inspector 配置） =====
     [SerializeField] protected RectTransform 网格容器;   // 网格区域（左上锚定；代码动态生成底座与物品）。可运行时 绑定网格容器 覆盖（动态容器面板）
@@ -180,20 +180,6 @@ public abstract partial class 网格面板基类 : 面板基类
         if (线层 != null) { 线层.gameObject.SetActive(false); Destroy(线层.gameObject); 线层 = null; }
         if (物品层 != null) { 物品层.gameObject.SetActive(false); Destroy(物品层.gameObject); 物品层 = null; }
     }
-
-    protected override void 刷新(object 上下文)
-    {
-        选中 = null;
-        请求刷新();
-    }
-
-    public override bool 回退()
-    {
-        if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
-        return true;
-    }
-
-    public override string 取消文本 => "返回";
 
     // ============================================================
     // 更新循环（调度 刷新 + 拖拽 跨面板 投影 + 钩子）
