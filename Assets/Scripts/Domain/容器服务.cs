@@ -107,6 +107,12 @@ using System.Collections.Generic;
             var 家具 = 家具容器定义(堆叠);
             if (家具 != null)
             {
+                // 分区容器（净水器 等）：容器物品 = 各分区 子容器 堆叠（子堆叠 各自 容器物品 = 分区 内容）
+                if (家具.容器分区 != null && 家具.容器分区.Length > 0)
+                {
+                    初始化分区容器(堆叠, 家具);
+                    return;
+                }
                 var (_, 等级) = 家具工具.解码(堆叠.标识);
                 var (列, 行) = 家具容器尺寸(家具, 等级);
                 if (列 <= 0 || 行 <= 0) return;
@@ -124,10 +130,30 @@ using System.Collections.Generic;
             堆叠.容器物品 ??= new List<物品堆叠>();
         }
 
-        // 容器是否允许放入该物品（容器允许类型 校验；空 = 任意；家具容器 走 家具规则）
+        // 分区容器 初始化：按 家具定义.容器分区 建 子容器 堆叠（标识 = 父标识 + "@" + 分区名；容器列/行 = 分区 尺寸）
+        private void 初始化分区容器(物品堆叠 堆叠, 家具数据 家具)
+        {
+            if (堆叠.容器物品 == null || 堆叠.容器物品.Count == 0)
+                堆叠.容器物品 = new List<物品堆叠>();
+            else return;   // 已 初始化（读档 恢复）——不 重复 建
+            foreach (var 分区 in 家具.容器分区)
+            {
+                if (分区 == null) continue;
+                堆叠.容器物品.Add(new 物品堆叠($"{堆叠.标识}@{分区.名称}", 1)
+                {
+                    容器列 = 分区.列 > 0 ? 分区.列 : 3,
+                    容器行 = 分区.行 > 0 ? 分区.行 : 3,
+                    容器物品 = new List<物品堆叠>(),
+                });
+            }
+        }
+
+        // 容器是否允许放入该物品（容器允许类型 校验；空 = 任意；家具容器 走 家具规则；分区 子容器 走 分区 规则）
         public bool 允许放入(物品堆叠 容器, string 标识)
         {
             if (容器 == null || string.IsNullOrEmpty(标识)) return false;
+            // 分区 子容器（净水器 的 脏水区 等：标识 含 @）→ 按 分区 配置 过滤
+            if (子容器分区(容器) != null) return 分区允许放入(容器, 标识);
             var 家具 = 家具容器定义(容器);
             if (家具 != null) return 家具允许放入(家具, 标识);
             var 模板 = 物品数据解析?.Invoke(容器.标识);
@@ -170,6 +196,62 @@ using System.Collections.Generic;
             注入解析器(服务);
             注入形状(服务, 容器.标识, 列, 行);
             return 服务;
+        }
+
+        // ===== 分区容器（净水器 等：容器物品 = 各分区 子容器 堆叠） =====
+
+        // 家具 是否 分区容器（家具定义.容器分区 非空）
+        public bool 是分区容器(物品堆叠 堆叠)
+        {
+            if (堆叠 == null) return false;
+            var 家具 = 家具容器定义(堆叠);
+            return 家具 != null && 家具.容器分区 != null && 家具.容器分区.Length > 0;
+        }
+
+        // 分区 数量（净水器 3 区 → 3）
+        public int 分区数量(物品堆叠 容器) => 是分区容器(容器) && 容器.容器物品 != null ? 容器.容器物品.Count : 0;
+
+        // 第 分区索引 个 子容器 堆叠（容器物品[索引]；null = 无）
+        public 物品堆叠 分区子容器(物品堆叠 容器, int 索引)
+        {
+            if (!是分区容器(容器) || 容器.容器物品 == null || 索引 < 0 || 索引 >= 容器.容器物品.Count) return null;
+            return 容器.容器物品[索引];
+        }
+
+        // 该 子容器 堆叠 的 分区 配置（子容器 标识 = "父@分区名"；null = 非 子容器/找不到）
+        public 容器分区数据 子容器分区(物品堆叠 子容器)
+        {
+            if (子容器 == null || string.IsNullOrEmpty(子容器.标识)) return null;
+            int at = 子容器.标识.IndexOf('@');
+            if (at <= 0) return null;
+            string 父标识 = 子容器.标识.Substring(0, at);
+            string 分区名 = 子容器.标识.Substring(at + 1);
+            var (定义标识, _) = 家具工具.解码(父标识);
+            var 家具 = 家具定义解析?.Invoke(定义标识);
+            if (家具?.容器分区 == null) return null;
+            foreach (var 分区 in 家具.容器分区)
+                if (分区 != null && 分区.名称 == 分区名) return 分区;
+            return null;
+        }
+
+        // 分区 允许放入（子容器 按其 分区 配置 过滤；父 容器 自身 仍 按 家具 允许 规则 先 拦）
+        public bool 分区允许放入(物品堆叠 子容器, string 标识)
+        {
+            if (物品数据解析 == null || string.IsNullOrEmpty(标识)) return false;
+            var 分区 = 子容器分区(子容器);
+            if (分区 == null) return false;
+            var 入 = 物品数据解析(标识);
+            if (入 == null) return false;
+            if (string.IsNullOrEmpty(分区.允许类型)) return true;
+            foreach (var 类型 in 分区.允许类型.Split('|'))
+            {
+                if (入.类型 != 类型.Trim()) continue;
+                if (string.IsNullOrEmpty(分区.允许种类)) return true;
+                foreach (var 种类 in 分区.允许种类.Split('|'))
+                    if (入.种类 == 种类.Trim()) return true;
+                return false;
+            }
+            return false;
         }
 
         // 穿戴容器视图：把 装备记录（弹挂/腰封/背包）的 容器物品 包成 网格服务（中区网格常驻显示用）
