@@ -13,7 +13,7 @@ public sealed class 建造面板 : MonoBehaviour
     [SerializeField] private GameObject 行模板;      // 家具行 模板（挂 家具行：字体/布局 模板 里 手动 排）
     [SerializeField] private 安全屋面板 安全屋;       // 安全屋面板（进入 摆放 / 强制 重建 网格）
 
-    private static readonly string[] 家具顺序 = { "床", "工作台", "储物箱", "冰箱", "净水器", "收音机", "灶台", "医疗站", "门", "厕所" };   // 固定 顺序（含 基础 家具：门/厕所——0 级 破损 显示 修复）
+    private static readonly string[] 家具顺序 = { "床", "工作台", "储物箱", "冰箱", "净水器", "种植箱", "收音机", "灶台", "医疗站", "门", "厕所" };   // 固定 顺序（含 基础 家具：门/厕所——0 级 破损 显示 修复）
 
     private 玩家档案 玩家 => ServiceRegistry.Get<PlayerService>().档案;
     private DataService 数据 => ServiceRegistry.Get<DataService>();

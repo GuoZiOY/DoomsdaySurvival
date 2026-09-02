@@ -94,6 +94,8 @@ public sealed class 世界时间管理器
         if (玩家.水分度 <= 0) 玩家.生命 = Mathf.Max(0, 玩家.生命 - Mathf.Max(1, Mathf.RoundToInt(2 * 时数)));
         // 腐坏 结算：易腐 物品 随 时间 变质（常温 扣减；冰箱 内 按 倍率 减速）
         腐坏结算(分钟);
+        // 生长 结算：种植箱 内 种子 随 时间 生长（成熟 替换）
+        生长结算(分钟);
     }
 
     // ===== 腐坏 结算（易腐 物品 随 时间 变质） =====
@@ -150,6 +152,48 @@ public sealed class 世界时间管理器
         if (!数据.家具.TryGetValue(定义标识, out var 定义) || 定义.保质期倍率 == null || 定义.保质期倍率.Length == 0) return 1f;
         int 索引 = Mathf.Clamp(等级 - 1, 0, 定义.保质期倍率.Length - 1);
         return 定义.保质期倍率[索引] > 0 ? 定义.保质期倍率[索引] : 1f;
+    }
+
+    // ===== 生长 结算（种植箱 内 种子 → 成熟） =====
+
+    // 遍历 玩家.家具 里 容器 家具（种植箱 等）的 容器 物品：
+    //   惰性 初始化：生长分钟<=0 且 物品 是 种子（生长时间>0）→ 补 生长时间×60
+    //   扣减：-分钟；成熟（<=0 且 已 初始化）→ 替换 为 成熟产物（数量 不变；清 生长分钟 防 重 替换）
+    private void 生长结算(int 分钟)
+    {
+        if (分钟 <= 0) return;
+        var 数据 = ServiceRegistry.Get<DataService>();
+        if (数据 == null) return;
+        bool 有变化 = false;
+        foreach (var 家具 in 玩家.家具)
+        {
+            if (家具?.容器物品 == null) continue;
+            var (定义标识, _) = 家具工具.解码(家具.标识);
+            if (!数据.家具.TryGetValue(定义标识, out var 定义) || !定义.是容器) continue;
+            foreach (var 堆叠 in 家具.容器物品)
+                if (堆叠 != null) 有变化 |= 生长单个(堆叠, 分钟, 数据);
+        }
+        if (有变化)
+            事件?.发布(new 背包变化事件("", 0, 变化原因.获得));   // 触发 容器 面板 刷新（成熟 替换）
+    }
+
+    // 单个 种子 生长 处理：返回 是否 状态 变化（初始化/成熟 替换）
+    private bool 生长单个(物品堆叠 堆叠, int 分钟, DataService 数据)
+    {
+        if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return false;
+        if (!数据.物品.TryGetValue(堆叠.标识, out var 模板) || 模板.生长时间 <= 0 || string.IsNullOrEmpty(模板.成熟产物)) return false;   // 非 种子
+        // 惰性 初始化（生长分钟 0 = 未 初始化/旧档）：补 生长时间×60
+        if (堆叠.生长分钟 <= 0)
+        {
+            堆叠.生长分钟 = 模板.生长时间 * 60f;
+            return true;
+        }
+        堆叠.生长分钟 -= 分钟;
+        if (堆叠.生长分钟 > 0) return false;
+        // 成熟：替换 为 成熟产物（保持 数量/位置；清 生长分钟 = 0 表示 已 成熟 不再 长）
+        堆叠.标识 = 模板.成熟产物;
+        堆叠.生长分钟 = 0;
+        return true;
     }
 
     // ===== ③ 跳时（制作 动画 / 一次性 推进：只 推 时间 + 跨天；副作用 由 调用方 结算） =====
