@@ -3,32 +3,38 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 制作面板：安全屋 制作 家具（工作台/灶台/医疗站）共用——完全由 安全屋面板 管控（子面板，非 面板管理器 独立面板）。
-// 场景手动搭建（与 建造面板 同模式）：制作面板 物体（挂 本组件，初始 inactive，放 安全屋面板 下）
-//   + 标题（家具名·制作）+ 配方列表（选配方）+ 详情 + 制作按钮
-//   + 输入网格（材料 拖入：只收 当前 配方 材料）+ 输出网格（产物 出现 可 拖走）
-// 会话 存储：输入/输出 = 面板 会话 网格服务（打开 时 建 空；材料 拖入 = 真实 移入 输入）
-// 制作 流程：选配方 → 材料 拖入 输入 → 点 制作（从 输入 扣 → 动画 → 产物 入 输出）
-//           关闭/回退 = 取消 制作（输入 剩料 返还 背包）+ 制作 中 取消 回滚
+// 制作面板：制作 家具（工作台/灶台/医疗站）的 浮动 操作面板（浮动面板基类 子类）——
+// Canvas 顶层 浮动，可与 持有面板（背包）共存：材料 从 背包 拖入 输入区、产物 拖回 背包。
+// 场景搭建：Resources/Prefab/制作面板.prefab（挂 本组件）+ 浮动壳（面板根/标题/关闭）
+//   + 配方列表（选配方）+ 详情 + 制作按钮 + 输入网格（只收 当前 配方 材料）+ 输出网格（产物）。
+// 会话 存储：输入/输出 = 面板 会话 网格服务（创建 时 建；材料 拖入 = 真实 移入 输入）
+// 制作 流程：右键 家具「打开」→ 制作面板.创建（绑定 家具 实例）→ 选配方 → 拖材料 入 输入
+//           → 点 制作（从 输入 扣 → 动画 → 产物 入 输出）；关闭 = 输入 剩料 返还 背包。
 // 制作动画：进度条 + 时间 流逝（HUD 时钟 同步 走）。
-public sealed class 制作面板 : MonoBehaviour
+public sealed class 制作面板 : 浮动面板基类
 {
+    private const string 预制体路径常量 = "Prefab/制作面板";   // Resources 路径（预制体 静态 搭建）
+
+    [SerializeField] private RectTransform 面板根;   // 浮动壳：面板根（拖拽/置顶/限屏）
     [SerializeField] private TMP_Text 标题;         // 标题：家具名 · 制作（场景 搭）
     [SerializeField] private RectTransform 内容区;  // 配方行 容器（场景 搭）
     [SerializeField] private GameObject 配方行模板; // 配方行 模板（挂 配方行：物品图/名称/选中背景）
     [SerializeField] private TMP_Text 详情文本;     // 选中 配方 详情（场景 搭）
     [SerializeField] private Button 制作按钮;       // 制作 按钮（场景 搭；interactable = 可制作）
-    [SerializeField] private Button 关闭按钮;       // 关闭 按钮（场景 搭；点击 = 关闭 制作面板，回 营地）
+    [SerializeField] private Button 关闭按钮;       // 关闭 按钮（场景 搭；点击 = 关闭 面板）
     [SerializeField] private 制作输入输出网格 输入网格;   // 材料 输入 区（只收 当前 配方 材料）
     [SerializeField] private 制作输入输出网格 输出网格;   // 产物 输出 区（禁 拖入；产物 可 拖走）
+
+    protected override string 预制体路径 => 预制体路径常量;
+    protected override RectTransform 根矩形 => 面板根;
 
     private 工作台制作服务 制作 => ServiceRegistry.Get<工作台制作服务>();
     private DataService 数据 => ServiceRegistry.Get<DataService>();
 
-    private string 家具标识;        // 打开 时 注入："工作台"/"灶台"/"医疗站"
+    private string 家具标识;        // 家具 实例 解码："工作台"/"灶台"/"医疗站"
     private string 选中配方标识;
 
-    // 会话 网格（输入/输出 的 数据源：打开 建，关闭 清）
+    // 会话 网格（输入/输出 的 数据源：创建 建，关闭 清）
     private 网格服务 输入会话, 输出会话;
 
     // ===== 制作动画 状态（代码 动态 建 进度条，不 依赖 场景 手动 搭） =====
@@ -38,6 +44,10 @@ public sealed class 制作面板 : MonoBehaviour
     private TMP_Text 制作中文本;    // "制作中…（推进 X 分钟）"
     private GameObject 动画根;      // 进度条 + 文本 的 容器（制作 时 显示，完成 隐藏）
     private float 已推分钟;         // 动画 期间 已 推进 的 游戏 分钟（取消 时 回滚）
+
+    // 静态 工厂：家具 右键「打开」→ 制作面板.创建（绑定 工作台/灶台/医疗站 家具 实例）
+    public static 制作面板 创建(RectTransform 挂载父, 物品堆叠 家具实例)
+        => 创建<制作面板>(挂载父, 家具实例, 预制体路径常量);
 
     void Awake()
     {
@@ -52,34 +62,37 @@ public sealed class 制作面板 : MonoBehaviour
             制作按钮.onClick.AddListener(点击制作);
             音效管理器.实例?.注册按钮(制作按钮);   // 点击 制作 按钮 → 点击 音效（本帧 失败 时 自动 跳过）
         }
-        // 关闭 按钮：绑定 一次（点击 = 关闭 制作面板，回 营地 视图）
+        // 关闭 按钮：绑定 一次（点击 = 关闭 面板——浮动 面板 关闭 = 销毁 + 剩料 返还）
         if (关闭按钮 != null)
         {
             关闭按钮.onClick.AddListener(() =>
             {
                 音效管理器.实例?.播放成功();
-                关闭();
+                关闭();   // 基类 关闭：清理内容（返还 剩料）→ 销毁
             });
         }
     }
 
-    // 打开（安全屋面板 调用）：注入 家具类型 + 建 会话 网格 + 显示 + 刷新
-    public void 打开(string 家具标识)
+    // 初始化（基类 创建 调用）：家具 实例 → 家具 标识 + 会话 网格 + 刷新
+    protected override void 初始化面板(物品堆叠 家具实例, RectTransform 挂载父)
     {
-        this.家具标识 = 家具标识;
+        当前容器 = 家具实例;
+        if (家具实例 == null) return;
+        var (定义标识, _) = 家具工具.解码(家具实例.标识);
+        家具标识 = 定义标识;
+        // 面板 尺寸（内容 多：配方 列表 + 输入/输出 网格）——覆盖 基类 初始 占位
+        if (面板根 != null) 面板根.sizeDelta = new Vector2(720f, 560f);
         取消制作动画();
         创建会话网格();
-        gameObject.SetActive(true);
         刷新();
     }
 
-    // 关闭（安全屋面板 调用：隐藏面板/回退 时）：输入 剩料 返还 背包 + 清 会话
-    public void 关闭()
+    // 清理 内容（基类 关闭 销毁 前 调）：取消 制作 + 输入 剩料 返还 背包 + 清 会话
+    protected override void 清理内容()
     {
-        取消制作动画();   // 制作 中 关闭：回滚 已扣 材料/精力/已推 时间
+        取消制作动画();   // 制作 中 关闭：回滚 已扣 精力/已推 时间
         返还输入材料();   // 输入 区 剩料 → 背包
         清理会话网格();
-        gameObject.SetActive(false);
     }
 
     // 建 会话 网格（输入/输出 数据源：空 网格服务）

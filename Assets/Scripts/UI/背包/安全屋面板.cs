@@ -25,7 +25,7 @@ public sealed class 安全屋面板 : 面板基类
     [SerializeField] private Button 拆除按钮;          // 拆除 按钮：拆墙 模式 开关（点击 后 左键 点 墙 拆）
     [SerializeField] private TMP_Text 拆除按钮文本;    // 拆除按钮 文本（拆墙 模式 切换 时 更新；可选）
     [SerializeField] private 建造面板 建造面板;        // 建造面板：显示 家具 信息 + 建造/升级
-    [SerializeField] private 制作面板 制作面板;        // 制作面板：工作台/灶台/医疗站 制作（右键 家具「打开」→ 打开制作）
+    // 注：制作面板 已 浮动 化（制作面板.创建）——不再 由 安全屋面板 管控
 
     // ===== 房间网格（家具网格面板：家具 模式 子类） =====
     private 家具网格面板 房间网格;
@@ -46,7 +46,6 @@ public sealed class 安全屋面板 : 面板基类
     void Awake()
     {
         if (建造面板 != null) 建造面板.gameObject.SetActive(false);   // 建造面板 初始 隐藏（点 建造 才 出现）
-        if (制作面板 != null) 制作面板.关闭();   // 制作面板 初始 隐藏（右键 家具「打开」才 出现）
         if (建造按钮 != null) 建造按钮.onClick.AddListener(切换编辑模式);
         if (拆除按钮 != null) 拆除按钮.onClick.AddListener(切换拆除模式);
     }
@@ -71,7 +70,6 @@ public sealed class 安全屋面板 : 面板基类
     public override void 隐藏面板(bool 上下互切 = false, bool 返回方向 = false)
     {
         退出摆放();
-        if (制作面板 != null) 制作面板.关闭();   // 制作面板 由 安全屋面板 管控：随 营地 关闭
         背景模糊层.隐藏模糊();
         base.隐藏面板(上下互切, 返回方向);
     }
@@ -79,7 +77,6 @@ public sealed class 安全屋面板 : 面板基类
     public override bool 回退()
     {
         if (摆放预览 != null) { 退出摆放(); 重建(); return true; }
-        if (制作面板 != null && 制作面板.gameObject.activeSelf) { 制作面板.关闭(); return true; }   // 制作面板 开 → 先 关（回 营地）
         if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
         return true;
     }
@@ -131,17 +128,6 @@ public sealed class 安全屋面板 : 面板基类
     public void 强制重建网格()
     {
         if (房间网格 != null) 房间网格.强制重建();
-    }
-
-    // 打开 制作面板（工作台/灶台/医疗站 右键「打开」→ 家具网格面板 调用）：由 安全屋面板 直接 管控（子面板，不走 面板管理器）
-    public void 打开制作(string 家具标识)
-    {
-        if (制作面板 == null)
-        {
-            事件.发布(new 日志事件(日志类型.反馈坏, "制作面板未接线（安全屋面板 → 制作面板）。"));
-            return;
-        }
-        制作面板.打开(家具标识);
     }
 
     // 切换 编辑模式（建造按钮）：允许 建造/移动/旋转 家具；非 编辑 模式 家具 静态
