@@ -17,7 +17,6 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
     protected const float 底边距 = 16f;      // 网格 底部 距 面板 底缘
     protected const float 最小面板宽 = 360f;
     protected const float 最小面板高 = 250f;
-    protected const float 初始宽 = 480f, 初始高 = 420f;
     protected const float 初始右偏比例 = 0.15f;
     protected const float 初始下偏 = 20f;
     protected const float 兜底右偏比例 = 0.4f;
@@ -56,26 +55,26 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         var 顶层 = 画布 != null ? (RectTransform)画布.transform : 挂载父;
         面板.transform.SetParent(顶层, false);
         面板.transform.SetAsLastSibling();
-        // 左上锚定 + 初始位置：挂载父 左上 → Canvas 局部坐标 → 右下偏移（避开原挂载点）
+        // 锚点 居中（面板 宽高 = 预制体 原样：手搭 预制体 定 多少 就 多少，代码 不 覆盖）
         var 根 = 面板.根矩形;
-        UI工具.设锚点(根, new Vector2(0, 1), new Vector2(0, 1));
+        UI工具.设锚点(根, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+        面板.当前容器 = 容器;
+        已打开[容器] = 面板;
+        面板.初始化面板(容器, 挂载父);   // 尺寸 定稿（容器面板 按 网格 自适应——在 此 之后 定位 才 用 最终 尺寸）
+        // 初始 位置：面板 左上 ≈ 挂载父 左上 右下 偏移（避 原 挂载 点）；居中 锚 → 减 画布 中心
         var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
         Vector2 挂载父左上;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(顶层,
                 RectTransformUtility.WorldToScreenPoint(相机, 挂载父.TransformPoint(new Vector3(挂载父.rect.xMin, 挂载父.rect.yMax, 0f))),
                 相机, out 挂载父左上))
-            根.anchoredPosition = 挂载父左上 - new Vector2(顶层.rect.xMin, 顶层.rect.yMax) + new Vector2(挂载父.rect.width * 初始右偏比例, -初始下偏);
+            根.anchoredPosition = 挂载父左上 - 顶层.rect.center + new Vector2(挂载父.rect.width * 初始右偏比例 + 根.rect.width * 0.5f, -初始下偏 - 根.rect.height * 0.5f);
         else
-            根.anchoredPosition = new Vector2(顶层.rect.width * 兜底右偏比例, -初始下偏);
-        根.sizeDelta = new Vector2(初始宽, 初始高);
-        面板.当前容器 = 容器;
-        已打开[容器] = 面板;
-        面板.初始化面板(容器, 挂载父);
+            根.anchoredPosition = new Vector2(顶层.rect.width * 兜底右偏比例, -初始下偏) - 顶层.rect.center;
         面板.限制在屏幕内();
         return 面板;
     }
 
-    // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏
+    // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏（锚点 居中 → 对称 范围）
     protected void 限制在屏幕内()
     {
         var 父 = 根矩形.parent as RectTransform;
@@ -83,19 +82,26 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         var 位置 = 根矩形.anchoredPosition;
         float 父宽 = 父.rect.width, 父高 = 父.rect.height;
         float 面板宽 = 根矩形.sizeDelta.x, 面板高 = 根矩形.sizeDelta.y;
-        位置.x = Mathf.Clamp(位置.x, 0f, Mathf.Max(0f, 父宽 - 面板宽));
-        位置.y = Mathf.Clamp(位置.y, Mathf.Min(0f, -(父高 - 面板高)), 0f);
+        float 余宽 = Mathf.Max(0f, (父宽 - 面板宽) * 0.5f);   // 中心 锚：可 偏移 的 半宽（面板 比 父 大 → 0 = 居中）
+        float 余高 = Mathf.Max(0f, (父高 - 面板高) * 0.5f);
+        位置.x = Mathf.Clamp(位置.x, -余宽, 余宽);
+        位置.y = Mathf.Clamp(位置.y, -余高, 余高);
         根矩形.anchoredPosition = 位置;
     }
 
-    // 关闭（子类 关闭按钮 / 外部 调用）：解除 防重 登记 + 置空 数据源 + 销毁
+    // 关闭（子类 关闭按钮 / 外部 调用）：解除 防重 登记 + 置空 数据源 + 销毁。
+    // 可否关闭：子类 拦截（如 制作面板：会话 里 有 物品 放 不 回 玩家 → 拒绝 关闭，防 丢失）
     public void 关闭()
     {
+        if (!可否关闭()) return;
         if (当前容器 != null) 已打开.Remove(当前容器);
         当前容器 = null;
         清理内容();
         Destroy(gameObject);
     }
+
+    // 子类 覆写：关闭 前 检查/善后（返回 false = 取消 关闭）。默认 允许。
+    protected virtual bool 可否关闭() => true;
 
     // 屏幕点 是否在 本根矩形（底座）矩形 内——拖拽落点 拦截用
     public bool 命中(Vector2 屏幕点)
@@ -106,7 +112,7 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         return RectTransformUtility.RectangleContainsScreenPoint(根矩形, 屏幕点, 相机);
     }
 
-    protected void OnDestroy()
+    protected virtual void OnDestroy()
     {
         if (当前容器 != null) 已打开.Remove(当前容器);
     }

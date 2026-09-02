@@ -212,17 +212,17 @@ public abstract partial class 网格面板基类
         }
         else 拖拽代理.position = 事件.position;
         var 下方面板 = 事件下方面板(事件);
-        var 自己面板 = GetComponentInParent<容器面板>();
-        var 最上层容器 = 最上层容器面板(事件);
-        if (最上层容器 != null)
+        var 最上层浮动 = 最上层浮动宿主(事件);
+        if (最上层浮动 != null)
         {
-            if (最上层容器 != 自己面板)
+            // 鼠标 在 浮层 上：别的 浮层 → 拦截（投影 归 那 个 浮层）；自己 宿主 但 不在 本 网格 容器 → 隐藏（底座 空白/同 宿主 他 网格）
+            if (最上层浮动 != 浮动宿主)
             {
                 落点有效 = false;
                 隐藏全部投影();
                 return;
             }
-            if (!最上层容器.命中网格(事件.position))
+            if (!屏幕命中(事件.position))
             {
                 落点有效 = false;
                 隐藏全部投影();
@@ -303,38 +303,45 @@ public abstract partial class 网格面板基类
         return 视图.寻找可放置格智能旋转(堆叠, out _) != null;
     }
 
-    // 鼠标下方的 网格面板基类（矩形范围判定；容器面板 优先 于 普通面板）
+    // 鼠标下方的 网格面板基类（浮层 宿主 优先：鼠标 在 某 浮动面板 上 → 只 认 该 宿主 内 的 网格，
+    // 宿主 底座 空白 → 返回 null（拦截，不 穿透 下层）；否则 普通 网格 矩形 命中）
     protected 网格面板基类 事件下方面板(PointerEventData 事件)
     {
-        网格面板基类 容器命中 = null, 普通命中 = null;
-        int 最大容器序号 = -1, 最大普通序号 = -1;
+        var 最上层浮动 = 最上层浮动宿主(事件);   // 鼠标 下 最 上 层 浮动面板（壳 矩形）
+        if (最上层浮动 != null)
+        {
+            // 鼠标 在 浮层 上：只 认 该 宿主 内 的 网格（各 网格 容器 矩形 细分——同 宿主 多 网格 输入/输出 可 区分）
+            网格面板基类 浮层内命中 = null;
+            foreach (var 面板 in 全部面板)
+            {
+                if (面板 == null || !面板.gameObject.activeInHierarchy) continue;
+                if (面板.浮动宿主 != 最上层浮动) continue;
+                if (面板.网格容器 == null) continue;
+                if (RectTransformUtility.RectangleContainsScreenPoint(面板.网格容器, 事件.position, 事件.pressEventCamera))
+                    浮层内命中 = 面板;   // 同 宿主 内 网格 一般 不 重叠；重叠 时 取 后（渲染 序）
+            }
+            return 浮层内命中;   // null = 鼠标 在 宿主 底座 空白 → 上层 拦截
+        }
+        // 普通（非浮层 内）网格：矩形 命中 + 层级 序 号
+        网格面板基类 普通命中 = null;
+        int 最大普通序号 = -1;
         foreach (var 面板 in 全部面板)
         {
             if (面板 == null || !面板.gameObject.activeInHierarchy) continue;
-            var 容器面板 = 面板.所属容器 != null ? 面板.GetComponentInParent<容器面板>() : null;
-            RectTransform 矩形;
-            矩形 = 容器面板 != null ? (RectTransform)容器面板.transform : 面板.网格容器;
-            if (矩形 == null) continue;
-            if (!RectTransformUtility.RectangleContainsScreenPoint(矩形, 事件.position, 事件.pressEventCamera)) continue;
-            if (容器面板 != null)
-            {
-                int 序号 = 容器面板.transform.GetSiblingIndex();
-                if (序号 > 最大容器序号) { 最大容器序号 = 序号; 容器命中 = 面板; }
-            }
-            else
-            {
-                int 序号 = 面板.transform.GetSiblingIndex();
-                if (序号 > 最大普通序号) { 最大普通序号 = 序号; 普通命中 = 面板; }
-            }
+            if (面板.网格容器 == null) continue;
+            if (!RectTransformUtility.RectangleContainsScreenPoint(面板.网格容器, 事件.position, 事件.pressEventCamera)) continue;
+            int 序号 = 面板.transform.GetSiblingIndex();
+            if (序号 > 最大普通序号) { 最大普通序号 = 序号; 普通命中 = 面板; }
         }
-        return 容器命中 ?? 普通命中;
+        return 普通命中;
     }
 
-    protected static 容器面板 最上层容器面板(PointerEventData 事件)
+    // 鼠标下 最 上 层 浮动面板（宿主 壳）：矩形 命中 + sibling 序 号（浮动面板 都 挂 Canvas 顶层，序号 可 比）
+    protected static 浮动面板基类 最上层浮动宿主(PointerEventData 事件)
     {
-        容器面板 最上层 = null;
+        浮动面板基类 最上层 = null;
         int 最大序号 = -1;
-        foreach (var 面板 in FindObjectsOfType<容器面板>(true))
+        foreach (var 面板 in FindObjectsOfType<浮动面板基类>(true))
         {
             if (面板 == null || !面板.gameObject.activeInHierarchy) continue;
             if (!面板.命中(事件.position)) continue;
@@ -342,13 +349,6 @@ public abstract partial class 网格面板基类
             if (序号 > 最大序号) { 最大序号 = 序号; 最上层 = 面板; }
         }
         return 最上层;
-    }
-
-    protected bool 鼠标在容器面板底座上(PointerEventData 事件)
-    {
-        var 自己面板 = GetComponentInParent<容器面板>();
-        var 最上层 = 最上层容器面板(事件);
-        return 最上层 != null && 最上层 != 自己面板;
     }
 
     // 屏幕相对 点 → 网格落格（物品中心对齐 四舍五入；块偏移 反算：x=右缝、y=下缝）
