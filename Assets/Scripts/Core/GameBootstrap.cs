@@ -54,7 +54,11 @@ using UnityEngine;
             ServiceRegistry.Register(new 世界时间管理器(事件));
 
             // —— 容器（塔科夫式嵌套容器）——
-            var 容器 = new 容器服务 { 物品数据解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物) ? 物 : null };
+            var 容器 = new 容器服务
+            {
+                物品数据解析 = 标识 => 数据.物品.TryGetValue(标识, out var 物) ? 物 : null,
+                家具定义解析 = 标识 => 数据.家具.TryGetValue(标识, out var 家) ? 家 : null,   // 家具容器（冰箱 等：识别 是容器/尺寸/允许放入）
+            };
             容器.接线解析器(玩家.档案);   // PlayerService 已初始化，补接网格解析器
             ServiceRegistry.Register(容器);
 

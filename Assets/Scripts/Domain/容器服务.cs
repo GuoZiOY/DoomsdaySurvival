@@ -9,6 +9,8 @@ using System.Collections.Generic;
     {
         // 注入：标识 -> 物品数据（模板查询：是容器/容器尺寸/允许类型）。装配层接到 DataService。
         [NonSerialized] public Func<string, 物品数据> 物品数据解析;
+        // 注入：家具定义标识 -> 家具定义（家具容器 识别：冰箱 等 打开 网格面板 的 家具）。装配层接到 DataService。
+        [NonSerialized] public Func<string, 家具数据> 家具定义解析;
         // 注入：网格解析器（与 网格服务 同款，打开容器视图时注入，容器内网格判定依赖它们）。装配层从 玩家档案 同步。
         [NonSerialized] public Func<string, 物品形状> 形状解析;
         [NonSerialized] public Func<string, int> 堆叠上限解析;
@@ -24,41 +26,110 @@ using System.Collections.Generic;
             重量解析 = 档案.重量解析;
         }
 
-        // 该堆叠是否是容器：模板标记 或 已有容器实例内容
+        // ===== 家具容器（冰箱 等：家具实例 也是 容器） =====
+
+        // 家具容器 定义（解码 家具实例标识 → 家具定义；非容器家具 = null）
+        private 家具数据 家具容器定义(string 实例标识)
+        {
+            if (家具定义解析 == null || string.IsNullOrEmpty(实例标识)) return null;
+            var (定义标识, _) = 家具工具.解码(实例标识);
+            var 定义 = 家具定义解析(定义标识);
+            return 定义 != null && 定义.是容器 ? 定义 : null;
+        }
+
+        private 家具数据 家具容器定义(物品堆叠 堆叠) => 堆叠 == null ? null : 家具容器定义(堆叠.标识);
+
+        // 家具容器 内部网格尺寸（按等级：1级=定义.容器列行；n级 应用 升级 前 n-1 段 的 容器列行）
+        private (int 列, int 行) 家具容器尺寸(家具数据 定义, int 等级)
+        {
+            int 列 = 定义.容器列, 行 = 定义.容器行;
+            if (定义.升级 != null)
+            {
+                int 段数 = Math.Min(等级 - 1, 定义.升级.Length);
+                for (int i = 0; i < 段数; i++)
+                {
+                    var 升 = 定义.升级[i];
+                    if (升.容器列 > 0) 列 = 升.容器列;
+                    if (升.容器行 > 0) 行 = 升.容器行;
+                }
+            }
+            return (列, 行);
+        }
+
+        // 家具容器 允许放入 校验（容器允许类型 "|" 分隔多类型；可选 容器允许种类 "|" 分隔多值 二级过滤）
+        private bool 家具允许放入(家具数据 定义, string 入标识)
+        {
+            if (物品数据解析 == null || string.IsNullOrEmpty(入标识)) return false;
+            var 入 = 物品数据解析(入标识);
+            if (入 == null) return false;
+            if (string.IsNullOrEmpty(定义.容器允许类型)) return true;
+            foreach (var 类型 in 定义.容器允许类型.Split('|'))
+            {
+                if (入.类型 != 类型.Trim()) continue;
+                // 种类 过滤（"|" 分隔多值；空 = 不按种类过滤）：命中 任一 允许种类 即可
+                if (string.IsNullOrEmpty(定义.容器允许种类)) return true;
+                foreach (var 种类 in 定义.容器允许种类.Split('|'))
+                    if (入.种类 == 种类.Trim()) return true;
+                return false;
+            }
+            return false;
+        }
+
+        // 该堆叠是否是容器：物品模板 / 家具容器 / 已有容器实例内容
         public bool 是容器(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return false;
             var 模板 = 物品数据解析?.Invoke(堆叠.标识);
             if (模板 != null && 模板.是容器) return true;
+            if (家具容器定义(堆叠) != null) return true;
             return 堆叠.容器物品 != null && 堆叠.容器物品.Count >= 0 && 堆叠.容器列 > 0 && 堆叠.容器行 > 0;
         }
 
-        // 容器内部网格尺寸（实例优先，缺省用模板）
+        // 容器内部网格尺寸（实例优先，缺省用模板/家具容器）
         public (int 列, int 行) 容器尺寸(物品堆叠 堆叠)
         {
             if (堆叠.容器列 > 0 && 堆叠.容器行 > 0) return (堆叠.容器列, 堆叠.容器行);
+            var 家具 = 家具容器定义(堆叠);
+            if (家具 != null)
+            {
+                var (_, 等级) = 家具工具.解码(堆叠.标识);
+                return 家具容器尺寸(家具, 等级);
+            }
             var 模板 = 物品数据解析?.Invoke(堆叠.标识);
             if (模板 != null) return (模板.容器列, 模板.容器行);
             return (0, 0);
         }
 
-        // 初始化容器实例（放入网格/装备/掉落生成时调用）：按模板建空容器列表
+        // 初始化容器实例（放入网格/装备/掉落生成/打开家具容器 时调用）：按模板/家具定义 建空容器列表
         public void 初始化容器(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return;
+            var 家具 = 家具容器定义(堆叠);
+            if (家具 != null)
+            {
+                var (_, 等级) = 家具工具.解码(堆叠.标识);
+                var (列, 行) = 家具容器尺寸(家具, 等级);
+                if (列 <= 0 || 行 <= 0) return;
+                堆叠.容器列 = 列;
+                堆叠.容器行 = 行;
+                堆叠.容器物品 ??= new List<物品堆叠>();
+                return;
+            }
             var 模板 = 物品数据解析?.Invoke(堆叠.标识);
             if (模板 == null || !模板.是容器) return;
-            var (列, 行) = 容器尺寸(堆叠);
-            if (列 <= 0 || 行 <= 0) return;
-            堆叠.容器列 = 列;
-            堆叠.容器行 = 行;
+            var (列2, 行2) = 容器尺寸(堆叠);
+            if (列2 <= 0 || 行2 <= 0) return;
+            堆叠.容器列 = 列2;
+            堆叠.容器行 = 行2;
             堆叠.容器物品 ??= new List<物品堆叠>();
         }
 
-        // 容器是否允许放入该物品（容器允许类型 校验；空 = 任意）
+        // 容器是否允许放入该物品（容器允许类型 校验；空 = 任意；家具容器 走 家具规则）
         public bool 允许放入(物品堆叠 容器, string 标识)
         {
             if (容器 == null || string.IsNullOrEmpty(标识)) return false;
+            var 家具 = 家具容器定义(容器);
+            if (家具 != null) return 家具允许放入(家具, 标识);
             var 模板 = 物品数据解析?.Invoke(容器.标识);
             if (模板 == null || !模板.是容器) return false;
             if (string.IsNullOrEmpty(模板.容器允许类型)) return true;
@@ -66,10 +137,12 @@ using System.Collections.Generic;
             return 入 != null && 入.类型 == 模板.容器允许类型;
         }
 
-        // 允许放入（按 容器标识 查模板；装具块 校验用——装备记录 非 物品堆叠）
+        // 允许放入（按 容器标识 查模板；装具块 校验用——装备记录 非 物品堆叠；家具标识 走 家具规则）
         public bool 允许放入(string 容器标识, string 入标识)
         {
             if (string.IsNullOrEmpty(容器标识) || string.IsNullOrEmpty(入标识)) return false;
+            var 家具 = 家具容器定义(容器标识);
+            if (家具 != null) return 家具允许放入(家具, 入标识);
             var 容器模板 = 物品数据解析?.Invoke(容器标识);
             if (容器模板 == null || !容器模板.是容器) return false;
             if (string.IsNullOrEmpty(容器模板.容器允许类型)) return true;
@@ -77,12 +150,13 @@ using System.Collections.Generic;
             return 入 != null && 入.类型 == 容器模板.容器允许类型;
         }
 
-        // 按 标识 判断 是否容器（装具块 嵌套校验用）
+        // 按 标识 判断 是否容器（装具块 嵌套校验用；家具容器 亦识别）
         public bool 是容器(string 标识)
         {
             if (string.IsNullOrEmpty(标识)) return false;
             var 模板 = 物品数据解析?.Invoke(标识);
-            return 模板 != null && 模板.是容器;
+            if (模板 != null && 模板.是容器) return true;
+            return 家具容器定义(标识) != null;
         }
 
         // 打开容器：把 容器物品 包成 网格服务 视图（复用全部网格逻辑），并注入网格解析器 + 容器内部形状

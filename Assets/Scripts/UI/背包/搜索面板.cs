@@ -16,8 +16,8 @@ public sealed class 搜索面板 : MonoBehaviour
     // ===== 常量（视觉/资源 统一） =====
     private const string 放大镜路径 = "Art/放大镜";   // 放大镜图（未放 = null → 不显示 扫描动效）
     private const string 斜纹路径 = "Art/黑灰斜纹";    // 黑幕 背景 纹理（未放 = null → 纯色 兜底）
-    private const float 黑幕镜尺寸 = 32f;             // 黑幕 放大镜 尺寸
-    private const float 黑块镜尺寸 = 26f;             // 黑块 放大镜 尺寸
+    private const float 黑幕镜尺寸 = 50f;             // 黑幕 放大镜 尺寸
+    private const float 黑块镜尺寸 = 32f;             // 黑块 放大镜 尺寸
     private const float 黑幕扫描半径 = 28f;           // 黑幕 扫描 圆周 半径
     private const float 黑块扫描半径 = 12f;           // 黑块 扫描 圆周 半径
     private const float 扫描速度 = 2f;                // 扫描 圈/秒

@@ -213,8 +213,10 @@ public sealed class 右键菜单 : MonoBehaviour
         if (使用按钮 != null) 使用按钮.gameObject.SetActive(false);   // 使用 = 纯消费（恢复品）；家具 不 走 使用
         if (打开按钮 != null)
         {
-            // 打开：储物箱 → 仓库；工作台/灶台/医疗站 → 制作面板（都是「打开 内部界面」语义）
+            // 打开：储物箱 → 仓库；工作台/灶台/医疗站 → 制作面板；容器型家具（冰箱/水箱，是容器）→ 浮动容器面板
             bool 可打开 = 定义标识 == "储物箱" || 定义标识 == "工作台" || 定义标识 == "灶台" || 定义标识 == "医疗站";
+            if (!可打开 && ServiceRegistry.Get<DataService>().家具.TryGetValue(定义标识, out var 家具定义))
+                可打开 = 家具定义.是容器;
             打开按钮.gameObject.SetActive(可打开);
         }
         if (装备按钮 != null) 装备按钮.gameObject.SetActive(false);
