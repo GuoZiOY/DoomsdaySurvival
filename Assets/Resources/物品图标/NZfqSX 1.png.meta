@@ -1,0 +1,2300 @@
+fileFormatVersion: 2
+guid: d9cac618043f1ad4d9eb524d21b3255a
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -8985798005916389496
+    second: NZfqSX 1_0
+  - first:
+      213: 5271914345067282543
+    second: NZfqSX 1_1
+  - first:
+      213: 7217858237170027999
+    second: NZfqSX 1_2
+  - first:
+      213: -3564359247288531290
+    second: NZfqSX 1_3
+  - first:
+      213: 6148225016914988897
+    second: NZfqSX 1_4
+  - first:
+      213: 7816548796108003335
+    second: NZfqSX 1_5
+  - first:
+      213: 7535051095728418284
+    second: NZfqSX 1_6
+  - first:
+      213: 2873709180223779997
+    second: NZfqSX 1_7
+  - first:
+      213: -3776098078486990773
+    second: NZfqSX 1_8
+  - first:
+      213: -116853333189418584
+    second: NZfqSX 1_9
+  - first:
+      213: -7588932837324649519
+    second: NZfqSX 1_10
+  - first:
+      213: -1086407272995244155
+    second: NZfqSX 1_11
+  - first:
+      213: -106468961803719125
+    second: NZfqSX 1_12
+  - first:
+      213: 9172621701874415289
+    second: NZfqSX 1_13
+  - first:
+      213: 686972341361764224
+    second: NZfqSX 1_14
+  - first:
+      213: 4221901879955820759
+    second: NZfqSX 1_15
+  - first:
+      213: -4953792692446358997
+    second: NZfqSX 1_16
+  - first:
+      213: -3723946116259836573
+    second: NZfqSX 1_17
+  - first:
+      213: 2729641328387046172
+    second: NZfqSX 1_18
+  - first:
+      213: -2726481172213804182
+    second: NZfqSX 1_19
+  - first:
+      213: -2608838140725415834
+    second: NZfqSX 1_20
+  - first:
+      213: -163763519627074401
+    second: NZfqSX 1_21
+  - first:
+      213: 6194852767937254329
+    second: NZfqSX 1_22
+  - first:
+      213: -957542476757088940
+    second: NZfqSX 1_23
+  - first:
+      213: 4968587746380345864
+    second: NZfqSX 1_24
+  - first:
+      213: 5435084113971930882
+    second: NZfqSX 1_25
+  - first:
+      213: 9201274808120550100
+    second: NZfqSX 1_26
+  - first:
+      213: -2647188802478113301
+    second: NZfqSX 1_27
+  - first:
+      213: -4822830580855012372
+    second: NZfqSX 1_28
+  - first:
+      213: 6418441477142962155
+    second: NZfqSX 1_29
+  - first:
+      213: 6025195741655559825
+    second: NZfqSX 1_30
+  - first:
+      213: -7140747016259457647
+    second: NZfqSX 1_31
+  - first:
+      213: -3490356542542573916
+    second: NZfqSX 1_32
+  - first:
+      213: 1379239708682435262
+    second: NZfqSX 1_33
+  - first:
+      213: 4914968346889814106
+    second: NZfqSX 1_34
+  - first:
+      213: 4102792803989442820
+    second: NZfqSX 1_35
+  - first:
+      213: -8285350350558859372
+    second: NZfqSX 1_36
+  - first:
+      213: 8704835634971608754
+    second: NZfqSX 1_37
+  - first:
+      213: 7636478604933993240
+    second: NZfqSX 1_38
+  - first:
+      213: 5041448171988230609
+    second: NZfqSX 1_39
+  - first:
+      213: 3164570221213022080
+    second: NZfqSX 1_40
+  - first:
+      213: -434114212640694805
+    second: NZfqSX 1_41
+  - first:
+      213: 885920580506054324
+    second: NZfqSX 1_42
+  - first:
+      213: 6226270557425546013
+    second: NZfqSX 1_43
+  - first:
+      213: -6111290474325595131
+    second: NZfqSX 1_44
+  - first:
+      213: -5127063186953304292
+    second: NZfqSX 1_45
+  - first:
+      213: -9051618085994233721
+    second: NZfqSX 1_46
+  - first:
+      213: 6615551196085631996
+    second: NZfqSX 1_47
+  - first:
+      213: -8013762463858949165
+    second: NZfqSX 1_48
+  - first:
+      213: 8355129365860557604
+    second: NZfqSX 1_49
+  - first:
+      213: 624517662444650029
+    second: NZfqSX 1_50
+  - first:
+      213: -5268297907561163729
+    second: NZfqSX 1_51
+  - first:
+      213: 1231012002637501281
+    second: NZfqSX 1_52
+  - first:
+      213: 6262182973083978101
+    second: NZfqSX 1_53
+  - first:
+      213: -6628950083423401799
+    second: NZfqSX 1_54
+  - first:
+      213: -8963391973853237673
+    second: NZfqSX 1_55
+  - first:
+      213: 8292100390473539509
+    second: NZfqSX 1_56
+  - first:
+      213: -3549579924231756371
+    second: NZfqSX 1_57
+  - first:
+      213: -801204724726894131
+    second: NZfqSX 1_58
+  - first:
+      213: 151271481604999288
+    second: NZfqSX 1_59
+  - first:
+      213: 2084251909512472141
+    second: NZfqSX 1_60
+  - first:
+      213: -6921789163291803280
+    second: NZfqSX 1_61
+  - first:
+      213: 3136604593366261120
+    second: NZfqSX 1_62
+  - first:
+      213: -8024891311830050020
+    second: NZfqSX 1_63
+  - first:
+      213: 7267648294304039937
+    second: NZfqSX 1_64
+  - first:
+      213: 2111575316449391645
+    second: NZfqSX 1_65
+  - first:
+      213: 8495154250502947527
+    second: NZfqSX 1_66
+  - first:
+      213: 388086048158980073
+    second: NZfqSX 1_67
+  - first:
+      213: -7135686177042981761
+    second: NZfqSX 1_68
+  - first:
+      213: 6392477274802322743
+    second: NZfqSX 1_69
+  - first:
+      213: -6448491057046201164
+    second: NZfqSX 1_70
+  - first:
+      213: -6705255968341312373
+    second: NZfqSX 1_71
+  - first:
+      213: -5687501531984917395
+    second: NZfqSX 1_72
+  - first:
+      213: -7527342060531049916
+    second: NZfqSX 1_73
+  - first:
+      213: -4171490163215347524
+    second: NZfqSX 1_74
+  - first:
+      213: -5752749938711189405
+    second: NZfqSX 1_75
+  - first:
+      213: 4795641139798530441
+    second: NZfqSX 1_76
+  - first:
+      213: 2146693476351066365
+    second: NZfqSX 1_77
+  - first:
+      213: 4621448723328403856
+    second: NZfqSX 1_78
+  - first:
+      213: -1311847780018469690
+    second: NZfqSX 1_79
+  - first:
+      213: -8656897757409480095
+    second: NZfqSX 1_80
+  - first:
+      213: -5706970955452473582
+    second: NZfqSX 1_81
+  - first:
+      213: 772604505715673134
+    second: NZfqSX 1_82
+  - first:
+      213: 2353509662745338916
+    second: NZfqSX 1_83
+  - first:
+      213: 5419371578294673966
+    second: NZfqSX 1_84
+  - first:
+      213: -1242328510114555345
+    second: NZfqSX 1_85
+  - first:
+      213: -8506224578015658046
+    second: NZfqSX 1_86
+  - first:
+      213: 6877341391882081627
+    second: NZfqSX 1_87
+  - first:
+      213: 3437594822110329158
+    second: NZfqSX 1_88
+  - first:
+      213: -6808691807975116125
+    second: NZfqSX 1_89
+  - first:
+      213: 4797254457393706237
+    second: NZfqSX 1_90
+  - first:
+      213: -1077008311841823717
+    second: NZfqSX 1_91
+  - first:
+      213: -8347564641817560572
+    second: NZfqSX 1_92
+  - first:
+      213: -6110254762083211345
+    second: NZfqSX 1_93
+  - first:
+      213: 1438805377989742146
+    second: NZfqSX 1_94
+  - first:
+      213: 4793602638620007277
+    second: NZfqSX 1_95
+  - first:
+      213: 4585271210480033420
+    second: NZfqSX 1_96
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: NZfqSX 1_0
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 704
+        width: 42
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88fa0f982580c4380800000000000000
+      internalID: -8985798005916389496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_1
+      rect:
+        serializedVersion: 2
+        x: 93
+        y: 703
+        width: 75
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6085004a2a992940800000000000000
+      internalID: 5271914345067282543
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_2
+      rect:
+        serializedVersion: 2
+        x: 190
+        y: 704
+        width: 65
+        height: 79
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdd85a923dbfa2460800000000000000
+      internalID: 7217858237170027999
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_3
+      rect:
+        serializedVersion: 2
+        x: 281
+        y: 707
+        width: 73
+        height: 78
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a60d7d362ad88ec0800000000000000
+      internalID: -3564359247288531290
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_4
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 762
+        width: 11
+        height: 20
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16f43640412e25550800000000000000
+      internalID: 6148225016914988897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_5
+      rect:
+        serializedVersion: 2
+        x: 381
+        y: 703
+        width: 83
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 708568957b5f97c60800000000000000
+      internalID: 7816548796108003335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_6
+      rect:
+        serializedVersion: 2
+        x: 484
+        y: 706
+        width: 83
+        height: 78
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ced6f459c01e19860800000000000000
+      internalID: 7535051095728418284
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_7
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 701
+        width: 78
+        height: 86
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d94740b164771e720800000000000000
+      internalID: 2873709180223779997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_8
+      rect:
+        serializedVersion: 2
+        x: 686
+        y: 714
+        width: 81
+        height: 65
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b407fb2edca989bc0800000000000000
+      internalID: -3776098078486990773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_9
+      rect:
+        serializedVersion: 2
+        x: 279
+        y: 706
+        width: 67
+        height: 16
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a1ac68338ad06ef0800000000000000
+      internalID: -116853333189418584
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_10
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 606
+        width: 82
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1db87f6dac1bea690800000000000000
+      internalID: -7588932837324649519
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_11
+      rect:
+        serializedVersion: 2
+        x: 137
+        y: 640
+        width: 45
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 587b7bb575e4ce0f0800000000000000
+      internalID: -1086407272995244155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_12
+      rect:
+        serializedVersion: 2
+        x: 166
+        y: 606
+        width: 50
+        height: 49
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2ea5181b0fb58ef0800000000000000
+      internalID: -106468961803719125
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_13
+      rect:
+        serializedVersion: 2
+        x: 239
+        y: 617
+        width: 68
+        height: 70
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b67347d6d2bb4f70800000000000000
+      internalID: 9172621701874415289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_14
+      rect:
+        serializedVersion: 2
+        x: 343
+        y: 604
+        width: 77
+        height: 83
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 087e26964bd988900800000000000000
+      internalID: 686972341361764224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_15
+      rect:
+        serializedVersion: 2
+        x: 445
+        y: 604
+        width: 57
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d012572465379a30800000000000000
+      internalID: 4221901879955820759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_16
+      rect:
+        serializedVersion: 2
+        x: 543
+        y: 624
+        width: 41
+        height: 60
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b221fc3eac7904bb0800000000000000
+      internalID: -4953792692446358997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_17
+      rect:
+        serializedVersion: 2
+        x: 606
+        y: 606
+        width: 38
+        height: 59
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36d03a1dcb2e15cc0800000000000000
+      internalID: -3723946116259836573
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_18
+      rect:
+        serializedVersion: 2
+        x: 631
+        y: 641
+        width: 47
+        height: 46
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1b3cbe6352a1e520800000000000000
+      internalID: 2729641328387046172
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_19
+      rect:
+        serializedVersion: 2
+        x: 701
+        y: 602
+        width: 67
+        height: 87
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a63d763c1d7992ad0800000000000000
+      internalID: -2726481172213804182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_20
+      rect:
+        serializedVersion: 2
+        x: 294
+        y: 604
+        width: 26
+        height: 29
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6603291888b8bcbd0800000000000000
+      internalID: -2608838140725415834
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_21
+      rect:
+        serializedVersion: 2
+        x: 525
+        y: 607
+        width: 42
+        height: 25
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f94e57152f13abdf0800000000000000
+      internalID: -163763519627074401
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_22
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 505
+        width: 57
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9b3debc45c988f550800000000000000
+      internalID: 6194852767937254329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_23
+      rect:
+        serializedVersion: 2
+        x: 111
+        y: 505
+        width: 55
+        height: 54
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 455cb8fc03026b2f0800000000000000
+      internalID: -957542476757088940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_24
+      rect:
+        serializedVersion: 2
+        x: 138
+        y: 552
+        width: 43
+        height: 37
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 802fb5a0b38f3f440800000000000000
+      internalID: 4968587746380345864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_25
+      rect:
+        serializedVersion: 2
+        x: 204
+        y: 505
+        width: 74
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2076aa1943c4d6b40800000000000000
+      internalID: 5435084113971930882
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_26
+      rect:
+        serializedVersion: 2
+        x: 299
+        y: 509
+        width: 81
+        height: 77
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d2a6c200be71bf70800000000000000
+      internalID: 9201274808120550100
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_27
+      rect:
+        serializedVersion: 2
+        x: 401
+        y: 510
+        width: 77
+        height: 76
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bed76ee3fcb434bd0800000000000000
+      internalID: -2647188802478113301
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_28
+      rect:
+        serializedVersion: 2
+        x: 499
+        y: 504
+        width: 79
+        height: 86
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce30f30a32dd11db0800000000000000
+      internalID: -4822830580855012372
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_29
+      rect:
+        serializedVersion: 2
+        x: 599
+        y: 508
+        width: 71
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bef5db06482e21950800000000000000
+      internalID: 6418441477142962155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_30
+      rect:
+        serializedVersion: 2
+        x: 691
+        y: 508
+        width: 78
+        height: 78
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 19e639baa9bcd9350800000000000000
+      internalID: 6025195741655559825
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_31
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 421
+        width: 81
+        height: 60
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 19dace80c68f6ec90800000000000000
+      internalID: -7140747016259457647
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_32
+      rect:
+        serializedVersion: 2
+        x: 133
+        y: 438
+        width: 64
+        height: 46
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4ae0a4e9733cf8fc0800000000000000
+      internalID: -3490356542542573916
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_33
+      rect:
+        serializedVersion: 2
+        x: 221
+        y: 410
+        width: 82
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eba3120253b042310800000000000000
+      internalID: 1379239708682435262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_34
+      rect:
+        serializedVersion: 2
+        x: 315
+        y: 410
+        width: 80
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a5008aebba9753440800000000000000
+      internalID: 4914968346889814106
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_35
+      rect:
+        serializedVersion: 2
+        x: 410
+        y: 477
+        width: 62
+        height: 12
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 401d1d4515c00f830800000000000000
+      internalID: 4102792803989442820
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_36
+      rect:
+        serializedVersion: 2
+        x: 411
+        y: 426
+        width: 79
+        height: 52
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 49fe74bf0c5840d80800000000000000
+      internalID: -8285350350558859372
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_37
+      rect:
+        serializedVersion: 2
+        x: 520
+        y: 418
+        width: 52
+        height: 73
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b605aac3e9cdc870800000000000000
+      internalID: 8704835634971608754
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_38
+      rect:
+        serializedVersion: 2
+        x: 599
+        y: 411
+        width: 76
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81316f5d4d83af960800000000000000
+      internalID: 7636478604933993240
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_42
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 421
+        width: 49
+        height: 55
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4be654cf21c6b4c00800000000000000
+      internalID: 885920580506054324
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_43
+      rect:
+        serializedVersion: 2
+        x: 504
+        y: 439
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d13b2d27518286650800000000000000
+      internalID: 6226270557425546013
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_44
+      rect:
+        serializedVersion: 2
+        x: 571
+        y: 439
+        width: 16
+        height: 10
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 50c289e41b5503ba0800000000000000
+      internalID: -6111290474325595131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_46
+      rect:
+        serializedVersion: 2
+        x: 687
+        y: 409
+        width: 83
+        height: 85
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 78000ddee41326280800000000000000
+      internalID: -9051618085994233721
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_48
+      rect:
+        serializedVersion: 2
+        x: 125
+        y: 419
+        width: 42
+        height: 22
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d304537f7569c090800000000000000
+      internalID: -8013762463858949165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_49
+      rect:
+        serializedVersion: 2
+        x: 413
+        y: 414
+        width: 59
+        height: 14
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 423ad8014e163f370800000000000000
+      internalID: 8355129365860557604
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_50
+      rect:
+        serializedVersion: 2
+        x: 504
+        y: 418
+        width: 17
+        height: 22
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2e78f1518bbaa800800000000000000
+      internalID: 624517662444650029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_51
+      rect:
+        serializedVersion: 2
+        x: 571
+        y: 418
+        width: 16
+        height: 22
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f2412e837fe33e6b0800000000000000
+      internalID: -5268297907561163729
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_55
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 307
+        width: 74
+        height: 83
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75ee3e76d72ab9380800000000000000
+      internalID: -8963391973853237673
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_56
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 316
+        width: 82
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bf9d082f55731370800000000000000
+      internalID: 8292100390473539509
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_57
+      rect:
+        serializedVersion: 2
+        x: 241
+        y: 306
+        width: 71
+        height: 83
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da5ee4a8ddb5dbec0800000000000000
+      internalID: -3549579924231756371
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_58
+      rect:
+        serializedVersion: 2
+        x: 340
+        y: 306
+        width: 58
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc1f94e3c8c81e4f0800000000000000
+      internalID: -801204724726894131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_59
+      rect:
+        serializedVersion: 2
+        x: 423
+        y: 305
+        width: 55
+        height: 85
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87886bd6c9c691200800000000000000
+      internalID: 151271481604999288
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_64
+      rect:
+        serializedVersion: 2
+        x: 605
+        y: 308
+        width: 74
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10447763e9fdbd460800000000000000
+      internalID: 7267648294304039937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_66
+      rect:
+        serializedVersion: 2
+        x: 699
+        y: 307
+        width: 57
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c2c06518c9d4e570800000000000000
+      internalID: 8495154250502947527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_70
+      rect:
+        serializedVersion: 2
+        x: 505
+        y: 307
+        width: 79
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4bc5a779c8b5286a0800000000000000
+      internalID: -6448491057046201164
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_71
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 213
+        width: 75
+        height: 76
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b8cb2f6093522f2a0800000000000000
+      internalID: -6705255968341312373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_72
+      rect:
+        serializedVersion: 2
+        x: 123
+        y: 214
+        width: 75
+        height: 74
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6c8c868d7fe111b0800000000000000
+      internalID: -5687501531984917395
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_73
+      rect:
+        serializedVersion: 2
+        x: 215
+        y: 213
+        width: 79
+        height: 77
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 44a903b0742898790800000000000000
+      internalID: -7527342060531049916
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_74
+      rect:
+        serializedVersion: 2
+        x: 309
+        y: 207
+        width: 79
+        height: 87
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cb0538d4cc3eb16c0800000000000000
+      internalID: -4171490163215347524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_75
+      rect:
+        serializedVersion: 2
+        x: 404
+        y: 211
+        width: 85
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 368287df8602a20b0800000000000000
+      internalID: -5752749938711189405
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_76
+      rect:
+        serializedVersion: 2
+        x: 504
+        y: 213
+        width: 50
+        height: 45
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 989d0ff453a8d8240800000000000000
+      internalID: 4795641139798530441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_77
+      rect:
+        serializedVersion: 2
+        x: 525
+        y: 256
+        width: 39
+        height: 33
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df0cd83d7569acd10800000000000000
+      internalID: 2146693476351066365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_78
+      rect:
+        serializedVersion: 2
+        x: 604
+        y: 209
+        width: 66
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0990cadd02fa22040800000000000000
+      internalID: 4621448723328403856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_79
+      rect:
+        serializedVersion: 2
+        x: 687
+        y: 236
+        width: 35
+        height: 45
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c44d9005616bcde0800000000000000
+      internalID: -1311847780018469690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_80
+      rect:
+        serializedVersion: 2
+        x: 692
+        y: 210
+        width: 60
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1627bb81b558cd780800000000000000
+      internalID: -8656897757409480095
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_81
+      rect:
+        serializedVersion: 2
+        x: 721
+        y: 214
+        width: 35
+        height: 45
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 21f98c02724ccc0b0800000000000000
+      internalID: -5706970955452473582
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_82
+      rect:
+        serializedVersion: 2
+        x: 550
+        y: 216
+        width: 37
+        height: 37
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e288c0b54b7d8ba00800000000000000
+      internalID: 772604505715673134
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_83
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 116
+        width: 83
+        height: 79
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 424a26f919859a020800000000000000
+      internalID: 2353509662745338916
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_84
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 114
+        width: 61
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e222a16ccb9753b40800000000000000
+      internalID: 5419371578294673966
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_85
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 149
+        width: 32
+        height: 39
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f2a184c5dcc52cee0800000000000000
+      internalID: -1242328510114555345
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_86
+      rect:
+        serializedVersion: 2
+        x: 218
+        y: 115
+        width: 64
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2cffdaf60d1d3f980800000000000000
+      internalID: -8506224578015658046
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_87
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 119
+        width: 32
+        height: 39
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b55d836ee89317f50800000000000000
+      internalID: 6877341391882081627
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_88
+      rect:
+        serializedVersion: 2
+        x: 307
+        y: 115
+        width: 64
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 649bb9d074ac4bf20800000000000000
+      internalID: 3437594822110329158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_89
+      rect:
+        serializedVersion: 2
+        x: 389
+        y: 127
+        width: 84
+        height: 59
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a2f788efdaa281a0800000000000000
+      internalID: -6808691807975116125
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_90
+      rect:
+        serializedVersion: 2
+        x: 489
+        y: 117
+        width: 74
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df47c161385439240800000000000000
+      internalID: 4797254457393706237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_91
+      rect:
+        serializedVersion: 2
+        x: 580
+        y: 121
+        width: 84
+        height: 68
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b14668885a2bd01f0800000000000000
+      internalID: -1077008311841823717
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_92
+      rect:
+        serializedVersion: 2
+        x: 680
+        y: 115
+        width: 76
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40a7ad08f2e772c80800000000000000
+      internalID: -8347564641817560572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_93
+      rect:
+        serializedVersion: 2
+        x: 31
+        y: 22
+        width: 81
+        height: 78
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fa724eadaa3043ba0800000000000000
+      internalID: -6110254762083211345
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_94
+      rect:
+        serializedVersion: 2
+        x: 127
+        y: 21
+        width: 77
+        height: 83
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24e00004ed9a7f310800000000000000
+      internalID: 1438805377989742146
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_95
+      rect:
+        serializedVersion: 2
+        x: 219
+        y: 21
+        width: 69
+        height: 83
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6b1255c33c468240800000000000000
+      internalID: 4793602638620007277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NZfqSX 1_96
+      rect:
+        serializedVersion: 2
+        x: 303
+        y: 21
+        width: 84
+        height: 82
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8edc734fd722af30800000000000000
+      internalID: 4585271210480033420
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 77e1a89b45901134b9ff2624d50f3990
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      NZfqSX 1_0: -8985798005916389496
+      NZfqSX 1_1: 5271914345067282543
+      NZfqSX 1_10: -7588932837324649519
+      NZfqSX 1_11: -1086407272995244155
+      NZfqSX 1_12: -106468961803719125
+      NZfqSX 1_13: 9172621701874415289
+      NZfqSX 1_14: 686972341361764224
+      NZfqSX 1_15: 4221901879955820759
+      NZfqSX 1_16: -4953792692446358997
+      NZfqSX 1_17: -3723946116259836573
+      NZfqSX 1_18: 2729641328387046172
+      NZfqSX 1_19: -2726481172213804182
+      NZfqSX 1_2: 7217858237170027999
+      NZfqSX 1_20: -2608838140725415834
+      NZfqSX 1_21: -163763519627074401
+      NZfqSX 1_22: 6194852767937254329
+      NZfqSX 1_23: -957542476757088940
+      NZfqSX 1_24: 4968587746380345864
+      NZfqSX 1_25: 5435084113971930882
+      NZfqSX 1_26: 9201274808120550100
+      NZfqSX 1_27: -2647188802478113301
+      NZfqSX 1_28: -4822830580855012372
+      NZfqSX 1_29: 6418441477142962155
+      NZfqSX 1_3: -3564359247288531290
+      NZfqSX 1_30: 6025195741655559825
+      NZfqSX 1_31: -7140747016259457647
+      NZfqSX 1_32: -3490356542542573916
+      NZfqSX 1_33: 1379239708682435262
+      NZfqSX 1_34: 4914968346889814106
+      NZfqSX 1_35: 4102792803989442820
+      NZfqSX 1_36: -8285350350558859372
+      NZfqSX 1_37: 8704835634971608754
+      NZfqSX 1_38: 7636478604933993240
+      NZfqSX 1_39: 5041448171988230609
+      NZfqSX 1_4: 6148225016914988897
+      NZfqSX 1_40: 3164570221213022080
+      NZfqSX 1_41: -434114212640694805
+      NZfqSX 1_42: 885920580506054324
+      NZfqSX 1_43: 6226270557425546013
+      NZfqSX 1_44: -6111290474325595131
+      NZfqSX 1_45: -5127063186953304292
+      NZfqSX 1_46: -9051618085994233721
+      NZfqSX 1_47: 6615551196085631996
+      NZfqSX 1_48: -8013762463858949165
+      NZfqSX 1_49: 8355129365860557604
+      NZfqSX 1_5: 7816548796108003335
+      NZfqSX 1_50: 624517662444650029
+      NZfqSX 1_51: -5268297907561163729
+      NZfqSX 1_52: 1231012002637501281
+      NZfqSX 1_53: 6262182973083978101
+      NZfqSX 1_54: -6628950083423401799
+      NZfqSX 1_55: -8963391973853237673
+      NZfqSX 1_56: 8292100390473539509
+      NZfqSX 1_57: -3549579924231756371
+      NZfqSX 1_58: -801204724726894131
+      NZfqSX 1_59: 151271481604999288
+      NZfqSX 1_6: 7535051095728418284
+      NZfqSX 1_60: 2084251909512472141
+      NZfqSX 1_61: -6921789163291803280
+      NZfqSX 1_62: 3136604593366261120
+      NZfqSX 1_63: -8024891311830050020
+      NZfqSX 1_64: 7267648294304039937
+      NZfqSX 1_65: 2111575316449391645
+      NZfqSX 1_66: 8495154250502947527
+      NZfqSX 1_67: 388086048158980073
+      NZfqSX 1_68: -7135686177042981761
+      NZfqSX 1_69: 6392477274802322743
+      NZfqSX 1_7: 2873709180223779997
+      NZfqSX 1_70: -6448491057046201164
+      NZfqSX 1_71: -6705255968341312373
+      NZfqSX 1_72: -5687501531984917395
+      NZfqSX 1_73: -7527342060531049916
+      NZfqSX 1_74: -4171490163215347524
+      NZfqSX 1_75: -5752749938711189405
+      NZfqSX 1_76: 4795641139798530441
+      NZfqSX 1_77: 2146693476351066365
+      NZfqSX 1_78: 4621448723328403856
+      NZfqSX 1_79: -1311847780018469690
+      NZfqSX 1_8: -3776098078486990773
+      NZfqSX 1_80: -8656897757409480095
+      NZfqSX 1_81: -5706970955452473582
+      NZfqSX 1_82: 772604505715673134
+      NZfqSX 1_83: 2353509662745338916
+      NZfqSX 1_84: 5419371578294673966
+      NZfqSX 1_85: -1242328510114555345
+      NZfqSX 1_86: -8506224578015658046
+      NZfqSX 1_87: 6877341391882081627
+      NZfqSX 1_88: 3437594822110329158
+      NZfqSX 1_89: -6808691807975116125
+      NZfqSX 1_9: -116853333189418584
+      NZfqSX 1_90: 4797254457393706237
+      NZfqSX 1_91: -1077008311841823717
+      NZfqSX 1_92: -8347564641817560572
+      NZfqSX 1_93: -6110254762083211345
+      NZfqSX 1_94: 1438805377989742146
+      NZfqSX 1_95: 4793602638620007277
+      NZfqSX 1_96: 4585271210480033420
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

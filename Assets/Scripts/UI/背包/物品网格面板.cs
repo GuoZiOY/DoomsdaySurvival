@@ -9,7 +9,8 @@ using UnityEngine.UI;
 // 继承 网格面板基类（通用骨架：字段/生命周期/渲染框架/拖拽框架/交互框架/钩子）；本类 + 渲染/拖拽/交互 partial 只写 物品 语义。
 // 框架：网格面板基类.cs（抽象骨架+钩子）/ 家具网格面板.cs（安全屋 房间网格）。
 // 差异 钩子 全部 override（转发 到 partial 的 物品 语义 方法）；基类 骨架 零 物品 逻辑。
-public sealed partial class 物品网格面板 : 网格面板基类
+// 去 sealed：种植箱/制作输入输出 等 特殊语义 网格 子类 继承（目标允许放入/右键实体/创建实体框 等 钩子 override）。
+public partial class 物品网格面板 : 网格面板基类
 {
     [NonSerialized] public 搜索面板 搜索宿主;  // 非空 = 本面板 是 搜索面板 的 网格：双击 容器 物品 → 4 区 原位 替换（箱中箱）
 

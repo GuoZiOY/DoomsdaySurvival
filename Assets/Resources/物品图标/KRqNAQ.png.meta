@@ -1,0 +1,1820 @@
+fileFormatVersion: 2
+guid: 2f49c8430327bf04988862f1e455a24a
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -6505509985271252702
+    second: KRqNAQ_0
+  - first:
+      213: -7537838269965276177
+    second: KRqNAQ_1
+  - first:
+      213: 1694613067235457330
+    second: KRqNAQ_2
+  - first:
+      213: -2166637137254940733
+    second: KRqNAQ_3
+  - first:
+      213: -7766385064843793259
+    second: KRqNAQ_4
+  - first:
+      213: -4599854177107212081
+    second: KRqNAQ_5
+  - first:
+      213: 8053853727327413983
+    second: KRqNAQ_6
+  - first:
+      213: -1534590965900458537
+    second: KRqNAQ_7
+  - first:
+      213: -8003214806662402614
+    second: KRqNAQ_8
+  - first:
+      213: 6356648140748040027
+    second: KRqNAQ_9
+  - first:
+      213: 3824821765280146646
+    second: KRqNAQ_10
+  - first:
+      213: 8569318184522841039
+    second: KRqNAQ_11
+  - first:
+      213: -3477941779615631023
+    second: KRqNAQ_12
+  - first:
+      213: 4521191802329606267
+    second: KRqNAQ_13
+  - first:
+      213: -7033484478899803424
+    second: KRqNAQ_14
+  - first:
+      213: -8415642934733739578
+    second: KRqNAQ_15
+  - first:
+      213: -4829147559366696214
+    second: KRqNAQ_16
+  - first:
+      213: 3247018436425285127
+    second: KRqNAQ_17
+  - first:
+      213: 610098485230667484
+    second: KRqNAQ_18
+  - first:
+      213: 6786646371156314488
+    second: KRqNAQ_19
+  - first:
+      213: -7872437254240367208
+    second: KRqNAQ_20
+  - first:
+      213: 7335082976073999087
+    second: KRqNAQ_21
+  - first:
+      213: 8136503284300042388
+    second: KRqNAQ_22
+  - first:
+      213: -2936766581642939186
+    second: KRqNAQ_23
+  - first:
+      213: 3997960124932665398
+    second: KRqNAQ_24
+  - first:
+      213: -4626850707286770193
+    second: KRqNAQ_25
+  - first:
+      213: 8085638751906813135
+    second: KRqNAQ_26
+  - first:
+      213: -979743349837068177
+    second: KRqNAQ_27
+  - first:
+      213: 7034317523782635267
+    second: KRqNAQ_28
+  - first:
+      213: 4637538901986370935
+    second: KRqNAQ_29
+  - first:
+      213: -3947800338463380718
+    second: KRqNAQ_30
+  - first:
+      213: -6515363415167538676
+    second: KRqNAQ_31
+  - first:
+      213: -6245221611124508000
+    second: KRqNAQ_32
+  - first:
+      213: 9142016512232047730
+    second: KRqNAQ_33
+  - first:
+      213: 795594458826816097
+    second: KRqNAQ_34
+  - first:
+      213: -7623005325640560186
+    second: KRqNAQ_35
+  - first:
+      213: 7563728096431834333
+    second: KRqNAQ_36
+  - first:
+      213: 3083160699335578657
+    second: KRqNAQ_37
+  - first:
+      213: -826226035104030890
+    second: KRqNAQ_38
+  - first:
+      213: 5652259867057876963
+    second: KRqNAQ_39
+  - first:
+      213: 1178571724110820964
+    second: KRqNAQ_40
+  - first:
+      213: -6230744779846346337
+    second: KRqNAQ_41
+  - first:
+      213: -4439474885448383375
+    second: KRqNAQ_42
+  - first:
+      213: -5526911070593408901
+    second: KRqNAQ_43
+  - first:
+      213: 2910892403154278671
+    second: KRqNAQ_44
+  - first:
+      213: -4882343303385069565
+    second: KRqNAQ_45
+  - first:
+      213: -3992586918081866690
+    second: KRqNAQ_46
+  - first:
+      213: 4263585327427688876
+    second: KRqNAQ_47
+  - first:
+      213: 7318177846724316799
+    second: KRqNAQ_48
+  - first:
+      213: 7826714486331539712
+    second: KRqNAQ_49
+  - first:
+      213: -2652701160395081168
+    second: KRqNAQ_50
+  - first:
+      213: -4648844174387839854
+    second: KRqNAQ_51
+  - first:
+      213: -1313684501066230666
+    second: KRqNAQ_52
+  - first:
+      213: 6520867767679314463
+    second: KRqNAQ_53
+  - first:
+      213: 1011152167455469309
+    second: KRqNAQ_54
+  - first:
+      213: -6390599393410008497
+    second: KRqNAQ_55
+  - first:
+      213: -2145136870657646680
+    second: KRqNAQ_56
+  - first:
+      213: 5479042092690892529
+    second: KRqNAQ_57
+  - first:
+      213: 601715106508033691
+    second: KRqNAQ_58
+  - first:
+      213: 8755159224131486500
+    second: KRqNAQ_59
+  - first:
+      213: 4583410103094318920
+    second: KRqNAQ_60
+  - first:
+      213: 1903448883073322521
+    second: KRqNAQ_61
+  - first:
+      213: 678269095417750216
+    second: KRqNAQ_62
+  - first:
+      213: -1103915559549223284
+    second: KRqNAQ_63
+  - first:
+      213: -2884294770025630929
+    second: KRqNAQ_64
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: KRqNAQ_0
+      rect:
+        serializedVersion: 2
+        x: 23
+        y: 848
+        width: 157
+        height: 159
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2297625d229c7b5a0800000000000000
+      internalID: -6505509985271252702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_1
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 847
+        width: 159
+        height: 160
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: febef58d708346790800000000000000
+      internalID: -7537838269965276177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_2
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 848
+        width: 129
+        height: 119
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 239fd403b99748710800000000000000
+      internalID: 1694613067235457330
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_3
+      rect:
+        serializedVersion: 2
+        x: 556
+        y: 826
+        width: 95
+        height: 161
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3cfffb4c00f8ee1e0800000000000000
+      internalID: -2166637137254940733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_4
+      rect:
+        serializedVersion: 2
+        x: 681
+        y: 824
+        width: 128
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59c261d7ee1483490800000000000000
+      internalID: -7766385064843793259
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_5
+      rect:
+        serializedVersion: 2
+        x: 710
+        y: 897
+        width: 73
+        height: 89
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc88dea3ff80a20c0800000000000000
+      internalID: -4599854177107212081
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_6
+      rect:
+        serializedVersion: 2
+        x: 823
+        y: 819
+        width: 163
+        height: 163
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd66e4a3b4905cf60800000000000000
+      internalID: 8053853727327413983
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_7
+      rect:
+        serializedVersion: 2
+        x: 999
+        y: 849
+        width: 43
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d5caf9a5a904bae0800000000000000
+      internalID: -1534590965900458537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_8
+      rect:
+        serializedVersion: 2
+        x: 1031
+        y: 900
+        width: 48
+        height: 67
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: acdadb3498edee090800000000000000
+      internalID: -8003214806662402614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_9
+      rect:
+        serializedVersion: 2
+        x: 1138
+        y: 884
+        width: 78
+        height: 96
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b572f671ec9573850800000000000000
+      internalID: 6356648140748040027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_10
+      rect:
+        serializedVersion: 2
+        x: 1043
+        y: 811
+        width: 42
+        height: 57
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d4a4b8712f741530800000000000000
+      internalID: 3824821765280146646
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_11
+      rect:
+        serializedVersion: 2
+        x: 1103
+        y: 823
+        width: 153
+        height: 73
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fcb77c39c755ce670800000000000000
+      internalID: 8569318184522841039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_12
+      rect:
+        serializedVersion: 2
+        x: 1184
+        y: 823
+        width: 73
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 159358cd06edbbfc0800000000000000
+      internalID: -3477941779615631023
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_13
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 658
+        width: 146
+        height: 157
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b78a34b6dff7ebe30800000000000000
+      internalID: 4521191802329606267
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_14
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 657
+        width: 158
+        height: 158
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ea24f5a12b046e90800000000000000
+      internalID: -7033484478899803424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_15
+      rect:
+        serializedVersion: 2
+        x: 367
+        y: 655
+        width: 131
+        height: 153
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c96baeb651a53b80800000000000000
+      internalID: -8415642934733739578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_16
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 640
+        width: 161
+        height: 161
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae2e00471eb6bfcb0800000000000000
+      internalID: -4829147559366696214
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_17
+      rect:
+        serializedVersion: 2
+        x: 702
+        y: 639
+        width: 123
+        height: 159
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 70ef542801abf0d20800000000000000
+      internalID: 3247018436425285127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_18
+      rect:
+        serializedVersion: 2
+        x: 847
+        y: 640
+        width: 123
+        height: 159
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd68d220751877800800000000000000
+      internalID: 610098485230667484
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_19
+      rect:
+        serializedVersion: 2
+        x: 982
+        y: 640
+        width: 123
+        height: 159
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87947f8dae20f2e50800000000000000
+      internalID: 6786646371156314488
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_20
+      rect:
+        serializedVersion: 2
+        x: 1134
+        y: 627
+        width: 104
+        height: 151
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 89d8378f60c7fb290800000000000000
+      internalID: -7872437254240367208
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_21
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 473
+        width: 104
+        height: 151
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe2e7e29a137bc560800000000000000
+      internalID: 7335082976073999087
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_22
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 469
+        width: 104
+        height: 151
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 490d086c0aaaae070800000000000000
+      internalID: 8136503284300042388
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_23
+      rect:
+        serializedVersion: 2
+        x: 278
+        y: 452
+        width: 152
+        height: 154
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec43fe88a528e37d0800000000000000
+      internalID: -2936766581642939186
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_24
+      rect:
+        serializedVersion: 2
+        x: 460
+        y: 449
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 630b9c03d8b9b7730800000000000000
+      internalID: 3997960124932665398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_25
+      rect:
+        serializedVersion: 2
+        x: 622
+        y: 454
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fed386bbbcf1acfb0800000000000000
+      internalID: -4626850707286770193
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_26
+      rect:
+        serializedVersion: 2
+        x: 783
+        y: 449
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc4d985fa95f53070800000000000000
+      internalID: 8085638751906813135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_27
+      rect:
+        serializedVersion: 2
+        x: 944
+        y: 449
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6809ed3d904762f0800000000000000
+      internalID: -979743349837068177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_28
+      rect:
+        serializedVersion: 2
+        x: 1095
+        y: 447
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30f8e5ab48aee9160800000000000000
+      internalID: 7034317523782635267
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_29
+      rect:
+        serializedVersion: 2
+        x: 25
+        y: 279
+        width: 142
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 775e3f48f09db5040800000000000000
+      internalID: 4637538901986370935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_30
+      rect:
+        serializedVersion: 2
+        x: 201
+        y: 282
+        width: 141
+        height: 135
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 21b29bd22889639c0800000000000000
+      internalID: -3947800338463380718
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_31
+      rect:
+        serializedVersion: 2
+        x: 403
+        y: 317
+        width: 104
+        height: 107
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c0aec586e77c495a0800000000000000
+      internalID: -6515363415167538676
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_32
+      rect:
+        serializedVersion: 2
+        x: 558
+        y: 380
+        width: 40
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0aab45588048459a0800000000000000
+      internalID: -6245221611124508000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_33
+      rect:
+        serializedVersion: 2
+        x: 626
+        y: 380
+        width: 40
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 274c856d497fede70800000000000000
+      internalID: 9142016512232047730
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_34
+      rect:
+        serializedVersion: 2
+        x: 729
+        y: 267
+        width: 74
+        height: 136
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16a34afe1f48a0b00800000000000000
+      internalID: 795594458826816097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_35
+      rect:
+        serializedVersion: 2
+        x: 829
+        y: 265
+        width: 111
+        height: 155
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c198447b05a53690800000000000000
+      internalID: -7623005325640560186
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_36
+      rect:
+        serializedVersion: 2
+        x: 955
+        y: 271
+        width: 154
+        height: 126
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd4067d11a2c7f860800000000000000
+      internalID: 7563728096431834333
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_37
+      rect:
+        serializedVersion: 2
+        x: 1111
+        y: 265
+        width: 154
+        height: 152
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 124975d125699ca20800000000000000
+      internalID: 3083160699335578657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_38
+      rect:
+        serializedVersion: 2
+        x: 350
+        y: 266
+        width: 56
+        height: 52
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65fd1717cc7a884f0800000000000000
+      internalID: -826226035104030890
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_39
+      rect:
+        serializedVersion: 2
+        x: 369
+        y: 287
+        width: 72
+        height: 70
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ef6e22f66cd07e40800000000000000
+      internalID: 5652259867057876963
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_40
+      rect:
+        serializedVersion: 2
+        x: 533
+        y: 262
+        width: 158
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 466f1fd1db02b5010800000000000000
+      internalID: 1178571724110820964
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_41
+      rect:
+        serializedVersion: 2
+        x: 29
+        y: 100
+        width: 163
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f99932772a2f789a0800000000000000
+      internalID: -6230744779846346337
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_42
+      rect:
+        serializedVersion: 2
+        x: 211
+        y: 68
+        width: 24
+        height: 132
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 174c49fec11d362c0800000000000000
+      internalID: -4439474885448383375
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_43
+      rect:
+        serializedVersion: 2
+        x: 235
+        y: 71
+        width: 25
+        height: 136
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b702b140aa77c43b0800000000000000
+      internalID: -5526911070593408901
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_44
+      rect:
+        serializedVersion: 2
+        x: 261
+        y: 71
+        width: 25
+        height: 153
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f09d465d731956820800000000000000
+      internalID: 2910892403154278671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_45
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 71
+        width: 26
+        height: 153
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 308c93222ae6e3cb0800000000000000
+      internalID: -4882343303385069565
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_46
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 71
+        width: 25
+        height: 136
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e34dbd40a5b7798c0800000000000000
+      internalID: -3992586918081866690
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_47
+      rect:
+        serializedVersion: 2
+        x: 339
+        y: 68
+        width: 25
+        height: 132
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca915ee044c4b2b30800000000000000
+      internalID: 4263585327427688876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_48
+      rect:
+        serializedVersion: 2
+        x: 398
+        y: 172
+        width: 156
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7ec22d6af36f8560800000000000000
+      internalID: 7318177846724316799
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_49
+      rect:
+        serializedVersion: 2
+        x: 398
+        y: 119
+        width: 161
+        height: 57
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 001023c8b531e9c60800000000000000
+      internalID: 7826714486331539712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_50
+      rect:
+        serializedVersion: 2
+        x: 580
+        y: 65
+        width: 160
+        height: 152
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03a72676956bf2bd0800000000000000
+      internalID: -2652701160395081168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_51
+      rect:
+        serializedVersion: 2
+        x: 761
+        y: 57
+        width: 158
+        height: 150
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29cf771aadcfb7fb0800000000000000
+      internalID: -4648844174387839854
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_52
+      rect:
+        serializedVersion: 2
+        x: 420
+        y: 65
+        width: 117
+        height: 68
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 674d20f08ead4cde0800000000000000
+      internalID: -1313684501066230666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_53
+      rect:
+        serializedVersion: 2
+        x: 1054
+        y: 17
+        width: 19
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f1ae1d78fa6ce7a50800000000000000
+      internalID: 6520867767679314463
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_54
+      rect:
+        serializedVersion: 2
+        x: 1074
+        y: 17
+        width: 19
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfeac0bf985580e00800000000000000
+      internalID: 1011152167455469309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_55
+      rect:
+        serializedVersion: 2
+        x: 1095
+        y: 17
+        width: 20
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f4a38f5e5b70057a0800000000000000
+      internalID: -6390599393410008497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_56
+      rect:
+        serializedVersion: 2
+        x: 1115
+        y: 17
+        width: 24
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8af9bdda161fa32e0800000000000000
+      internalID: -2145136870657646680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_57
+      rect:
+        serializedVersion: 2
+        x: 1142
+        y: 17
+        width: 14
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f6e04c01c7790c40800000000000000
+      internalID: 5479042092690892529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_58
+      rect:
+        serializedVersion: 2
+        x: 1154
+        y: 17
+        width: 19
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b9ec56b83b8b95800800000000000000
+      internalID: 601715106508033691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_59
+      rect:
+        serializedVersion: 2
+        x: 1175
+        y: 10
+        width: 20
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42387527de2908970800000000000000
+      internalID: 8755159224131486500
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_60
+      rect:
+        serializedVersion: 2
+        x: 1197
+        y: 17
+        width: 20
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8479fde643b8b9f30800000000000000
+      internalID: 4583410103094318920
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_61
+      rect:
+        serializedVersion: 2
+        x: 1218
+        y: 39
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91e03bb9ca86a6a10800000000000000
+      internalID: 1903448883073322521
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_62
+      rect:
+        serializedVersion: 2
+        x: 1218
+        y: 17
+        width: 8
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8c2208e0622b96900800000000000000
+      internalID: 678269095417750216
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_63
+      rect:
+        serializedVersion: 2
+        x: 1227
+        y: 17
+        width: 17
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8eba0bb5aa1ea0f0800000000000000
+      internalID: -1103915559549223284
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: KRqNAQ_64
+      rect:
+        serializedVersion: 2
+        x: 1244
+        y: 17
+        width: 19
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f23fa15303de8f7d0800000000000000
+      internalID: -2884294770025630929
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      KRqNAQ_0: -6505509985271252702
+      KRqNAQ_1: -7537838269965276177
+      KRqNAQ_10: 3824821765280146646
+      KRqNAQ_11: 8569318184522841039
+      KRqNAQ_12: -3477941779615631023
+      KRqNAQ_13: 4521191802329606267
+      KRqNAQ_14: -7033484478899803424
+      KRqNAQ_15: -8415642934733739578
+      KRqNAQ_16: -4829147559366696214
+      KRqNAQ_17: 3247018436425285127
+      KRqNAQ_18: 610098485230667484
+      KRqNAQ_19: 6786646371156314488
+      KRqNAQ_2: 1694613067235457330
+      KRqNAQ_20: -7872437254240367208
+      KRqNAQ_21: 7335082976073999087
+      KRqNAQ_22: 8136503284300042388
+      KRqNAQ_23: -2936766581642939186
+      KRqNAQ_24: 3997960124932665398
+      KRqNAQ_25: -4626850707286770193
+      KRqNAQ_26: 8085638751906813135
+      KRqNAQ_27: -979743349837068177
+      KRqNAQ_28: 7034317523782635267
+      KRqNAQ_29: 4637538901986370935
+      KRqNAQ_3: -2166637137254940733
+      KRqNAQ_30: -3947800338463380718
+      KRqNAQ_31: -6515363415167538676
+      KRqNAQ_32: -6245221611124508000
+      KRqNAQ_33: 9142016512232047730
+      KRqNAQ_34: 795594458826816097
+      KRqNAQ_35: -7623005325640560186
+      KRqNAQ_36: 7563728096431834333
+      KRqNAQ_37: 3083160699335578657
+      KRqNAQ_38: -826226035104030890
+      KRqNAQ_39: 5652259867057876963
+      KRqNAQ_4: -7766385064843793259
+      KRqNAQ_40: 1178571724110820964
+      KRqNAQ_41: -6230744779846346337
+      KRqNAQ_42: -4439474885448383375
+      KRqNAQ_43: -5526911070593408901
+      KRqNAQ_44: 2910892403154278671
+      KRqNAQ_45: -4882343303385069565
+      KRqNAQ_46: -3992586918081866690
+      KRqNAQ_47: 4263585327427688876
+      KRqNAQ_48: 7318177846724316799
+      KRqNAQ_49: 7826714486331539712
+      KRqNAQ_5: -4599854177107212081
+      KRqNAQ_50: -2652701160395081168
+      KRqNAQ_51: -4648844174387839854
+      KRqNAQ_52: -1313684501066230666
+      KRqNAQ_53: 6520867767679314463
+      KRqNAQ_54: 1011152167455469309
+      KRqNAQ_55: -6390599393410008497
+      KRqNAQ_56: -2145136870657646680
+      KRqNAQ_57: 5479042092690892529
+      KRqNAQ_58: 601715106508033691
+      KRqNAQ_59: 8755159224131486500
+      KRqNAQ_6: 8053853727327413983
+      KRqNAQ_60: 4583410103094318920
+      KRqNAQ_61: 1903448883073322521
+      KRqNAQ_62: 678269095417750216
+      KRqNAQ_63: -1103915559549223284
+      KRqNAQ_64: -2884294770025630929
+      KRqNAQ_7: -1534590965900458537
+      KRqNAQ_8: -8003214806662402614
+      KRqNAQ_9: 6356648140748040027
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
