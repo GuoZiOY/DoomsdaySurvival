@@ -19,6 +19,7 @@ using System.Collections.Generic;
         public List<物品堆叠> 容器物品;   // 容器内部物品（与 网格服务.网格物品 同构）；null = 非容器/空容器
         public float 新鲜分钟;      // 剩余保质期（游戏分钟；0 = 未初始化/无保质期；<=0 变质）。腐坏系统用，随档存档
         public float 生长分钟;      // 剩余 生长 时间（游戏分钟；0 = 未初始化/非种子；<=0 成熟）。种植箱 用，随档存档
+        public float 净化分钟;      // 净水器 实例：距 下次 净化 完成 的 剩余 游戏 分钟（0 = 未初始化/非净化器）。自动 净化 用，随档存档
 
         public 物品堆叠() { }
         public 物品堆叠(string 标识, int 数量) { this.标识 = 标识; this.数量 = 数量; }
