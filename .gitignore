@@ -47,6 +47,7 @@ Tools/户型验证/bin/
 
 # Unity 崩溃恢复 + 本地测试图片
 Assets/_Recovery/
-Assets/Resources/物品图标/KRqNAQ.png
-Assets/Resources/物品图标/NZfqSX 1.png
 
+# 本地测试图片（含 meta）
+Assets/Resources/物品图标/KRqNAQ.png*
+Assets/Resources/物品图标/NZfqSX 1.png*
