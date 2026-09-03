@@ -13,8 +13,9 @@ public sealed class 日志面板 : 面板基类
 {
     [SerializeField] private RectTransform 日志内容;
     [SerializeField] private ScrollRect 日志滚动;
-    [SerializeField] private GameObject 面板壳;      // 可见壳（背景+滚动区 所在容器）：无任何日志条目时隐藏，来消息时显示。
-                                                     // 注意：拖「背景/滚动区 的父物体」，勿拖本组件所在根（脚本需常驻收事件/跑协程）。
+    [SerializeField] private GameObject 面板壳;      // 可见壳（背景+滚动区 容器；可拖 脚本所在根 也可拖 子容器）：
+                                                     // 无任何日志条目时隐藏（CanvasGroup alpha=0），来消息时亮出。
+                                                     // 用 alpha 而非 SetActive——脚本保持常驻（收事件/跑协程），隐藏后必能恢复显示。
     [SerializeField] private float 字号 = 17f;      // 日志统一字号（Inspector 可调）
     [SerializeField] private float 停留秒数 = 6f;    // 每条日志停留时长（统一时长后淡出消失）
     [SerializeField] private float 淡出秒数 = 0.4f;  // 淡出动画时长
@@ -24,6 +25,8 @@ public sealed class 日志面板 : 面板基类
     private readonly List<GameObject> 条目表 = new List<GameObject>();
     private readonly HashSet<GameObject> 淡出中 = new HashSet<GameObject>();   // 正在淡出的条目（防同一条目重复淡出/双扣）
     private readonly List<日志记录> 历史 = new List<日志记录>();
+
+    private CanvasGroup 壳组;   // 面板壳 的 CanvasGroup（懒取/补挂；alpha 控显隐，不动 SetActive）
 
     // 会话历史记录（内存：非过程消息沉淀；供后续「历史列表」入口读取）
     public struct 日志记录
@@ -41,6 +44,8 @@ public sealed class 日志面板 : 面板基类
         ServiceRegistry.Get<EventBus>()?.订阅(日志订阅);
         // 穿透：本面板树所有 Image 不拦截点击（滚轮/滚动条由代码控制，无需点击命中）
         foreach (var 图 in GetComponentsInChildren<Image>(true)) 图.raycastTarget = false;
+        // 无日志起步：壳初始隐藏（有消息自动亮）
+        尝试隐藏壳();
     }
 
     protected override void 刷新(object 上下文) { }
@@ -103,16 +108,30 @@ public sealed class 日志面板 : 面板基类
         滚到底();   // 布局变更后滚到最新一条
     }
 
-    // 壳显隐：有任一 条目（含 淡出中）→ 亮；全部清空 → 隐藏（面板壳 引用未设 则 不控制）
+    // 壳显隐：有任一 条目（含 淡出中）→ 亮；全部清空 → 隐藏。
+    // 用 CanvasGroup alpha 而非 SetActive：壳可能是 脚本所在根/含脚本节点，SetActive 会停脚本导致隐藏后无法恢复。
     private void 显示壳()
     {
-        if (面板壳 != null && !面板壳.activeSelf) 面板壳.SetActive(true);
+        var 组 = 壳组 ?? 取壳组();
+        if (组 != null && 组.alpha < 1f) 组.alpha = 1f;
     }
 
     private void 尝试隐藏壳()
     {
-        if (面板壳 == null || !面板壳.activeSelf) return;
-        if (条目表.Count == 0 && 淡出中.Count == 0) 面板壳.SetActive(false);
+        if (面板壳 == null) return;
+        if (条目表.Count == 0 && 淡出中.Count == 0)
+        {
+            var 组 = 壳组 ?? 取壳组();
+            if (组 != null && 组.alpha > 0f) 组.alpha = 0f;
+        }
+    }
+
+    private CanvasGroup 取壳组()
+    {
+        if (面板壳 == null) return null;
+        壳组 = 面板壳.GetComponent<CanvasGroup>();
+        if (壳组 == null) 壳组 = 面板壳.AddComponent<CanvasGroup>();
+        return 壳组;
     }
 
     // 滚到底部（最新消息可见；滚动区未搭/无内容时静默）
