@@ -26,6 +26,9 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
     private 装备记录 拖拽记录;
     private GameObject 拖拽代理;   // 跟手物品图（挂 Canvas 顶层）
     private 物品堆叠 拖拽堆叠;     // 拖拽期间的临时堆叠（缓存一次，避免 OnDrag 每帧 new 产生 GC）
+    private RectTransform 代理根矩;   // 拖拽代理 根矩形（R 旋转 换 尺寸 用）
+    private RectTransform 代理内容矩; // 拖拽代理 内容矩形（R 旋转 转 90° 用）
+    private 物品形状 拖拽形状;        // 未旋转 形状（R 旋转 换向 用）
 
     // 刷新本槽显示（装备区 遍历调用）
     public void 设置(玩家档案 玩家, DataService 数据)
@@ -96,6 +99,8 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         拖拽中 = true;
         拖拽记录 = 记录;
         拖拽堆叠 = new 物品堆叠(记录.标识, 1) { 词缀 = 记录.词缀, 当前耐久 = 记录.当前耐久 };   // 缓存本次拖拽的临时堆叠（投影/卸下用）
+        拖拽形状 = 玩家?.网格服务?.形状解析?.Invoke(记录.标识) ?? new 物品形状(1, 1);
+        拖拽堆叠.旋转 = false;   // 拖拽 起点：未旋转（R 可 翻转）
         音效管理器.实例?.播放拿起();   // 拿起音效（与网格内拖拽同流程）
         清除拖拽投影();
         创建拖拽代理(记录.标识);
@@ -107,12 +112,63 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         更新拖拽投影(事件);   // 投影提示：目标槽位 绿/红、背包网格 绿框
     }
 
+    // 拖拽中 R 旋转（每帧检测——按住不动 也 生效；与 网格内 拖拽 一致。放 Update 而非 OnDrag：防 同帧 双翻转）
+    private void Update()
+    {
+        if (!拖拽中 || 拖拽堆叠 == null || !检测按R()) return;
+        拖拽堆叠.旋转 = !拖拽堆叠.旋转;
+        更新代理旋转();
+        // 按 新 旋转 重判 落点 投影（伪事件 = 当前 鼠标 位置）
+        var 伪事件 = new PointerEventData(EventSystem.current) { position = 输入鼠标位置() };
+        更新拖拽投影(伪事件);
+    }
+
+    private static Vector2 输入鼠标位置()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (UnityEngine.InputSystem.Mouse.current != null) return UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.mousePosition;
+#endif
+        return Vector2.zero;
+    }
+
+    // 代理 随 旋转：根 尺寸 宽高 互换 + 内容 转 90°（与 网格内 拖拽代理 同款视觉）
+    private void 更新代理旋转()
+    {
+        if (拖拽代理 == null || 拖拽形状 == null) return;
+        float 格 = 物品网格面板.格尺寸;
+        float 宽 = 拖拽堆叠.旋转 ? 拖拽形状.高 * 格 : 拖拽形状.宽 * 格;
+        float 高 = 拖拽堆叠.旋转 ? 拖拽形状.宽 * 格 : 拖拽形状.高 * 格;
+        if (代理根矩 != null)
+        {
+            代理根矩.sizeDelta = new Vector2(宽, 高);
+            代理根矩.localRotation = Quaternion.identity;   // 根 不 转（转 内容）
+        }
+        if (代理内容矩 != null) 代理内容矩.localRotation = Quaternion.Euler(0f, 0f, 拖拽堆叠.旋转 ? 90f : 0f);
+    }
+
+    // 拖拽中 R 键 按下（新输入 优先；旧 Input 兜底——与 网格内 拖拽 一致）
+    private bool 检测按R()
+    {
+        bool 按下 = false;
+#if ENABLE_INPUT_SYSTEM
+        if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.rKey.wasPressedThisFrame) 按下 = true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.R)) 按下 = true;
+#endif
+        return 按下;
+    }
+
     public void OnEndDrag(PointerEventData 事件)
     {
         if (!拖拽中) return;
         拖拽中 = false;
         清除拖拽投影();
         if (拖拽代理 != null) { Destroy(拖拽代理); 拖拽代理 = null; }
+        代理根矩 = null; 代理内容矩 = null; 拖拽形状 = null;
         var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (玩家 == null) return;
         // ① 拖到 背包网格（任一 物品网格面板）→ 卸下到 指定格（像背包内拖拽：拖到哪放哪；目标格不可放 → 穿回原位）——登记表遍历（替代 FindObjectsOfType）
@@ -131,7 +187,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
             bool 成功;
             // 背包槽卸下也走 卸下到格（到哪放哪；卸下到格 内部处理 背包缩容校验/网格尺寸还原）——不再特例回主背包
             if (面板.屏幕到格(事件.position, 拖拽堆叠, out var 列, out var 行))
-                成功 = 面板操作.卸下到格(玩家, 槽位名, 面板.视图服务, 列, 行);
+                成功 = 面板操作.卸下到格(玩家, 槽位名, 面板.视图服务, 列, 行, 拖拽堆叠.旋转);   // R 旋转 落点方向
             else 成功 = false;   // 落点在网格外/格坐标无效
             if (成功) 音效管理器.实例?.播放放下();
             else 音效管理器.实例?.播放失败();
@@ -243,5 +299,7 @@ public sealed class 装备槽 : MonoBehaviour, IPointerClickHandler, IBeginDragH
         }
         else 内容矩.sizeDelta = new Vector2(形状.宽 * 格, 形状.高 * 格);
         拖拽代理 = 物体;
+        代理根矩 = 矩;
+        代理内容矩 = 内容矩;
     }
 }
