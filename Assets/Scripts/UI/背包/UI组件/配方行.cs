@@ -59,8 +59,8 @@ public sealed class 配方行 : MonoBehaviour, IPointerClickHandler
                 物品图.rectTransform.sizeDelta = new Vector2(目标宽, 目标高);
             }
         }
-        // 名称（选中 ▸ 金色 前缀）
-        if (名称 != null) 名称.text = (选中 ? "<color=#d9a441>▸ </color>" : "") + 名称文本;
+        // 名称（选中 金色 高亮）
+        if (名称 != null) 名称.text = 选中 ? $"<color=#d9a441>{名称文本}</color>" : 名称文本;
         // 选中 背景（高亮）
         if (选中背景 != null) 选中背景.color = 选中 ? 背景选中色 : 背景正常色;
     }
