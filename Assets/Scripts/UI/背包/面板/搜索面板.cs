@@ -75,7 +75,7 @@ public sealed class 搜索面板 : MonoBehaviour
         var 视图 = 容器服务.打开(容器);
         当前定义 = null;   // 嵌套容器 非 搜索容器
         当前标识 = 容器.标识;
-        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.探索, $"正在搜索 {物品名(容器.标识)}"));   // 箱中箱 搜刮 → 日志
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.探索, $"正在搜索 {容器.标识}"));   // 箱中箱 搜刮 → 日志（容器.标识 即 物品名）
         if (标题文本 != null) 
             标题文本.text = 容器.标识;
         float 嵌套时间 = Mathf.Clamp(视图.网格列 * 视图.网格行 * 0.1f, 2f, 6f);   // 嵌套 搜索时间（按 格数 推导）
