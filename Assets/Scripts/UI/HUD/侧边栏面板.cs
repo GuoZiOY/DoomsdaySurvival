@@ -71,11 +71,11 @@ public sealed class 侧边栏面板 : MonoBehaviour
         if (玩家 == null || string.IsNullOrEmpty(玩家.当前节点))
         {
             音效管理器.实例?.播放失败();
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "尚未开始冒险，无可保存的进度。"));
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "尚未开始冒险，无可保存的进度。"));
             return;
         }
         ServiceRegistry.Get<SaveService>()?.保存(玩家);
-        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈, "已保存游戏。"));
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.系统, "已保存游戏。"));
     }
 
     // 暂停：Time.timeScale 0↔1（游戏世界冻结）；图标切换 暂停/继续

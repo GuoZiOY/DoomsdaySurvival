@@ -97,7 +97,7 @@ using UnityEngine;
         private void 加载情报()
         {
             var 资产 = Resources.Load<TextAsset>("Data/情报");
-            if (资产 == null) { 事件.发布(new 日志事件(日志类型.系统, "[数据] 缺失 Data/情报.json")); return; }
+            if (资产 == null) { Debug.LogWarning($"[数据] 缺失 Data/情报.json——请检查 Resources/Data 下文件与文件名"); return; }
             var 根 = JsonUtility.FromJson<情报根>(资产.text);
             if (根?.情报 != null) 情报.AddRange(根.情报);
         }
@@ -124,7 +124,7 @@ using UnityEngine;
         private void 加载<T, TRoot>(string 文件, Dictionary<string, T> 目标, Func<TRoot, T[]> 提取) where T : class
         {
             var 资产 = Resources.Load<TextAsset>($"Data/{文件}");
-            if (资产 == null) { 事件.发布(new 日志事件(日志类型.系统, $"[数据] 缺失 Data/{文件}.json")); return; }
+            if (资产 == null) { Debug.LogWarning($"[数据] 缺失 Data/{文件}.json——请检查 Resources/Data 下文件与文件名"); return; }
             var 根 = JsonUtility.FromJson<TRoot>(资产.text);
             if (根 == null) return;
             foreach (var 项 in 提取(根))

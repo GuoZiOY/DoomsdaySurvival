@@ -295,8 +295,15 @@ public sealed class 快速测试面板 : MonoBehaviour
 
     // ===== 测试操作 =====
 
+    // 测试反馈通道：v39 起 [测试] 消息走 Console（不再污染玩家日志流——玩家日志只承载游戏内叙事/反馈）。
+    // 面板内即时反馈：挂 快速测试面板 组件的物体上 可搭 反馈文本 引用位（可选，null = 仅 Console）。
+    [SerializeField] private TMP_Text 反馈文本;   // 可选：代码动态搭建面板底部文本行后赋值，最新反馈面板内可见（null = 仅 Console）
+
     private void 日志(string 内容, bool 坏 = false)
-        => ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(坏 ? 日志类型.反馈坏 : 日志类型.反馈, 内容));
+    {
+        if (坏) Debug.LogWarning(内容); else Debug.Log(内容);
+        if (反馈文本 != null) 反馈文本.text = 内容;   // 面板内可见（可选：场景在面板底部搭一行文本拖入）
+    }
 
     private 玩家档案 档案() => ServiceRegistry.Get<PlayerService>()?.档案;
     private DataService 数据() => ServiceRegistry.Get<DataService>();

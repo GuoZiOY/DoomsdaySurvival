@@ -53,7 +53,7 @@ public sealed class 主菜单面板 : 面板基类
         if (!(ServiceRegistry.Get<SaveService>()?.有存档() ?? false))
         {
             音效管理器.实例?.播放失败();
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "没有可继续的存档。"));
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "没有可继续的存档。"));
             return;
         }
         玩家.读档();

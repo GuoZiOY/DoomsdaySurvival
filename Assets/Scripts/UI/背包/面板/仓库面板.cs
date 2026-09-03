@@ -23,7 +23,7 @@ public sealed class 仓库面板 : MonoBehaviour
         var 档案 = ServiceRegistry.Get<PlayerService>()?.档案;
         if (面板 == null)
         {
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[仓库面板] 未配置 面板 引用（请拖入 物品网格面板）。"));
+            Debug.LogWarning("[仓库面板] 未配置 面板 引用（请拖入 物品网格面板）。");
             return;
         }
         if (档案 == null) return;

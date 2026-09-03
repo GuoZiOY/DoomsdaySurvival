@@ -49,6 +49,6 @@ public sealed class 家具行 : MonoBehaviour
     private void 材料不足反馈()
     {
         音效管理器.实例?.播放失败();
-        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "材料不足，无法执行。"));
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "材料不足，无法执行。"));
     }
 }

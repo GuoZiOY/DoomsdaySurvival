@@ -33,20 +33,18 @@ public static class 游戏主题
     public static readonly string 排队灰值 = "#9aa0a6";     // 信息条：排队中的敌方/其余
     public static readonly string 已行动灰值 = "#46433f";   // 信息条：已行动（淡删除线）
 
-    // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色）
+    // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色；v39 收敛 7 类）
     public static string 日志色(日志类型 类型)
     {
         switch (类型)
         {
-            case 日志类型.系统: return "#a8b0ba";    // 亮灰蓝（避开灰底，与之区分）
-            case 日志类型.操作: return "#e8b84c";    // 提亮金
-            case 日志类型.反馈: return "#8fcf78";    // 提亮苔绿
-            case 日志类型.反馈坏: return "#e05a50";  // 提亮血烬红
-            case 日志类型.内心: return "#b09fd0";    // 提亮暮紫
-            case 日志类型.战斗: return "#e0826a";    // 提亮余烬橙红（战斗过程）
-            case 日志类型.探索: return "#7fc0a8";    // 提亮青绿（探索事件）
-            case 日志类型.任务: return "#d9b36a";    // 提亮土金（任务接取/完成）
-            default: return "#f0ead9";               // 剧情 = 近白暖色（主叙事最亮）
+            case 日志类型.探索: return "#7fc0a8";    // 青绿（探索事件）
+            case 日志类型.战斗: return "#e0826a";    // 橙红（战斗/结果）
+            case 日志类型.生存: return "#6fb8d9";    // 提亮水蓝（睡觉/伤病/时间生存）
+            case 日志类型.获得: return "#8fcf78";    // 提亮苔绿（获得/成功）
+            case 日志类型.警告: return "#e05a50";    // 提亮血烬红（失败/负面）
+            case 日志类型.内心: return "#b09fd0";    // 提亮暮紫（心声）
+            default: return "#a8b0ba";               // 系统 = 亮灰蓝（中性）
         }
     }
 
@@ -55,16 +53,13 @@ public static class 游戏主题
     {
         switch (类型)
         {
-            case 日志类型.系统: return "系统";
-            case 日志类型.剧情: return "剧情";
-            case 日志类型.操作: return "操作";
-            case 日志类型.反馈: return "获得";
-            case 日志类型.反馈坏: return "警告";
-            case 日志类型.内心: return "心声";
-            case 日志类型.战斗: return "战斗";
             case 日志类型.探索: return "探索";
-            case 日志类型.任务: return "任务";
-            default: return "信息";
+            case 日志类型.战斗: return "战斗";
+            case 日志类型.生存: return "生存";
+            case 日志类型.获得: return "获得";
+            case 日志类型.警告: return "警告";
+            case 日志类型.内心: return "心声";
+            default: return "系统";
         }
     }
 }

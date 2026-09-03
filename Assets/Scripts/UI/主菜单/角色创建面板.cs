@@ -308,7 +308,7 @@ public sealed class 角色创建面板 : 面板基类
         {
             // 引导（不强制）：超过建议数量时提示一次（选第 建议数+1 个时），玩家仍可继续选
             if (已选天赋.Count == 建议天赋数)
-                ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏,
+                ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.系统,
                     $"天赋越多，活下去越难——建议最多 {建议天赋数} 个（仅建议，可继续选择）。"));
             已选天赋.Add(标识); 天赋预算 -= 天赋.点数;
         }

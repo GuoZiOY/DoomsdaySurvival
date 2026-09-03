@@ -49,12 +49,12 @@ public sealed class 玩家输入系统 : MonoBehaviour
     {
         if (面板 == null)
         {
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[测试] 场景缺少 面板管理器。"));
+            Debug.LogWarning("[测试] 场景缺少 面板管理器。");
             return;
         }
         if (面板.当前显示面板 is 持有面板) { 面板.返回上一面板(); return; }   // 再按 F1 → 关闭（返回上一面板）
         面板.显示面板类型<持有面板>();
         if (面板.当前显示面板 is not 持有面板)
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[测试] 持有面板未接线到 面板管理器.背包 引用位。"));
+            Debug.LogWarning("[测试] 持有面板未接线到 面板管理器.背包 引用位。");
     }
 }

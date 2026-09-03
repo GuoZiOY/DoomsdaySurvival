@@ -76,7 +76,7 @@ public sealed class 装具区 : MonoBehaviour
         if (容器服务 == null) return;
         if (容器块 == null || 容器块.Length == 0)
         {
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.反馈坏, "[装具区] 未配置 容器块 数组（请拖入 弹挂/腰封/背包 三块：装备槽 + 面板 引用）。"));
+            Debug.LogWarning("[装具区] 未配置 容器块 数组（请拖入 弹挂/腰封/背包 三块：装备槽 + 面板 引用）。");
             return;
         }
         float 格 = 物品网格面板.格尺寸;   // 格尺寸统一常量 100（全项目一致）

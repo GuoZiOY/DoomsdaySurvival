@@ -22,10 +22,10 @@ public sealed class 技能服务
     {
         if (!数据.技能.TryGetValue(技能标识, out var 技能)) return false;
         var 原因 = 档案.技能前提失败原因(技能);
-        if (!string.IsNullOrEmpty(原因)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.反馈坏, $"无法学习 {技能.名称}：{原因}")); return false; }
+        if (!string.IsNullOrEmpty(原因)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.警告, $"无法学习 {技能.名称}：{原因}")); return false; }
         if (档案.掌握技能(技能.标识)) { 音效管理器.实例?.播放失败(); 事件.发布(new 日志事件(日志类型.系统, "你已经掌握这个技能了。")); return false; }
         if (!档案.学习技能(技能)) return false;
-        事件.发布(new 日志事件(日志类型.反馈, $"你学会了技能《{技能.名称}》！"));
+        事件.发布(new 日志事件(日志类型.获得, $"你学会了技能《{技能.名称}》！"));
         return true;
     }
 
