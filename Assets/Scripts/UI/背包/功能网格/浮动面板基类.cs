@@ -61,6 +61,7 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         面板.当前容器 = 容器;
         已打开[容器] = 面板;
         面板.初始化面板(容器, 挂载父);   // 尺寸 定稿（容器面板 按 网格 自适应——在 此 之后 定位 才 用 最终 尺寸）
+        发开合日志($"打开了 {容器名(容器)}。");   // 打开 家具/容器 → 日志（[角色]）
         // 初始 位置：面板 左上 ≈ 挂载父 左上 右下 偏移（避 原 挂载 点）；居中 锚 → 减 画布 中心
         var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
         Vector2 挂载父左上;
@@ -73,6 +74,21 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         面板.限制在屏幕内();
         return 面板;
     }
+
+    // 家具/容器 显示名：家具实例（编码 带等级）→ 家具定义.名称；物品容器 → 物品.标识（打开日志 用）
+    private static string 容器名(物品堆叠 容器)
+    {
+        if (容器 == null) return "";
+        var 数据 = ServiceRegistry.Get<DataService>();
+        if (数据 == null) return 容器.标识;
+        var (定义, _) = 家具工具.解码(容器.标识);
+        if (数据.家具.TryGetValue(定义, out var 家具)) return 家具.名称;
+        return 数据.物品.TryGetValue(容器.标识, out var 物) ? 物.标识 : 容器.标识;
+    }
+
+    // 打开/关闭 家具 日志（[角色]：玩家 对 家具/容器 的 操作）——静态工厂（打开）/ 关闭() 共用
+    private static void 发开合日志(string 文本)
+        => ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.角色, 文本));
 
     // 把面板位置限制在父（Canvas 顶层）范围内：创建后/拖拽时调用，防止面板出屏（锚点 居中 → 对称 范围）
     protected void 限制在屏幕内()
@@ -94,7 +110,12 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
     public void 关闭()
     {
         if (!可否关闭()) return;
-        if (当前容器 != null) 已打开.Remove(当前容器);
+        if (当前容器 != null)
+        {
+            var 名 = 容器名(当前容器);
+            if (!string.IsNullOrEmpty(名)) 发开合日志($"关闭了 {名}。");   // 关闭 家具/容器 → 日志
+            已打开.Remove(当前容器);
+        }
         当前容器 = null;
         清理内容();
         Destroy(gameObject);
