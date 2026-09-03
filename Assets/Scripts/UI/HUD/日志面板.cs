@@ -13,6 +13,8 @@ public sealed class 日志面板 : 面板基类
 {
     [SerializeField] private RectTransform 日志内容;
     [SerializeField] private ScrollRect 日志滚动;
+    [SerializeField] private GameObject 面板壳;      // 可见壳（背景+滚动区 所在容器）：无任何日志条目时隐藏，来消息时显示。
+                                                     // 注意：拖「背景/滚动区 的父物体」，勿拖本组件所在根（脚本需常驻收事件/跑协程）。
     [SerializeField] private float 字号 = 17f;      // 日志统一字号（Inspector 可调）
     [SerializeField] private float 停留秒数 = 6f;    // 每条日志停留时长（统一时长后淡出消失）
     [SerializeField] private float 淡出秒数 = 0.4f;  // 淡出动画时长
@@ -20,6 +22,7 @@ public sealed class 日志面板 : 面板基类
     [SerializeField] private int 历史上限 = 300;     // 会话历史记录上限（内存，不随档）
 
     private readonly List<GameObject> 条目表 = new List<GameObject>();
+    private readonly HashSet<GameObject> 淡出中 = new HashSet<GameObject>();   // 正在淡出的条目（防同一条目重复淡出/双扣）
     private readonly List<日志记录> 历史 = new List<日志记录>();
 
     // 会话历史记录（内存：非过程消息沉淀；供后续「历史列表」入口读取）
@@ -77,6 +80,8 @@ public sealed class 日志面板 : 面板基类
         // 面板隐藏（主菜单等收起）期间：不建条目（协程在 inactive 下不推进会堆积），仅历史已记
         if (!gameObject.activeInHierarchy) return;
 
+        显示壳();   // 无日志时壳隐藏，来消息先亮出面板
+
         var 条目 = new GameObject("日志条目", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(CanvasGroup));
         条目.transform.SetParent(日志内容, false);
         var 文本 = 条目.GetComponent<TextMeshProUGUI>();
@@ -98,6 +103,18 @@ public sealed class 日志面板 : 面板基类
         滚到底();   // 布局变更后滚到最新一条
     }
 
+    // 壳显隐：有任一 条目（含 淡出中）→ 亮；全部清空 → 隐藏（面板壳 引用未设 则 不控制）
+    private void 显示壳()
+    {
+        if (面板壳 != null && !面板壳.activeSelf) 面板壳.SetActive(true);
+    }
+
+    private void 尝试隐藏壳()
+    {
+        if (面板壳 == null || !面板壳.activeSelf) return;
+        if (条目表.Count == 0 && 淡出中.Count == 0) 面板壳.SetActive(false);
+    }
+
     // 滚到底部（最新消息可见；滚动区未搭/无内容时静默）
     private void 滚到底()
     {
@@ -117,8 +134,9 @@ public sealed class 日志面板 : 面板基类
     private IEnumerator 淡出销毁(GameObject 条目)
     {
         if (条目 == null) yield break;
+        if (!淡出中.Add(条目)) yield break;   // 已在淡出（超上限提前淡出 + 生命周期到点 同一条目只淡一次）
         var 组 = 条目.GetComponent<CanvasGroup>();
-        if (组 == null) { Destroy(条目); yield break; }
+        if (组 == null) { Destroy(条目); 淡出中.Remove(条目); 尝试隐藏壳(); yield break; }
         float 流逝 = 0f;
         while (流逝 < 淡出秒数)
         {
@@ -127,6 +145,8 @@ public sealed class 日志面板 : 面板基类
             yield return null;
         }
         Destroy(条目);
+        淡出中.Remove(条目);
+        尝试隐藏壳();   // 全部清空 → 壳收起
     }
 
     // 分层渲染：[第X天 HH:MM](灰) → 加粗彩色类型徽章 → 正文(近白，仅数值提亮)，不整段刷色
