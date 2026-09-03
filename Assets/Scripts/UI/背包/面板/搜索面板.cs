@@ -60,6 +60,7 @@ public sealed class 搜索面板 : MonoBehaviour
         当前定义 = 定义;
         当前标识 = 定义.标识;
         if (标题文本 != null) 标题文本.text = 定义.名称;
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.探索, $"正在搜索 {定义.名称}"));   // 搜刮 开始 → 日志
         var 视图 = 服务.打开(定义);
         if (视图 != null) 
             显示视图(视图, null, 定义.搜索时间);
@@ -74,6 +75,7 @@ public sealed class 搜索面板 : MonoBehaviour
         var 视图 = 容器服务.打开(容器);
         当前定义 = null;   // 嵌套容器 非 搜索容器
         当前标识 = 容器.标识;
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.探索, $"正在搜索 {物品名(容器.标识)}"));   // 箱中箱 搜刮 → 日志
         if (标题文本 != null) 
             标题文本.text = 容器.标识;
         float 嵌套时间 = Mathf.Clamp(视图.网格列 * 视图.网格行 * 0.1f, 2f, 6f);   // 嵌套 搜索时间（按 格数 推导）
@@ -102,9 +104,14 @@ public sealed class 搜索面板 : MonoBehaviour
         else 挂物品黑块();   // 已搜完：黑块 跳过 已搜索 → 全可见（队列空 → 无动作）
     }
 
-    // 关闭（切容器/退出搜索模式时调用）
+    // 关闭（切容器/退出搜索模式时调用）：退出即报（不论是否搜完）——曾在搜刮 → "关闭了 X"
     public void 关闭()
     {
+        if (!string.IsNullOrEmpty(当前标识))
+        {
+            string 名 = 当前定义 != null ? 当前定义.名称 : 当前标识;
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.探索, $"关闭了 {名}"));
+        }
         StopAllCoroutines();   // 停 残留 倒计时 协程
         当前定义 = null;
         当前标识 = null;
