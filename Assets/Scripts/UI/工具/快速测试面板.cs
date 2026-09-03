@@ -16,6 +16,8 @@ public sealed class 快速测试面板 : MonoBehaviour
     private RectTransform 画布;
     private RectTransform 测试组;   // 按钮+面板 的公共父级：拖拽整体移动；面板与按钮同级，按钮悬停缩放不波及面板
     private RectTransform 面板根;
+    private float 面板高缓存;        // 面板 尺寸（按 屏幕 高 动态；测试组/面板 布局 用）
+    private float 面板宽缓存;        // 面板 宽度（按 屏幕 宽 动态；更 宽 双 列）
 
     // 创建唯一实例（挂 DontDestroyOnLoad：跨场景常驻）
     public static void 确保存在()
@@ -60,23 +62,26 @@ public sealed class 快速测试面板 : MonoBehaviour
         测试组.anchorMin = new Vector2(0.5f, 0.5f);
         测试组.anchorMax = new Vector2(0.5f, 0.5f);
         测试组.pivot = new Vector2(0.5f, 0.5f);
-        测试组.sizeDelta = new Vector2(340f, 620f);
-        float 屏幕高 = 画布.rect.height > 0 ? 画布.rect.height : Screen.height;
-        测试组.anchoredPosition = new Vector2(0f, 屏幕高 / 2f - 186f);   // 初始：按钮贴近顶部居中
+        float 屏高 = 画布.rect.height > 0 ? 画布.rect.height : Screen.height;
+        float 屏宽 = 画布.rect.width > 0 ? 画布.rect.width : Screen.width;
+        面板高缓存 = Mathf.Clamp(屏高 - 105f, 400f, 960f);   // 面板 高：按钮 下方 到 屏 底（留 边距）
+        面板宽缓存 = Mathf.Clamp(屏宽 - 40f, 700f, 800f);   // 面板 宽：更 宽（双 列 布局）
+        测试组.sizeDelta = new Vector2(面板宽缓存, 面板高缓存 + 65f);
+        测试组.anchoredPosition = new Vector2(0f, 面板高缓存 + 5f - 屏高 / 2f);   // 面板 底 距 屏 底 10
 
         var 按钮 = 创建按钮(测试组, "测试开关", "测试", () => 面板根.gameObject.SetActive(!面板根.gameObject.activeSelf));
         var 矩形 = 按钮.GetComponent<RectTransform>();
         矩形.anchorMin = new Vector2(0.5f, 0.5f);
         矩形.anchorMax = new Vector2(0.5f, 0.5f);
         矩形.pivot = new Vector2(0.5f, 0.5f);
-        矩形.anchoredPosition = new Vector2(0f, 150f);   // 面板上方
-        矩形.sizeDelta = new Vector2(110f, 48f);
+        矩形.anchoredPosition = new Vector2(0f, 40f);   // 固定：面板 顶 上方 10（不 随 面板 高）
+        矩形.sizeDelta = new Vector2(130f, 50f);
         // 拖拽按钮 → 测试组整体移动（绝对跟踪鼠标，1:1 平滑跟手）
         var 拖拽 = 按钮.gameObject.AddComponent<测试组拖拽>();
         拖拽.初始化(测试组, 画布);
     }
 
-    // 面板：标题 + 可滚动测试按钮列表（默认收起）。测试组子节点（与按钮同级，不受按钮悬停缩放影响）
+    // 面板：标题 + 大尺寸 滚动 测试 按钮 列表（无 折叠，全部 按钮 直接 列出）。测试组子节点（与按钮同级）
     private void 创建面板()
     {
         面板根 = new GameObject("面板", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -84,8 +89,8 @@ public sealed class 快速测试面板 : MonoBehaviour
         面板根.anchorMin = new Vector2(0.5f, 0.5f);
         面板根.anchorMax = new Vector2(0.5f, 0.5f);
         面板根.pivot = new Vector2(0.5f, 0.5f);
-        面板根.anchoredPosition = new Vector2(0f, -150f);   // 按钮下方
-        面板根.sizeDelta = new Vector2(340f, 560f);
+        面板根.anchoredPosition = new Vector2(0f, -面板高缓存 / 2f + 5f);   // 面板 底部 距 测试组 底 5
+        面板根.sizeDelta = new Vector2(面板宽缓存, 面板高缓存);
         面板根.GetComponent<Image>().color = new Color(0.06f, 0.06f, 0.09f, 0.96f);
         // 拖拽面板背景/标题 → 测试组整体移动
         var 拖拽 = 面板根.gameObject.AddComponent<测试组拖拽>();
@@ -123,67 +128,141 @@ public sealed class 快速测试面板 : MonoBehaviour
         视口物体.GetComponent<Image>().color = new Color(0, 0, 0, 0);
         滚动.viewport = 视口矩形;
 
-        // 内容（竖直排列 + 自适应高度）
-        var 内容物体 = new GameObject("内容", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        // 内容（横向：两 大 列；每 列 纵向 排列 分区——更 宽 面板 双 列 展示）
+        var 内容物体 = new GameObject("内容", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
         内容物体.transform.SetParent(视口物体.transform, false);
         var 内容矩形 = 内容物体.GetComponent<RectTransform>();
         内容矩形.anchorMin = new Vector2(0, 1);
         内容矩形.anchorMax = new Vector2(1, 1);
         内容矩形.pivot = new Vector2(0.5f, 1);
         内容矩形.sizeDelta = new Vector2(0, 0);
-        var 布局 = 内容物体.GetComponent<VerticalLayoutGroup>();
-        布局.spacing = 6f;
-        var 自适应 = 内容物体.GetComponent<ContentSizeFitter>();
-        自适应.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var 内容布局 = 内容物体.GetComponent<HorizontalLayoutGroup>();
+        内容布局.spacing = 10f;   // 两 列 间 间隔
+        内容布局.childControlWidth = true;
+        内容布局.childControlHeight = false;   // 列 高度 由 自身 内容 决定
+        内容物体.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         滚动.content = 内容矩形;
 
-        // 测试按钮
-        (string, UnityAction)[] 测试项 =
+        // 两 大 列（左：基础/制作/搜索；右：物资/时间）
+        var 左列 = 创建列(内容物体.transform);
+        var 右列 = 创建列(内容物体.transform);
+        (string, (string, UnityAction)[])[] 左分区 =
         {
-            ("打开背包面板", 打开背包面板),
-            ("打开安全屋面板", () => 面板管理器.实例?.显示面板类型<安全屋面板>()),
-            ("生成新户型", 生成新户型),
-            ("加随机物品", 加随机物品),
-            ("加容器套装", 加容器套装),
-            ("清空背包", 清空背包),
-            ("随机穿戴容器", 随机穿戴容器),
-            ("仓库加物品", 仓库加物品),
-            ("加建材（安全屋）", 加建材),
-            ("加食物×5", 加食物),
-            ("加医疗品×5", 加医疗品),
-            ("随机装备武器防具", 随机装备武器防具),
-            ("恢复生存状态", 恢复生存状态),
-            ("打开搜索容器·鞋柜", () => 搜索面板.打开搜索("鞋柜")),
-            ("打开搜索容器·冰箱", () => 搜索面板.打开搜索("家用冰箱")),
-            ("打开搜索容器·工具柜", () => 搜索面板.打开搜索("工具柜")),
-            ("清空搜索状态", () => ServiceRegistry.Get<搜索服务>()?.清空战局()),
-            ("打开制作面板（工作台）", () => 打开制作测试("工作台")),
-            ("打开制作面板（灶台）", () => 打开制作测试("灶台")),
-            ("打开制作面板（医疗站）", () => 打开制作测试("医疗站")),
-            ("加制作材料+图纸", 加制作材料),
-            ("加生鲜食品（腐坏测试）", 加生鲜食品),
-            ("加脏水+木炭（净化测试）", 加脏水木炭),
-            ("加种子（种植测试）", 加种子),
-            ("推进24游戏时（腐坏测试）", 推进测试时间),
+            ("基础", new (string, UnityAction)[]
+            {
+                ("打开背包面板", 打开背包面板),
+                ("打开安全屋面板", () => 面板管理器.实例?.显示面板类型<安全屋面板>()),
+                ("生成新户型", 生成新户型),
+                ("恢复生存状态", 恢复生存状态),
+                ("清空背包", 清空背包),
+            }),
+            ("制作面板", new (string, UnityAction)[]
+            {
+                ("工作台", () => 打开制作测试("工作台")),
+                ("灶台", () => 打开制作测试("灶台")),
+                ("医疗站", () => 打开制作测试("医疗站")),
+            }),
+            ("搜索容器", new (string, UnityAction)[]
+            {
+                ("鞋柜", () => 搜索面板.打开搜索("鞋柜")),
+                ("家用冰箱", () => 搜索面板.打开搜索("家用冰箱")),
+                ("工具柜", () => 搜索面板.打开搜索("工具柜")),
+                ("清空搜索状态", () => ServiceRegistry.Get<搜索服务>()?.清空战局()),
+            }),
         };
-        foreach (var (文本, 回调) in 测试项)
+        (string, (string, UnityAction)[])[] 右分区 =
         {
-            var 按钮 = 创建按钮(内容物体.transform, "测试按钮", 文本, 回调);
-            var 布局元素 = 按钮.gameObject.AddComponent<LayoutElement>();
-            布局元素.preferredHeight = 56f;
-        }
+            ("物资", new (string, UnityAction)[]
+            {
+                ("加随机物品", 加随机物品),
+                ("加容器套装", 加容器套装),
+                ("随机穿戴容器", 随机穿戴容器),
+                ("仓库加物品", 仓库加物品),
+                ("加建材（安全屋）", 加建材),
+                ("加食物×5", 加食物),
+                ("加医疗品×5", 加医疗品),
+                ("随机装备武器防具", 随机装备武器防具),
+                ("加制作材料+图纸", 加制作材料),
+                ("加生鲜食品（腐坏测试）", 加生鲜食品),
+                ("加脏水+木炭（净化测试）", 加脏水木炭),
+                ("加种子（种植测试）", 加种子),
+            }),
+            ("时间", new (string, UnityAction)[]
+            {
+                ("推进24游戏时（腐坏测试）", 推进测试时间),
+            }),
+        };
+        foreach (var (组名, 项) in 左分区)
+            创建分区(左列, 组名, 项);
+        foreach (var (组名, 项) in 右分区)
+            创建分区(右列, 组名, 项);
 
         面板根.gameObject.SetActive(false);   // 默认收起
     }
 
-    // 通用按钮：Image 底 + 居中 TMP 文本 + 点击回调
+    // 创建 一 列（横向 内容 的 子列：纵向 排列 分区；flexibleWidth 平分 两 列）
+    private RectTransform 创建列(Transform 父)
+    {
+        var 列 = new GameObject("列", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        列.transform.SetParent(父, false);
+        var 矩形 = 列.GetComponent<RectTransform>();
+        矩形.anchorMin = new Vector2(0, 1);
+        矩形.anchorMax = new Vector2(1, 1);
+        矩形.pivot = new Vector2(0.5f, 1);
+        矩形.sizeDelta = Vector2.zero;
+        var 布局 = 列.GetComponent<VerticalLayoutGroup>();
+        布局.spacing = 10f;
+        列.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var 元素 = 列.AddComponent<LayoutElement>();
+        元素.flexibleWidth = 1f;   // 两 列 平分 宽度
+        return 矩形;
+    }
+
+    // 创建 一个 功能 分区：半透明 底 块（组标题 + 组内 按钮）——大 面板 按 功能 分区，区域 间 留 间隔
+    private void 创建分区(Transform 父, string 组名, (string, UnityAction)[] 项)
+    {
+        var 分区 = new GameObject($"分区_{组名}", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        分区.transform.SetParent(父, false);
+        var 分区矩形 = 分区.GetComponent<RectTransform>();
+        分区矩形.anchorMin = new Vector2(0, 1);
+        分区矩形.anchorMax = new Vector2(1, 1);
+        分区矩形.pivot = new Vector2(0.5f, 1);
+        分区矩形.sizeDelta = Vector2.zero;
+        分区.GetComponent<Image>().color = new Color(0.13f, 0.14f, 0.18f, 0.95f);   // 分区 底色（视觉 分 区）
+        var 分区布局 = 分区.GetComponent<VerticalLayoutGroup>();
+        分区布局.spacing = 4f;
+        分区布局.padding = new RectOffset(8, 8, 8, 8);
+        分区布局.childAlignment = TextAnchor.UpperCenter;   // 按钮 固定 窄宽 → 水平 居中
+        分区.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // 组标题（静态 文本 行）
+        var 标题 = 创建文本(分区矩形, "组标题", $"—— {组名} ——", 24f, TextAlignmentOptions.Center);
+        标题.rectTransform.anchorMin = new Vector2(0, 1);
+        标题.rectTransform.anchorMax = new Vector2(1, 1);
+        标题.rectTransform.pivot = new Vector2(0.5f, 1);
+        标题.rectTransform.sizeDelta = new Vector2(0, 0);
+        标题.color = new Color(0.72f, 0.78f, 0.92f, 1f);   // 组标题 高亮 色
+        var 标题布局 = 标题.gameObject.AddComponent<LayoutElement>();
+        标题布局.preferredHeight = 36f;
+
+        foreach (var (文本, 回调) in 项)
+        {
+            var 按钮 = 创建按钮(分区.transform, "测试按钮", 文本, 回调);
+            var 布局元素 = 按钮.gameObject.AddComponent<LayoutElement>();
+            布局元素.preferredHeight = 44f;
+            布局元素.preferredWidth = 200f;   // 按钮 不 需 全 列 宽（窄 些，居中）
+            布局元素.flexibleWidth = 0f;
+        }
+    }
+
+    // 通用按钮：Image 底 + 居中 TMP 文本 + 点击回调（回调 可空 = 调用方 后续 单独 挂）
     private Button 创建按钮(Transform 父, string 名, string 文本, UnityAction 回调)
     {
         var 物体 = new GameObject(名, typeof(RectTransform), typeof(Image), typeof(Button));
         物体.transform.SetParent(父, false);
         物体.GetComponent<Image>().color = new Color(0.18f, 0.18f, 0.22f, 1f);
         var 按钮 = 物体.GetComponent<Button>();
-        按钮.onClick.AddListener(回调);
+        if (回调 != null) 按钮.onClick.AddListener(回调);
 
         var 文本物体 = new GameObject("文本", typeof(RectTransform), typeof(TextMeshProUGUI));
         文本物体.transform.SetParent(物体.transform, false);

@@ -26,7 +26,8 @@ public sealed class 面板管理器 : MonoBehaviour
 
     [SerializeField] private GameObject 按钮预制体;     // 动态按钮共享（列表行）
     [SerializeField] private GameObject 地图节点预制体; // 地图节点按钮（节点图专用）
-    [SerializeField] private GameObject[] 常驻UI;       // 常驻 UI（HUD/日志/侧边栏/时钟/设置）：开始流程后常驻，主菜单时收起
+    [SerializeField] private GameObject[] 常驻UI;       // 常驻 UI（日志/侧边栏/时钟/设置）：开始流程后常驻，主菜单时收起
+    [SerializeField] private GameObject HUD;             // HUD 顶栏（独立 挂 Canvas 顶层）：安全屋/持有 面板 显示；主菜单/角色创建 隐藏
 
     public 角色创建面板 角色创建面板引用() => 角色创建;
 
@@ -98,6 +99,7 @@ public sealed class 面板管理器 : MonoBehaviour
         主菜单?.显示面板();
         当前显示面板 = 主菜单;
         foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(false);
+        if (HUD != null) HUD.SetActive(false);   // 主菜单：HUD 隐藏
         ServiceRegistry.Get<EventBus>()?.发布(new 面板切换事件(主菜单));
     }
 
@@ -116,7 +118,10 @@ public sealed class 面板管理器 : MonoBehaviour
         if (!上下互切) 上一个面板 = 当前显示面板;
         bool 返回方向 = _返回意图;
         _返回意图 = false;
-        foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(目标 != 主菜单 && 目标 != null);
+        // HUD 调控：HUD 顶栏 在 主菜单 与 角色创建 时 收起（未开档/创建角色 无 HUD）；
+        // 安全屋面板/持有面板 等 游戏内 面板 显示 HUD。
+        foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(目标 != null && 目标 != 主菜单 && 目标 != 角色创建);
+        if (HUD != null) HUD.SetActive(目标 != null && 目标 != 主菜单 && 目标 != 角色创建);
         foreach (var 面板 in 可切换面板)
             if (面板 != null && 面板 != 目标)
             {
