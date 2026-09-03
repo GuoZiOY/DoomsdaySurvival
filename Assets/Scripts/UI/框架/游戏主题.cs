@@ -33,7 +33,7 @@ public static class 游戏主题
     public static readonly string 排队灰值 = "#9aa0a6";     // 信息条：排队中的敌方/其余
     public static readonly string 已行动灰值 = "#46433f";   // 信息条：已行动（淡删除线）
 
-    // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色；v39 收敛 7 类）
+    // 日志类型 → 富文本颜色（针对日志灰半透明底设计的提亮配色；不动共享主题色；v39 收敛 + v40 补 角色）
     public static string 日志色(日志类型 类型)
     {
         switch (类型)
@@ -44,6 +44,7 @@ public static class 游戏主题
             case 日志类型.获得: return "#8fcf78";    // 提亮苔绿（获得/成功）
             case 日志类型.警告: return "#e05a50";    // 提亮血烬红（失败/负面）
             case 日志类型.内心: return "#b09fd0";    // 提亮暮紫（心声）
+            case 日志类型.角色: return "#e8b84c";    // 提亮金（角色操作：装备/卸下/使用/学技能/训练）
             default: return "#a8b0ba";               // 系统 = 亮灰蓝（中性）
         }
     }
@@ -59,6 +60,7 @@ public static class 游戏主题
             case 日志类型.获得: return "获得";
             case 日志类型.警告: return "警告";
             case 日志类型.内心: return "心声";
+            case 日志类型.角色: return "角色";
             default: return "系统";
         }
     }

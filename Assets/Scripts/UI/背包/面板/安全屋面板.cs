@@ -136,8 +136,8 @@ public sealed class 安全屋面板 : 面板基类
         编辑模式 = !编辑模式;
         if (建造按钮文本 != null) 建造按钮文本.text = 编辑模式 ? "退出编辑" : "编辑";
         事件.发布(new 日志事件(日志类型.系统, 编辑模式
-            ? "进入编辑模式。"
-            : "退出编辑模式。"));
+            ? "进入 编辑模式。"
+            : "退出 编辑模式。"));
         if (建造面板 != null)
         {
             建造面板.gameObject.SetActive(编辑模式);   // 点 建造 → 面板 出现；退出 编辑 → 隐藏
@@ -151,8 +151,8 @@ public sealed class 安全屋面板 : 面板基类
         拆除模式 = !拆除模式;
         if (拆除按钮文本 != null) 拆除按钮文本.text = 拆除模式 ? "退出拆除" : "拆除墙";
         事件.发布(new 日志事件(日志类型.系统, 拆除模式
-            ? "进入拆除模式。"
-            : "退出拆除模式。"));
+            ? "进入 拆除模式。"
+            : "退出 拆除模式。"));
         if (!拆除模式) 隐藏拆除投影();
     }
 
@@ -183,7 +183,7 @@ public sealed class 安全屋面板 : 面板基类
     // 进入 摆放模式（建造面板「建造」调用）：需 编辑 模式
     public void 进入摆放(string 定义标识)
     {
-        if (!编辑模式) { 事件.发布(new 日志事件(日志类型.警告, "需要先进入编辑模式。")); return; }
+        if (!编辑模式) { 事件.发布(new 日志事件(日志类型.警告, "需要先进入 编辑模式。")); return; }
         if (房间网格 == null) return;
         摆放堆叠 = new 物品堆叠(家具工具.编码(定义标识, 1), 1) { 旋转 = false };
         var 画布 = GetComponentInParent<Canvas>() ?? Object.FindFirstObjectByType<Canvas>();
@@ -196,7 +196,7 @@ public sealed class 安全屋面板 : 面板基类
         摆放框图.raycastTarget = false;
         var (宽, 高) = 安全屋.占格(摆放堆叠.标识, 摆放堆叠.旋转);
         UI工具.设锚(摆放框图.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(宽 * 格, 高 * 格));
-        事件.发布(new 日志事件(日志类型.系统, "进入摆放模式。"));
+        事件.发布(new 日志事件(日志类型.系统, "进入 摆放模式。"));
     }
 
     private void 退出摆放()

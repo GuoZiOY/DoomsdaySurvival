@@ -57,4 +57,11 @@ public static class 品质工具
         var 色 = ColorUtility.ToHtmlStringRGB(颜色(档));
         return $"<color=#{色}>[{品质名(档)}]</color>";
     }
+
+    // 名称着色（如 <color=#4a8cd4>铁剑</color>）：日志/文本里 物品名 按品质染对应色（不带 [标签]）
+    public static string 名称着色(品质 档, string 名称)
+    {
+        var 色 = ColorUtility.ToHtmlStringRGB(颜色(档));
+        return $"<color=#{色}>{名称}</color>";
+    }
 }
