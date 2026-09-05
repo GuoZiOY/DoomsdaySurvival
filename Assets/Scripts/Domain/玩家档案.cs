@@ -20,6 +20,8 @@ using System.Collections.Generic;
         public float 新鲜分钟;      // 剩余保质期（游戏分钟；0 = 未初始化/无保质期；<=0 变质）。腐坏系统用，随档存档
         public float 生长分钟;      // 剩余 生长 时间（游戏分钟；0 = 未初始化/非种子；<=0 成熟）。种植箱 用，随档存档
         public float 净化分钟;      // 净水器 实例：距 下次 净化 完成 的 剩余 游戏 分钟（0 = 未初始化/非净化器）。自动 净化 用，随档存档
+        public float 阅读分钟;      // 书籍：本次 阅读 剩余 游戏 分钟（0 = 未在 读；读满 → 结算）。随档存档
+        public int 失败叠加;        // 书籍：连续 失败 次数（每次 +10~12% 成功率；成功 清零；豪赌 顶级书 无用——只 1 次）。随档存档
 
         public 物品堆叠() { }
         public 物品堆叠(string 标识, int 数量) { this.标识 = 标识; this.数量 = 数量; }
@@ -173,6 +175,7 @@ using System.Collections.Generic;
 
         // —— 技能与任务 ——
         public List<技能掌握> 已学技能 = new List<技能掌握>();
+        public List<string> 已习得配方 = new List<string>();   // 书籍·配方书 永久习得 的 配方标识（随档存档；区别于 持有图纸 的 临时解锁）
         public List<任务进度> 任务 = new List<任务进度>();
         public List<日常任务> 日常 = new List<日常任务>();
         public int 日常生成日 = -1;
@@ -375,6 +378,16 @@ using System.Collections.Generic;
         public int 记录熟练度(string 标识, int 点数, int 每级阈值) => 成长管理.记录熟练度(标识, 点数, 每级阈值);
         public bool 获得经验(int 数值) => 成长管理.获得经验(数值);
         public int 升级所需经验 => 成长管理.升级所需经验;
+
+        // ================= 书籍（已习得配方 永久知识） =================
+
+        public bool 配方已习得(string 标识) => 已习得配方 != null && 已习得配方.Contains(标识);   // 是否已永久习得
+        public bool 记录习得配方(string 标识)   // 习得（去重；返回 是否 新增）
+        {
+            if (string.IsNullOrEmpty(标识) || 配方已习得(标识)) return false;
+            已习得配方.Add(标识);
+            return true;
+        }
 
         // ================= 任务（门面转发：任务管理器） =================
 

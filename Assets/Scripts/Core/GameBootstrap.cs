@@ -83,6 +83,7 @@ using UnityEngine;
             ServiceRegistry.Register(战斗服务);
             ServiceRegistry.Register(new 探索服务(事件, 数据, 玩家, 战斗服务));
             ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
+            ServiceRegistry.Register(new 书籍服务(事件, 数据));   // 书籍 阅读（技能书/配方书；依赖 技能服务——运行时 取）
             ServiceRegistry.Register(new 天赋服务(事件, 玩家));   // 机制型天赋（致命伤害/制作完成 事件响应）
             var 词缀 = new 词缀服务(数据);   // 装备随机词条生成（掉落/装备实例）
             ServiceRegistry.Register(词缀);

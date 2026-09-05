@@ -144,7 +144,7 @@ public sealed class 右键菜单 : MonoBehaviour
         {
             if (使用按钮 != null)
             {
-                bool 可用 = 物品.恢复量 > 0;
+                bool 可用 = 物品.恢复量 > 0 || (物品.类型 == "书籍" && (物品.书籍种类 == "技能书" || 物品.书籍种类 == "配方书"));
                 使用按钮.gameObject.SetActive(可用);
                 if (可用) 有操作 = true;
             }

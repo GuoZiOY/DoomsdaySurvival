@@ -110,6 +110,7 @@ public partial class 物品网格面板
         if (容器服务.是容器(堆叠)) { 打开容器(堆叠); return; }
         if (物品.恢复量 > 0) { 使用选中(); return; }
         if (!string.IsNullOrEmpty(物品.槽位)) { 装备选中(); return; }
+        if (物品.类型 == "书籍") { 打开书籍(堆叠); return; }
         if (物品.类型 == "技能书") { 面板操作.学习技能书(档案, 物品); return; }
         音效管理器.实例?.播放失败();
     }
@@ -127,12 +128,24 @@ public partial class 物品网格面板
         容器面板.创建(挂载父, 堆叠);
     }
 
+    // 打开书籍：双击/右键 书籍 → 书籍面板（阅读 操作）
+    private void 打开书籍(物品堆叠 堆叠)
+    {
+        if (!数据.物品.TryGetValue(堆叠.标识, out var 物品) || 物品.类型 != "书籍") { 音效管理器.实例?.播放失败(); return; }
+        音效管理器.实例?.播放成功();
+        var 滚动 = 网格容器 != null ? 网格容器.parent?.parent : null;
+        var 挂载父 = 滚动 != null ? (RectTransform)滚动 : 网格容器;
+        书籍面板.创建(挂载父, 堆叠);
+    }
+
     // ===== 操作按钮 =====
 
     private void 使用选中()
     {
         if (选中 == null) return;
-        if (!数据.物品.TryGetValue(选中.标识, out var 物品) || 物品.恢复量 <= 0) { 音效管理器.实例?.播放失败(); return; }
+        if (!数据.物品.TryGetValue(选中.标识, out var 物品)) { 音效管理器.实例?.播放失败(); return; }
+        if (物品.类型 == "书籍") { 打开书籍(选中); return; }   // 书籍 → 阅读（打开 书籍面板）
+        if (物品.恢复量 <= 0) { 音效管理器.实例?.播放失败(); return; }
         面板操作.使用恢复(档案, 数据, 选中.标识);
         选中 = null;
         请求刷新();
