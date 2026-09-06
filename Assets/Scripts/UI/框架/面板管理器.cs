@@ -13,7 +13,7 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 主菜单面板 主菜单;
     [SerializeField] private 角色创建面板 角色创建;
     [SerializeField] private 对话面板 对话;        // 短事件正文+选项（保留改造）
-    [SerializeField] private 战斗面板 战斗;
+    [SerializeField] private 战斗沙盒面板 战斗;    // 即时制战斗棋盘面板（场景手动搭建）
     [SerializeField] private 探索面板 探索;
     [SerializeField] private 角色面板 角色;        // 属性/装备（改造中）
 
@@ -76,7 +76,7 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<打开对话事件>(e => 显示(对话, e));
         事件.订阅<显示剧情事件>(e => 显示(对话, e));   // 短事件 → 对话面板（保留改造）
         事件.订阅<打开结局事件>(e => 显示(对话, e));
-        事件.订阅<打开战斗事件>(e => 显示(战斗, e));
+        事件.订阅<打开战斗事件>(e => 显示(战斗, e));   // 即时制战斗棋盘面板（布阵走 战斗开始事件）
         事件.订阅<探索显示事件>(e => 显示(探索, e));
         事件.订阅<打开探索事件>(e => 显示(探索, e));
         事件.订阅<打开野外面板事件>(e => 显示(探索, e));

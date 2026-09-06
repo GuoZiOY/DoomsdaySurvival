@@ -15,12 +15,6 @@
         public 生命变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
     }
 
-    public readonly struct 魔力变化事件
-    {
-        public readonly int 当前; public readonly int 最大; public readonly int 变化量;
-        public 魔力变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
-    }
-
     // 精力变化：探索/行动/物理技能 消耗，休息/睡觉 恢复
     public readonly struct 精力变化事件
     {

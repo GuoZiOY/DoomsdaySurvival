@@ -408,7 +408,7 @@ using System.Collections.Generic;
         public int 魔力 { get => 行动点; set => 行动点 = value; }
         public int 精力 { get => 行动点; set => 行动点 = value; }
         public int 物理伤害 => 近战伤害;
-        public int 魔法伤害 => 枪械伤害;
+        public int 远程伤害 => 枪械伤害;
         public int 最大魔力 => 最大行动点;
         public int 最大精力 => 最大行动点;
         public int 速度加成 => 装备管理.速度加成;

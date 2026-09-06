@@ -398,6 +398,8 @@ public sealed class 世界时间管理器
     {
         private void Update()
         {
+            // 战斗中：时间由战斗沙盒 推进战斗() 统一推进（行动条 + 生存结算），挂机驱动暂停，防双时钟
+            if (ServiceRegistry.Get<BattleService>()?.战斗中 == true) return;
             var 管理器 = ServiceRegistry.Get<世界时间管理器>();
             if (管理器 == null) return;
             管理器.推进(Time.deltaTime);

@@ -30,6 +30,7 @@ using UnityEngine;
         public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
         public List<情报条目> 情报 { get; private set; } = new List<情报条目>();   // 收音机 情报池（无标识，列表承载）
         public Dictionary<string, 搜索地图类型> 搜索地图类型 { get; private set; } = new Dictionary<string, 搜索地图类型>();
+        public Dictionary<string, 战斗棋盘数据> 战斗棋盘 { get; private set; } = new Dictionary<string, 战斗棋盘数据>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -64,6 +65,7 @@ using UnityEngine;
             加载("天气", 天气, (天气根 根) => 根.天气);       // 允许缺失（天气系统）
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
             加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
+            加载("战斗棋盘", 战斗棋盘, (战斗棋盘根 根) => 根.棋盘);   // 允许缺失（战斗沙盒）
             加载情报();
             加载助战组与区域剧情();
         }

@@ -16,7 +16,7 @@ public static class 游戏主题
     public static readonly Color 选中色 = new Color(0.42f, 0.66f, 0.82f);    // 钢蓝（地图节点选中高亮，区别于当前节点金色）
 
     // —— 战斗演出 ——
-    public static readonly Color 魔法 = new Color(0.45f, 0.62f, 1f);     // 魔法伤害飘字（冰川蓝）
+    public static readonly Color 远程 = new Color(0.45f, 0.62f, 1f);     // 远程伤害飘字（冰川蓝）
     public static readonly Color 治疗 = new Color(0.35f, 0.85f, 0.45f);   // 治疗飘字苔绿（提亮）
 
     // —— 富文本十六进制 ——
@@ -27,8 +27,8 @@ public static class 游戏主题
     public static readonly string 内心色值 = "#9e8fb8";
     public static readonly string 时间戳色值 = "#8a8f96";   // 提亮灰蓝（灰半透明底上可读，仍次级于正文）
     public static readonly string 高亮色值 = "#f5d88a";     // 数值/变量强调（亮米金，正文内始终可见）
-    public static readonly string 物攻色值 = "#e0826a";     // 物理伤害（战斗面板技能数值）
-    public static readonly string 魔攻色值 = "#7fb2d9";     // 魔法伤害（战斗面板技能数值）
+    public static readonly string 物攻色值 = "#e0826a";     // 近战伤害（战斗面板技能数值）
+    public static readonly string 远程色值 = "#7fb2d9";     // 远程伤害（战斗面板技能数值）
     public static readonly string 出手青值 = "#6be0a0";     // 信息条：下一个出手的我方
     public static readonly string 排队灰值 = "#9aa0a6";     // 信息条：排队中的敌方/其余
     public static readonly string 已行动灰值 = "#46433f";   // 信息条：已行动（淡删除线）

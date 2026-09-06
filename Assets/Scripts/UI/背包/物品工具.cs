@@ -18,7 +18,7 @@ public static class 物品工具
             case "恢复": return $"恢复 {物品.恢复量} 点生命";
             case "技能书":
                 if (!string.IsNullOrEmpty(物品.技能) && 数据.技能.TryGetValue(物品.技能, out var 技能))
-                    return $"可学习：{技能.名称}（消耗 {技能.消耗魔力} 魔力）";
+                    return $"可学习：{技能.名称}（消耗 {技能.消耗精力} 精力）";
                 return "";
             default:   // 武器/防具/饰品：合并 攻击/防御/生命/抗性 加成 + 词缀（换行独立列出）
                 {
