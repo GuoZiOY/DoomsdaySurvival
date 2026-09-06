@@ -6184,7 +6184,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: "Assembly-CSharp::\u53F3\u952E\u83DC\u5355"
   "\u83DC\u5355\u6839": {fileID: 403552225}
   "\u4F7F\u7528\u6309\u94AE": {fileID: 614683809}
-  "\u9605\u8BFB\u6309\u94AE": {fileID: 0}
   "\u88C5\u5907\u6309\u94AE": {fileID: 317858250}
   "\u6253\u5F00\u6309\u94AE": {fileID: 125811774}
   "\u62C6\u5206\u6309\u94AE": {fileID: 350834560}
