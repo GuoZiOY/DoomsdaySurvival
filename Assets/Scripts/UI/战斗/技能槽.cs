@@ -16,6 +16,7 @@ public sealed class 技能槽 : MonoBehaviour
     private 战斗沙盒面板 外壳 => GetComponentInParent<战斗沙盒面板>();
     public string 当前技能标识 { get; private set; }   // 本槽 绑定 的 技能标识；空槽 = null
     private int 当前冷却总轮;                          // 绑定 技能 的 总冷却轮数（fillAmount 分母）
+    private string 名字原文;                           // 绑定 技能名 原文（蓄力 标记 后缀 用）
 
     private static readonly Color 空槽色 = new Color(0.2f, 0.2f, 0.22f, 1f);
 
@@ -36,7 +37,7 @@ public sealed class 技能槽 : MonoBehaviour
         }
         当前冷却总轮 = Mathf.Max(1, 技能.冷却);
         if (图标 != null) 图标.color = 类别色(技能);
-        if (名称 != null) 名称.text = 技能.名称;
+        if (名称 != null) { 名称.text = 技能.名称; 名字原文 = 技能.名称; }
         if (冷却遮罩 != null) { 冷却遮罩.gameObject.SetActive(false); 冷却遮罩.fillAmount = 0f; }
         if (冷却文本 != null) 冷却文本.text = "";
         if (按钮 != null) 按钮.interactable = true;
@@ -46,11 +47,19 @@ public sealed class 技能槽 : MonoBehaviour
     private void 设为空槽()
     {
         当前冷却总轮 = 0;
+        名字原文 = null;
         if (图标 != null) 图标.color = 空槽色;
         if (名称 != null) 名称.text = "空槽";
         if (冷却遮罩 != null) { 冷却遮罩.gameObject.SetActive(false); 冷却遮罩.fillAmount = 0f; }
         if (冷却文本 != null) 冷却文本.text = "";
         if (按钮 != null) 按钮.interactable = false;
+    }
+
+    // 蓄力 标记：该 技能 正 在 蓄力（预约 中）→ 名称 加 后缀；否则 还原
+    public void 刷新蓄力(bool 蓄力中)
+    {
+        if (名称 == null || string.IsNullOrEmpty(名字原文)) return;
+        名称.text = 蓄力中 ? 名字原文 + "（蓄力中）" : 名字原文;
     }
 
     // 每帧 冷却 刷新：剩余轮 > 0 → 遮罩（fillAmount = 剩余/总，Radial360 倒计时）+ 禁用 + 文本；否则 清

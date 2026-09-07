@@ -179,8 +179,14 @@ public sealed class 战斗沙盒面板 : 面板基类
         // 技能冷却（固定 6 槽 轮询）
         if (技能槽位 != null && 战斗?.玩家 != null)
             foreach (var 槽组件 in 技能槽位)
-                if (槽组件 != null && 槽组件.当前技能标识 != null)
+            {
+                if (槽组件 == null) continue;
+                if (槽组件.当前技能标识 != null)
+                {
                     槽组件.刷新冷却(战斗.玩家.冷却剩余(槽组件.当前技能标识));
+                    槽组件.刷新蓄力(战斗.蓄力中技能 == 槽组件.当前技能标识);   // 预约/蓄力 中 标记
+                }
+            }
         // 弹挂/腰封 网格：物品使用 扣量 由 背包变化事件 自动刷新（物品网格面板 机制），无需此处轮询
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) 取消选择();
     }
