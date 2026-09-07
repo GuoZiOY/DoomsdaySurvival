@@ -47,8 +47,8 @@ public sealed class 战斗单位
     // —— Buff 列表（增益/减益/异常；无护盾） ——
     public readonly List<Buff实例> Buffs = new List<Buff实例>();
 
-    // —— 技能冷却：技能标识 → 剩余轮数 ——
-    public readonly Dictionary<string, int> 技能冷却 = new Dictionary<string, int>();
+    // —— 技能冷却：技能标识 → 剩余秒（现实秒，战斗中 每帧 推进；非 轮） ——
+    public readonly Dictionary<string, float> 技能冷却 = new Dictionary<string, float>();
 
     // —— 已学技能（我方投影 / 敌人技能） ——
     public readonly HashSet<string> 已学技能 = new HashSet<string>();
@@ -145,7 +145,7 @@ public sealed class 战斗单位
 
     public void 移除Buff(string 标识) => Buffs.RemoveAll(b => b.定义.标识 == 标识);
 
-    // 轮次结束：buff 计时递减移除；技能冷却递减；无敌回合递减
+    // 轮次结束：buff 计时递减移除；无敌回合递减（技能冷却 改 现实秒，由 推进冷却 逐帧 推进，不走 轮）
     public void 回合结束()
     {
         for (int i = Buffs.Count - 1; i >= 0; i--)
@@ -155,23 +155,31 @@ public sealed class 战斗单位
             if (b.剩余回合 <= 0) Buffs.RemoveAt(i);
         }
         if (无敌回合 > 0) 无敌回合--;
-        var 到期 = new List<string>();
-        foreach (var kv in 技能冷却)
-        {
-            技能冷却[kv.Key] = kv.Value - 1;
-            if (技能冷却[kv.Key] <= 0) 到期.Add(kv.Key);
-        }
-        foreach (var k in 到期) 技能冷却.Remove(k);
     }
 
     // —— 技能 ——
 
     public bool 掌握(string 标识) => 已学技能.Contains(标识);
     public int 熟练等级(string 标识) => 技能熟练.TryGetValue(标识, out var v) ? v : 0;
-    public int 冷却剩余(string 标识) => 技能冷却.TryGetValue(标识, out var c) ? c : 0;
-    public void 开始冷却(string 标识, int 轮数)
+    public float 冷却剩余(string 标识) => 技能冷却.TryGetValue(标识, out var c) ? c : 0f;
+
+    public void 开始冷却(string 标识, float 秒数)
     {
-        if (轮数 > 0) 技能冷却[标识] = 轮数;
+        if (秒数 > 0f) 技能冷却[标识] = 秒数;
+    }
+
+    // 冷却 推进：现实秒 逐帧 递减（战斗中 每帧 调用）；到 0 移除
+    public void 推进冷却(float 现实秒)
+    {
+        if (技能冷却.Count == 0) return;
+        var 到期 = new List<string>();
+        foreach (var kv in 技能冷却)
+        {
+            float 剩 = kv.Value - 现实秒;
+            if (剩 <= 0f) 到期.Add(kv.Key);
+            else 技能冷却[kv.Key] = 剩;
+        }
+        foreach (var k in 到期) 技能冷却.Remove(k);
     }
 
     // —— 工厂（投影/生成） ——
