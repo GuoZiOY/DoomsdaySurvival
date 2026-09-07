@@ -85,6 +85,17 @@ public sealed class 战斗沙盒面板 : 面板基类
     // 技能槽：固定 6 槽（场景手动搭建的 技能槽 组件数组），绑定 战斗技能槽 数据
     private void 刷新技能槽()
     {
+        if (技能槽位 == null || 技能槽位.Length == 0)
+        {
+            // 场景 未 手动 拖 技能槽位 数组 → 自动 收集 面板 内 技能槽 并 按 屏幕 x 左→右（技能栏 习惯 顺序）
+            var 收集 = GetComponentsInChildren<技能槽>(true);
+            if (收集 != null && 收集.Length > 0)
+            {
+                var 列表 = new List<技能槽>(收集);
+                列表.Sort((a, b) => a.transform.position.x.CompareTo(b.transform.position.x));
+                技能槽位 = 列表.ToArray();
+            }
+        }
         if (技能槽位 == null || 战斗?.玩家 == null) return;
         var 数据 = ServiceRegistry.Get<DataService>();
         var 槽 = ServiceRegistry.Get<PlayerService>()?.档案?.战斗技能槽;
