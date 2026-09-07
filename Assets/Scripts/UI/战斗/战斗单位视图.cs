@@ -66,6 +66,28 @@ public sealed class 战斗单位视图 : MonoBehaviour
         float 血比 = 单位.最大生命 > 0 ? (float)单位.生命 / 单位.最大生命 : 0f;
         if (血条 != null) 血条.value = Mathf.Clamp01(血比);
         if (行动条 != null) 行动条.value = Mathf.Clamp01(单位.行动条 / 100f);
+        行动条意图色(单位.当前意图);
+    }
+
+    // 行动条 前景 颜色：按 读条 意图（移动 金 / 攻击 血红 / 技能 紫 / 戒备 灰蓝）；前景 自动 找（Slider fillRect 的 Image）
+    private Image 行动条前景缓存;
+    private static readonly Color 意图移动色 = new Color(1f, 0.84f, 0.30f, 1f);    // 金黄
+    private static readonly Color 意图攻击色 = new Color(0.88f, 0.16f, 0.12f, 1f);   // 血红
+    private static readonly Color 意图技能色 = new Color(0.55f, 0.42f, 0.9f, 1f);    // 紫
+    private static readonly Color 意图戒备色 = new Color(0.55f, 0.6f, 0.65f, 1f);    // 灰蓝
+
+    private void 行动条意图色(战斗单位.意图类型 意图)
+    {
+        if (行动条 == null || 行动条.fillRect == null) return;
+        if (行动条前景缓存 == null)
+            行动条前景缓存 = 行动条.fillRect.GetComponent<Image>() ?? 行动条.fillRect.GetComponentInChildren<Image>();
+        if (行动条前景缓存 != null) 行动条前景缓存.color = 意图 switch
+        {
+            战斗单位.意图类型.攻击 => 意图攻击色,
+            战斗单位.意图类型.技能 => 意图技能色,
+            战斗单位.意图类型.戒备 => 意图戒备色,
+            _ => 意图移动色,
+        };
     }
 
     // —— Button 回调（预制体里：身体圆.Button → 点圆；信息卡.Button → 点卡）——
