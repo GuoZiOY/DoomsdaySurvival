@@ -83,32 +83,32 @@ public sealed class 战斗轨道 : MonoBehaviour
                 单位表.Remove(单位);
             }
         }
-        // 阵营 名额 分配：友方/敌方 各 前 2 → 上方，其余 下方（y 为 信息卡 相对 根 的 local y）
-        foreach (var 阵营组 in new[] { 我方组(单位组), 敌方组(单位组) })
-        {
-            for (int i = 0; i < 阵营组.Count; i++)
-            {
-                var 单位 = 阵营组[i];
-                if (!单位表.TryGetValue(单位, out var 视图))
+                // 阵营 名额 分配：友方/敌方 各 前 2 → 圆 上方（优先），其余 → 下方（y 为 信息卡 相对 根 的 local y）
+                foreach (var 阵营组 in new[] { 我方组(单位组), 敌方组(单位组) })
                 {
-                    视图 = 生成单位视图(单位);
-                    if (视图 == null) continue;
-                    单位表[单位] = 视图;
+                    for (int i = 0; i < 阵营组.Count; i++)
+                    {
+                        var 单位 = 阵营组[i];
+                        if (!单位表.TryGetValue(单位, out var 视图))
+                        {
+                            视图 = 生成单位视图(单位);
+                            if (视图 == null) continue;
+                            单位表[单位] = 视图;
+                        }
+                        if (!单位.存活) { 视图.gameObject.SetActive(false); continue; }
+                        视图.gameObject.SetActive(true);
+                        var 根 = (RectTransform)视图.transform;
+                        根.anchoredPosition = new Vector2(单位.列 * 节点间距, 0f);   // 移动 根 = 圆 + 信息卡 一起 跟随
+                        bool 上方 = i < 2;                                          // 上面 优先：每阵营 ≤2 个 都 放 圆 上方
+                        int 层序号 = 上方 ? i : i - 2;
+                        float 相对y = 上方
+                            ? +(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距)     // 上方（正 y = 上）：棋子边缘 + 间隔 + 堆叠
+                            : -(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距);    // 下方
+                        if (视图.卡变换 != null) 视图.卡变换.localPosition = new Vector2(0f, 相对y);
+                        bool 可选 = 外壳 != null && 外壳.是可选目标(单位);
+                        视图.刷新外观(可选);
+                    }
                 }
-                if (!单位.存活) { 视图.gameObject.SetActive(false); continue; }
-                视图.gameObject.SetActive(true);
-                var 根 = (RectTransform)视图.transform;
-                根.anchoredPosition = new Vector2(单位.列 * 节点间距, 0f);   // 移动 根 = 圆 + 信息卡 一起 跟随
-                bool 上方 = i < 2;
-                int 层序号 = 上方 ? i : i - 2;
-                float 相对y = 上方
-                    ? -(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距)     // 上方（负 = 上）：棋子边缘 + 间隔 + 堆叠
-                    : +(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距);    // 下方
-                if (视图.卡变换 != null) 视图.卡变换.localPosition = new Vector2(0f, 相对y);
-                bool 可选 = 外壳 != null && 外壳.是可选目标(单位);
-                视图.刷新外观(可选);
-            }
-        }
     }
 
     private static List<战斗单位> 我方组(List<战斗单位> 单位组)
