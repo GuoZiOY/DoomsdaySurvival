@@ -22,11 +22,7 @@ public sealed class 技能槽 : MonoBehaviour
 
     void Awake()
     {
-        // 引用位 空 时 自动 从 子物体 解析（场景 手动 拖 优先；兜底 保证 点击/显示 可用）
-        按钮 ??= GetComponent<Button>();
-        if (按钮 == null) 按钮 = GetComponentInChildren<Button>(true);
-        if (图标 == null) 图标 = GetComponentInChildren<Image>(true);
-        if (名称 == null) 名称 = GetComponentInChildren<TMP_Text>(true);
+        按钮 = GetComponent<Button>();
         if (按钮 != null) 按钮.onClick.AddListener(() => 外壳?.点击技能槽(当前技能标识));
     }
 
