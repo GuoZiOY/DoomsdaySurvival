@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 // 战斗服务：回合制战斗状态机。战斗单位统一抽象（玩家/敌人都是它），速度队列行动序，
@@ -18,10 +18,8 @@ public sealed class BattleService
     public readonly List<战斗单位> 我方 = new List<战斗单位>();
     public readonly List<战斗单位> 敌方 = new List<战斗单位>();
 
-    // —— 战斗沙盒（即时制 + 棋盘） ——
-    public int 棋盘宽 { get; private set; } = 12;
-    public int 棋盘高 { get; private set; } = 7;
-    public readonly HashSet<(int 列, int 行)> 障碍格 = new HashSet<(int, int)>();
+    // —— 战斗沙盒（即时制 + 节点式轨道） ——
+    public int 棋盘宽 { get; private set; } = 12;   // 轨道节点数（横向战线：0 ~ 棋盘宽-1）；节点间前后移动，无行维度
     public float 战斗分钟 { get; private set; }   // 本回合已累计分钟（满 60 结算一轮）
     public const float 每现实秒游戏分钟 = 1f;      // 战斗时间流速：1 现实秒 = 1 游戏分钟（2 倍正常流速，可调）
 
@@ -56,7 +54,7 @@ public sealed class BattleService
         this.先手模式 = 先手;
         战斗中 = true; 回合数 = 1; 战斗分钟 = 0f;
         我方.Clear(); 敌方.Clear(); 消耗道具.Clear();
-        累计金币 = 0; 累计经验 = 0; 障碍格.Clear();
+        累计金币 = 0; 累计经验 = 0;
         var 玩家单位 = 战斗单位.从玩家投影(档案);
         玩家 = 玩家单位; 我方.Add(玩家单位);
         // 轻量助战：加入我方，AI 行动表自动出手（玩家不可手动操控；倒下无碍，玩家倒下=败）
@@ -79,32 +77,17 @@ public sealed class BattleService
         事件.发布(new 战斗开始事件(我方.ToArray(), 敌方.ToArray()));
     }
 
-    // 棋盘生成：默认取"街头"模板（后续由遭遇/区域指定）；障碍模板在代码内置（街头/工厂/室内/空）
+    // 轨道生成：节点数 = 战斗棋盘.宽（默认 12）；无行维度、无障碍物——单位沿节点前后移动
     private void 初始化棋盘()
     {
-        string 模板 = "";
-        if (数据.战斗棋盘.TryGetValue("街头", out var 默认)) { 棋盘宽 = 默认.宽; 棋盘高 = 默认.高; 模板 = 默认.障碍模板; }
-        if (模板 == "") return;
-        if (模板 == "街头")
-        {
-            障碍格.Add((5, 2)); 障碍格.Add((5, 3)); 障碍格.Add((5, 4));   // 中段掩体（车辆废墟）
-            障碍格.Add((7, 2)); 障碍格.Add((7, 3)); 障碍格.Add((7, 4));
-        }
-        else if (模板 == "工厂")
-        {
-            for (int 行 = 0; 行 < 棋盘高; 行++) { 障碍格.Add((3, 行)); 障碍格.Add((8, 行)); }   // 两列机械
-        }
-        else if (模板 == "室内")
-        {
-            障碍格.Add((4, 1)); 障碍格.Add((4, 2)); 障碍格.Add((5, 3)); 障碍格.Add((5, 4));   // 家具散落
-        }
+        if (数据.战斗棋盘.TryGetValue("街头", out var 默认)) 棋盘宽 = Mathf.Max(4, 默认.宽);
     }
 
-    // 落位：我方左侧（列=出生列），敌方右侧（列=出生列），按数量垂直排开；大体型占 2 格
+    // 落位：我方节点 0，敌方节点 棋盘宽-1（同节点多单位重叠，视觉错位由轨道面板处理）
     private void 落位单位(int 先手)
     {
         int 我方列 = 0, 敌方列 = 棋盘宽 - 1;
-        if (数据.战斗棋盘.TryGetValue("街头", out var 棋盘)) { 我方列 = 棋盘.我方出生列; 敌方列 = 棋盘.敌方出生列; }
+        if (数据.战斗棋盘.TryGetValue("街头", out var 棋盘)) 敌方列 = Mathf.Max(我方列 + 1, 棋盘.宽 - 1);
         if (先手 == 1)   // 被偷袭：敌方先手（行动条领先）
         {
             foreach (var 敌 in 敌方) 敌.行动条 = 60f;
@@ -121,30 +104,23 @@ public sealed class BattleService
 
     private void 落位一侧(List<战斗单位> 单位组, int 列)
     {
-        int 总数 = 单位组.Count;
-        int 起始行 = Mathf.Max(0, (棋盘高 - 总数) / 2);
-        for (int i = 0; i < 总数; i++)
-        {
-            var 单位 = 单位组[i];
-            单位.列 = Mathf.Max(0, 列 - (单位.身形 - 1));   // 大体型（占 2 格）回退一列，防出生越界
-            单位.行 = 起始行 + i;
-        }
+        foreach (var 单位 in 单位组) 单位.列 = 列;   // 同节点重叠（视觉错位 面板 处理）
     }
 
     // ===== 即时制核心：时间推进 → 行动条 → 轮次结算 → 满条自动行动 =====
 
     // 战斗推进（面板每帧调用）：推进世界时间 + 行动条累积 + 轮次结算 + 满条行动。
     // 战斗中挂机驱动暂停（世界时间管理器.驱动 检查 战斗中），时间只在此推进，避免双时钟。
+    // 战斗中不结算生存（饱食/水分/伤病 暂停——战斗冲突中不吃不喝也不扣），仅推进时间并同步整点基准（防挂机恢复时补结算战斗期间）。
     public void 推进战斗(float 现实秒)
     {
         if (!战斗中 || 现实秒 <= 0f) return;
         float 游戏分钟 = 现实秒 * 每现实秒游戏分钟;
-        // 世界时间：推进档案分钟 + 生存结算（饱食/水分/伤病）+ 同步整点基准（防挂机重复结算）
+        // 世界时间：推进档案分钟（不结算生存）+ 同步整点基准 + 时间事件
         var 档案实例 = 档案;
         if (档案实例 != null)
         {
             档案实例.游戏分钟数 += 游戏分钟;
-            ServiceRegistry.Get<世界时间管理器>()?.结算时间段(Mathf.Max(1, Mathf.RoundToInt(游戏分钟)), true);
             ServiceRegistry.Get<世界时间管理器>()?.同步整点基准();
             事件.发布(new 时间变化事件(档案实例.游戏分钟数));
         }
@@ -223,16 +199,15 @@ public sealed class BattleService
         检查战斗结束();
     }
 
-    // 射程内有目标（近战=距离≤攻击距离；远程=距离≤攻击距离 且 直线视线）
+    // 射程内有目标（距离 = 节点差 ≤ 攻击距离；轨道无障碍，无需视线）
     private 战斗单位 可攻击目标(战斗单位 单位)
     {
         战斗单位 最近 = null; int 最近距 = int.MaxValue;
         foreach (var 敌 in 对方阵营(单位))
         {
             if (!敌.存活) continue;
-            int 距 = 格距(单位, 敌);
+            int 距 = Mathf.Abs(单位.列 - 敌.列);
             if (距 > 单位.攻击距离) continue;
-            if (单位.攻击距离 > 1 && !有视线(单位.列, 单位.行, 敌.列, 敌.行)) continue;
             if (距 < 最近距) { 最近 = 敌; 最近距 = 距; }
         }
         return 最近;
@@ -251,17 +226,17 @@ public sealed class BattleService
         执行攻击(攻击者, 目标);
     }
 
-    // 自动移动：玩家按 运动模式（前进/等待/后退）；敌人按 移动AI（冲锋/风筝/驻守）
+    // 自动移动（节点式轨道）：玩家按 运动模式（前进/等待/后退）；敌人按 移动AI（冲锋/风筝/驻守）。
+    // 停止规则：无论敌我，前方节点被敌方单位占据 → 停在相邻节点（不越过、不重叠——贴脸对峙）
     private void 自动移动(战斗单位 单位)
     {
-        int 目标列 = 0, 目标行 = 0;
+        int 方向 = 0;   // +1 前进（节点+1）/ -1 后退（节点-1）/ 0 不动
         if (单位.是否我方)
         {
             if (单位.运动模式 == 1) return;   // 原地等待
             var 敌 = 最近敌人(单位);
             if (敌 == null) return;
-            if (单位.运动模式 == 0) 朝敌方向(单位, 敌, out 目标列, out 目标行);
-            else 离敌方向(单位, 敌, out 目标列, out 目标行);
+            方向 = 单位.运动模式 == 0 ? (敌.列 > 单位.列 ? 1 : -1) : (敌.列 < 单位.列 ? 1 : -1);
         }
         else
         {
@@ -272,20 +247,21 @@ public sealed class BattleService
                 case "驻守": return;
                 case "风筝":
                     {
-                        int 距 = 格距(单位, 玩);
-                        if (距 > 单位.攻击距离) 朝敌方向(单位, 玩, out 目标列, out 目标行);
-                        else if (距 <= 1) 离敌方向(单位, 玩, out 目标列, out 目标行);
-                        else return;   // 风筝距离内：站桩输出
+                        int 距 = Mathf.Abs(单位.列 - 玩.列);
+                        if (距 > 单位.攻击距离) 方向 = 玩.列 > 单位.列 ? 1 : -1;   // 逼近到射程边缘
+                        else if (距 <= 1) 方向 = 玩.列 < 单位.列 ? 1 : -1;         // 被贴脸 → 拉远
+                        else return;   // 射程内站桩输出
                         break;
                     }
-                default: 朝敌方向(单位, 玩, out 目标列, out 目标行); break;
+                default: 方向 = 玩.列 > 单位.列 ? 1 : -1; break;   // 冲锋
             }
         }
-        if (目标列 == 0 && 目标行 == 0) return;
-        // 尝试移动：优先水平，水平不可走再垂直
-        if (可走(单位, 单位.列 + 目标列, 单位.行 + 目标行)) { 单位.列 += 目标列; 单位.行 += 目标行; }
-        else if (目标列 != 0 && 可走(单位, 单位.列, 单位.行 + 目标行)) { 单位.行 += 目标行; }
-        else if (目标行 != 0 && 可走(单位, 单位.列 + 目标列, 单位.行)) { 单位.列 += 目标列; }
+        if (方向 == 0) return;
+        int 目标列 = 单位.列 + 方向;
+        if (目标列 < 0 || 目标列 >= 棋盘宽) return;
+        foreach (var 敌 in 对方阵营(单位))
+            if (敌.存活 && 敌.列 == 目标列) return;   // 前方节点被敌方占据 → 停（贴脸）
+        单位.列 = 目标列;
     }
 
     private 战斗单位 最近敌人(战斗单位 单位)
@@ -294,59 +270,10 @@ public sealed class BattleService
         foreach (var 敌 in 对方阵营(单位))
         {
             if (!敌.存活) continue;
-            int 距 = 格距(单位, 敌);
+            int 距 = Mathf.Abs(单位.列 - 敌.列);
             if (距 < 最近距) { 最近 = 敌; 最近距 = 距; }
         }
         return 最近;
-    }
-
-    // 朝敌方向（优先水平：横向棋盘敌人在右）
-    private static void 朝敌方向(战斗单位 单位, 战斗单位 敌, out int 列, out int 行)
-    {
-        列 = 敌.列 > 单位.列 ? 1 : (敌.列 < 单位.列 ? -1 : 0);
-        行 = 敌.行 > 单位.行 ? 1 : (敌.行 < 单位.行 ? -1 : 0);
-    }
-
-    private static void 离敌方向(战斗单位 单位, 战斗单位 敌, out int 列, out int 行)
-    {
-        列 = 敌.列 < 单位.列 ? 1 : (敌.列 > 单位.列 ? -1 : 0);
-        行 = 敌.行 < 单位.行 ? 1 : (敌.行 > 单位.行 ? -1 : 0);
-    }
-
-    // 移动合法性：不越界、不撞障碍、不与存活单位重叠（考虑身形横向 2 格）
-    private bool 可走(战斗单位 单位, int 列, int 行)
-    {
-        if (列 < 0 || 列 + 单位.身形 > 棋盘宽 || 行 < 0 || 行 >= 棋盘高) return false;
-        for (int i = 0; i < 单位.身形; i++)
-            if (障碍格.Contains((列 + i, 行))) return false;
-        foreach (var 其他 in 全部单位())
-        {
-            if (其他 == 单位 || !其他.存活) continue;
-            for (int i = 0; i < 其他.身形; i++)
-                if (其他.列 + i == 列 && 其他.行 == 行) return false;
-            if (单位.身形 > 1 && 其他.列 == 列 + 1 && 其他.行 == 行) return false;
-        }
-        return true;
-    }
-
-    // 曼哈顿距离
-    private static int 格距(战斗单位 a, 战斗单位 b) => Mathf.Abs(a.列 - b.列) + Mathf.Abs(a.行 - b.行);
-
-    // 直线视线：Bresenham 采样（两端之间各格，遇障碍 = 遮挡）
-    private bool 有视线(int 列1, int 行1, int 列2, int 行2)
-    {
-        int dx = Mathf.Abs(列2 - 列1), dy = -Mathf.Abs(行2 - 行1);
-        int sx = 列1 < 列2 ? 1 : -1, sy = 行1 < 行2 ? 1 : -1;
-        int err = dx + dy, 列 = 列1, 行 = 行1;
-        while (true)
-        {
-            if (列 == 列2 && 行 == 行2) break;
-            int e2 = 2 * err;
-            if (e2 >= dy) { err += dy; 列 += sx; }
-            if (e2 <= dx) { err += dx; 行 += sy; }
-            if (障碍格.Contains((列, 行))) return false;   // 途中遇障碍
-        }
-        return true;
     }
 
     // 防御姿态：持续到下次行动；期间受击减半
@@ -431,21 +358,19 @@ public sealed class BattleService
         bool 敌方类 = 期望 == 目标类型.敌方单体 || 期望 == 目标类型.敌方全体 || 期望 == 目标类型.敌方两名;
         if (敌方类 && 目标.是否我方) return false;
         if (!敌方类 && !目标.是否我方) return false;
-        int 距 = 格距(施法者, 目标);
+        int 距 = Mathf.Abs(施法者.列 - 目标.列);
         if (距 == 0) return true;   // 自己恒可（治疗自己等）
         int 距离 = 技能.攻击距离 > 0 ? 技能.攻击距离 : 1;
-        if (距离 <= 1) return 距 <= 1;   // 近战：贴脸
-        return 距 <= 距离 && 有视线(施法者.列, 施法者.行, 目标.列, 目标.行);   // 远程：距离内 + 直线视线
+        return 距 <= 距离;   // 轨道：节点差 ≤ 攻击距离 即可（无障碍，无需视线）
     }
 
-    // 道具目标合法性：按 使用效果 判定阵营（恢复/增益 = 我方，缺省=恢复；减益 = 敌方）+ 距离（>1 需视线）
+    // 道具目标合法性：按 使用效果 判定阵营（恢复/增益 = 我方，缺省=恢复；减益 = 敌方）+ 距离（节点差 ≤ 1 贴脸可用）
     private bool 道具目标合法(物品数据 物品, 战斗单位 目标)
     {
         bool 攻击类 = 物品.使用效果枚举 == 效果类型.减益;
         if (攻击类 && 目标.是否我方) return false;
         if (!攻击类 && !目标.是否我方) return false;
-        int 距 = 格距(玩家, 目标);
-        if (距 == 0) return true;   // 自己恒可（治疗/增益自己）
+        int 距 = Mathf.Abs(玩家.列 - 目标.列);
         return 距 <= 1;   // 投掷类后续按 攻击距离 扩展
     }
 

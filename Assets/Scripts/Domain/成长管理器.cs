@@ -108,7 +108,21 @@ public sealed class 成长管理器
         if (技能 == null || 掌握技能(技能.标识)) return false;
         if (!string.IsNullOrEmpty(技能前提失败原因(技能))) return false;
         玩家.已学技能.Add(new 技能掌握(技能.标识));
+        填入技能槽(技能.标识);   // 学习自动 填 战斗技能槽（固定 6 槽，填第一个空槽）
         return true;
+    }
+
+    // 战斗技能槽：固定 6 槽，自动填第一个空槽（已在槽/槽满 则不动）
+    public void 填入技能槽(string 标识)
+    {
+        if (string.IsNullOrEmpty(标识)) return;
+        玩家.战斗技能槽 ??= new System.Collections.Generic.List<string>();
+        if (玩家.战斗技能槽.Contains(标识)) return;
+        for (int i = 0; i < 6; i++)
+        {
+            while (玩家.战斗技能槽.Count <= i) 玩家.战斗技能槽.Add(null);
+            if (string.IsNullOrEmpty(玩家.战斗技能槽[i])) { 玩家.战斗技能槽[i] = 标识; return; }
+        }
     }
 
     public int 记录熟练度(string 标识, int 点数, int 每级阈值)

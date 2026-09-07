@@ -208,6 +208,14 @@ using UnityEngine;
             档案.天赋 ??= new List<string>();
             档案.天赋冷却 ??= new Dictionary<string, float>();
             档案.家具 ??= new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载）
+            // 迁移：旧档 战斗技能槽 空 → 用 已学技能 前 6 自动填充（固定 6 槽）
+            档案.战斗技能槽 ??= new List<string>();
+            if (档案.战斗技能槽.Count == 0)
+                foreach (var s in 档案.已学技能)
+                {
+                    if (档案.战斗技能槽.Count >= 6) break;
+                    if (!档案.战斗技能槽.Contains(s.标识)) 档案.战斗技能槽.Add(s.标识);
+                }
             // 清理 旧主背包（档案.背包）非法堆叠
             for (int i = 档案.背包.Count - 1; i >= 0; i--)
                 if (档案.背包[i] == null || 档案.背包[i].数量 <= 0 || string.IsNullOrEmpty(档案.背包[i].标识)) 档案.背包.RemoveAt(i);

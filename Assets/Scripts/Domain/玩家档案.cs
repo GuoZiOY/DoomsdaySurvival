@@ -175,6 +175,8 @@ using System.Collections.Generic;
 
         // —— 技能与任务 ——
         public List<技能掌握> 已学技能 = new List<技能掌握>();
+        // 战斗技能槽：固定 6 槽（战斗沙盒技能栏 用；存 已学技能 标识，null/空 = 空槽）。学习新技能自动填第一个空槽
+        public List<string> 战斗技能槽 = new List<string>();
         public List<string> 已习得配方 = new List<string>();   // 书籍·配方书 永久习得 的 配方标识（随档存档；区别于 持有图纸 的 临时解锁）
         public List<任务进度> 任务 = new List<任务进度>();
         public List<日常任务> 日常 = new List<日常任务>();
