@@ -62,12 +62,7 @@ public sealed class 战斗单位视图 : MonoBehaviour
         bool 我方 = 单位.是否我方;
         if (身体圆 != null) 身体圆.color = 可选 ? 可选色 : (我方 ? 我方色 : 敌色);
         if (名字 != null) 名字.color = 可选 ? 名字可选色 : 名字色;
-        // 可选框 = 独立高亮子物体（描边/角标）；保险：误拖 根/圆/名字/卡 → 跳过 SetActive，防把单位整关
-        bool 可选框误拖 = 可选框 == null || 可选框 == gameObject
-            || (身体圆 != null && 可选框 == 身体圆.gameObject)
-            || (名字 != null && 可选框 == 名字.gameObject)
-            || (信息卡 != null && 可选框 == 信息卡.gameObject);
-        if (!可选框误拖 && 可选框.activeSelf != 可选) 可选框.SetActive(可选);
+        if (可选框 != null && 可选框.activeSelf != 可选) 可选框.SetActive(可选);
         float 血比 = 单位.最大生命 > 0 ? (float)单位.生命 / 单位.最大生命 : 0f;
         if (血条 != null) 血条.value = Mathf.Clamp01(血比);
         if (行动条 != null) 行动条.value = Mathf.Clamp01(单位.行动条 / 100f);
