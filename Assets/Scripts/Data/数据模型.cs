@@ -100,7 +100,7 @@ using System;
         public int 生命;
         public int 攻击;
         public int 防御;          // 减伤百分比（1 点 = 1%，封顶 50%）
-        public int 速度;          // 行动条速率（每游戏分钟填充点数）
+        public int 速度;          // 行动间隔参照（旧：每游戏分钟填充点数；现 用于 逃跑 等 速度对比）
         public int 等级 = 1;      // 敌人等级
         public AI行动项[] 行动表; // AI行动表
         public string 目标策略;   // 攻击目标策略：随机 / 残血 / 低防
@@ -112,6 +112,10 @@ using System;
         public string 移动AI;       // 自动移动策略："冲锋"（向玩家逼近）/ "风筝"（保持攻击距离边缘）/ "驻守"（原地不动）；空 = 冲锋
         public int 攻击距离 = 1;    // 攻击射程（格）：近战 1、远程 >1（决定何时进入攻击范围自动停下）
         public int 身形 = 1;        // 占格宽度（1 = 单格；2 = 横向占 2 格的大体型）
+        // —— 行动 间隔（现实 秒，一次 行动 用时）：敌人 天然 设定，缺省 = 0 → 5 秒 ——
+        public float 移动间隔秒;    // 移动 意图 一次 用时（秒）
+        public float 攻击间隔秒;    // 攻击 意图 一次 用时（秒）
+        public float 技能间隔秒;    // 技能 意图 一次 用时（秒）
     }
 
     [Serializable]
