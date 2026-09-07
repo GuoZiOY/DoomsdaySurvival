@@ -1,6 +1,5 @@
 ﻿<Solution>
   <Project Path="Unity.Timeline.csproj" />
-  <Project Path="Unity.PlasticSCM.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Editor.csproj" />
   <Project Path="MCPForUnity.Editor.csproj" />
   <Project Path="Unity.Mathematics.csproj" />
@@ -47,10 +46,8 @@
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
-  <Project Path="Unity.CollabProxy.Editor.csproj" />
   <Project Path="地图设计器.Tests.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
-  <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
   <Project Path="Unity.2D.Triangulation.Runtime.csproj" />
 </Solution>
