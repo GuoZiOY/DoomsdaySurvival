@@ -101,6 +101,13 @@ public sealed class 战斗沙盒面板 : 面板基类
     public void 点击技能槽(string 技能标识)
     {
         if (string.IsNullOrEmpty(技能标识)) return;
+        // 位移技（推进/后撤/冲撞）：无目标 自我 瞬发，点击 即 释放（免 目标选择）
+        var 数据 = ServiceRegistry.Get<DataService>();
+        if (数据 != null && 数据.技能.TryGetValue(技能标识, out var 技能) && !string.IsNullOrEmpty(技能.位移))
+        {
+            if (战斗 != null && 战斗.玩家 != null) 战斗.玩家主动技能(技能标识, 战斗.玩家);
+            return;
+        }
         开始选技能(技能标识);
     }
 
