@@ -172,14 +172,12 @@ public sealed class 战斗单位
     public void 推进冷却(float 现实秒)
     {
         if (技能冷却.Count == 0) return;
-        var 到期 = new List<string>();
-        foreach (var kv in 技能冷却)
+        foreach (var 标识 in new List<string>(技能冷却.Keys))   // 快照 key，避免 边遍历边改
         {
-            float 剩 = kv.Value - 现实秒;
-            if (剩 <= 0f) 到期.Add(kv.Key);
-            else 技能冷却[kv.Key] = 剩;
+            float 剩 = 技能冷却[标识] - 现实秒;
+            if (剩 <= 0f) 技能冷却.Remove(标识);
+            else 技能冷却[标识] = 剩;
         }
-        foreach (var k in 到期) 技能冷却.Remove(k);
     }
 
     // —— 工厂（投影/生成） ——
