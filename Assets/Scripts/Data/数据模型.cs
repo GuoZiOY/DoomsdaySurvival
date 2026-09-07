@@ -100,7 +100,7 @@ using System;
         public int 生命;
         public int 攻击;
         public int 防御;          // 减伤百分比（1 点 = 1%，封顶 50%）
-        public int 速度;          // 行动间隔参照（旧：每游戏分钟填充点数；现 用于 逃跑 等 速度对比）
+        public int 速度;          // 仅 逃跑 判定 等 速度 对比用（行动 频率 = 下方 间隔秒；敏捷 总成 移速/攻速 后续 接入）
         public int 等级 = 1;      // 敌人等级
         public AI行动项[] 行动表; // AI行动表
         public string 目标策略;   // 攻击目标策略：随机 / 残血 / 低防
