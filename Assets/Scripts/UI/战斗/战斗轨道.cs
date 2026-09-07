@@ -18,6 +18,7 @@ public sealed class 战斗轨道 : MonoBehaviour
     [SerializeField] private float 棋子直径 = 70f;      // 身体 圆 基准 直径（单位，叠 在 节点 上；绑定 时 × 身形 加宽）
     [SerializeField] private float 信息卡间距 = 34f;    // 同阵营 信息卡 垂直 堆叠 间距
     [SerializeField] private float 信息层距 = 22f;      // 信息卡 与 棋子（身体圆）边缘 的 间隔
+    [SerializeField] private float 信息卡侧偏 = 100f;   // 信息卡 左右 错开（避 双方 卡 重叠）：我方 → 左移 侧偏，敌方 → 右移 侧偏；0 = 不偏移
 
     private readonly Dictionary<战斗单位, 战斗单位视图> 单位表 = new Dictionary<战斗单位, 战斗单位视图>();
     private readonly Dictionary<int, int> 节点点击计数 = new Dictionary<int, int>();   // 重叠 圆 点击 循环 计数
@@ -104,7 +105,8 @@ public sealed class 战斗轨道 : MonoBehaviour
                         float 相对y = 上方
                             ? +(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距)     // 上方（正 y = 上）：棋子边缘 + 间隔 + 堆叠
                             : -(棋子直径 / 2f + 信息层距 + 层序号 * 信息卡间距);    // 下方
-                        if (视图.卡变换 != null) 视图.卡变换.localPosition = new Vector2(0f, 相对y);
+                        if (视图.卡变换 != null) 视图.卡变换.localPosition = new Vector2(
+                            单位.是否我方 ? -信息卡侧偏 : 信息卡侧偏, 相对y);   // 我方 左移 / 敌方 右移（避 双方 卡 重叠）
                         bool 可选 = 外壳 != null && 外壳.是可选目标(单位);
                         视图.刷新外观(可选);
                     }
