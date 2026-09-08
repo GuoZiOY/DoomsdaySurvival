@@ -116,7 +116,8 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
         if (有) 状态文本实例.text = 内容;
     }
 
-    // 阵营 贴边 外扩：我方 → 锚 卡 左缘、pivot 右 → 文本 从 左缘 往 左 扩（Right 对齐）；敌方 → 锚 右缘、pivot 左 → 往 右 扩（Left 对齐）
+    // 阵营 贴边 外扩（留 一点 分隔）：我方 → 锚 卡 左缘、pivot 右、往 左 扩（Right 对齐）；敌方 → 锚 右缘、pivot 左、往 右 扩（Left 对齐）
+    private const float 状态贴边分隔 = 10f;   // 与 卡 缘 的 一点 间隔
     private void 摆位状态文本()
     {
         if (状态文本实例 == null || 单位 == null) return;
@@ -127,18 +128,19 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
             矩.anchorMin = new Vector2(0f, 1f); 矩.anchorMax = new Vector2(0f, 1f);
             矩.pivot = new Vector2(1f, 1f);
             状态文本实例.alignment = TextAlignmentOptions.TopRight;
+            矩.anchoredPosition = new Vector2(-状态贴边分隔, 0f);
         }
         else
         {
             矩.anchorMin = new Vector2(1f, 1f); 矩.anchorMax = new Vector2(1f, 1f);
             矩.pivot = new Vector2(0f, 1f);
             状态文本实例.alignment = TextAlignmentOptions.TopLeft;
+            矩.anchoredPosition = new Vector2(状态贴边分隔, 0f);
         }
         矩.sizeDelta = new Vector2(240f, 28f);
-        矩.anchoredPosition = Vector2.zero;
     }
 
-    // 状态 摘要：眩晕 + 各 Buff（层数 >1 带 ×n）
+    // 状态 摘要：[眩晕] [流血×2] [防御削弱]…… 空格 隔开（[] 括起）；无 状态 = 空
     private string 状态内容()
     {
         if (单位 == null) return "";
@@ -147,7 +149,10 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
         foreach (var b in 单位.Buffs)
             if (b != null && b.定义 != null)
                 片段.Add(b.层数 > 1 ? $"{b.定义.名称}×{b.层数}" : b.定义.名称);
-        return string.Join("·", 片段);
+        if (片段.Count == 0) return "";
+        var 括号 = new List<string>();
+        foreach (var s in 片段) 括号.Add($"[{s}]");
+        return string.Join(" ", 括号);
     }
 
     // 行动条 前景 颜色：按 读条 意图（移动 金 / 攻击 血红 / 技能 紫 / 戒备 灰蓝）；前景 自动 找（Slider fillRect 的 Image）
