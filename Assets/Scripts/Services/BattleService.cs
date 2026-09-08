@@ -423,8 +423,8 @@ public sealed class BattleService
     {
         if (玩家 == null || 档案 == null) return;
         int 敏 = 档案.敏捷;
-        float 攻 = 1f + (敏 - 5) * 0.02f;   // 敏捷 → 攻速：每点 +2%（基准 5 点 = 0）
-        float 移 = 1f + (敏 - 5) * 0.03f;   // 敏捷 → 移速：每点 +3%
+        float 攻 = 1f + (敏 - 5) * 0.01f;   // 敏捷 → 攻速：每点 +1%（基准 5 点 = 0）
+        float 移 = 1f + (敏 - 5) * 0.015f;  // 敏捷 → 移速：每点 +1.5%
         string 武 = 玩家.当前武器标识;
         if (!string.IsNullOrEmpty(武) && 数据.物品.TryGetValue(武, out var 武器) && 武器.攻速加成 != 0f)
             攻 += 武器.攻速加成 / 100f;   // 轻 武器 快 / 重 武器 慢（负面）
