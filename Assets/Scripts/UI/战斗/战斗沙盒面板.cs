@@ -167,6 +167,9 @@ public sealed class 战斗沙盒面板 : 面板基类
     // 棋盘网格 查询：该单位 是否为 当前可选目标（更新实体框 高亮 用）
     public bool 是可选目标(战斗单位 单位) => 待选技能 != null && 单位 != null && 当前可选目标.Contains(单位);
 
+    // 是否 正在 目标 选择（待选技能/道具 ≠ null）：无 选择 时 点 信息卡 不 反馈
+    public bool 正在选目标 => 待选技能 != null;
+
     // ===== 战斗 反馈：伤害/治疗 → 飘字 + 相机抖动（配色 在此 集中） =====
     private static readonly Color 飘字近战 = new Color(1f, 0.95f, 0.9f, 1f);
     private static readonly Color 飘字远程 = new Color(0.45f, 0.62f, 1f, 1f);
@@ -178,19 +181,19 @@ public sealed class 战斗沙盒面板 : 面板基类
     private void 处理伤害反馈(伤害事件 e)
     {
         if (棋盘 == null || e.目标 == null) return;
-        if (e.闪避) { 棋盘.显示飘字(e.目标, "MISS", 飘字闪避, 60f); return; }
+        if (e.闪避) { 棋盘.显示飘字(e.目标, "MISS", 飘字闪避, 80f); return; }
         if (e.数值 <= 0) return;
         Color 色 = e.暴击 ? 飘字暴击
             : e.类型 == 伤害类型.远程 ? 飘字远程
             : e.类型 == 伤害类型.真实 ? 飘字真实 : 飘字近战;
-        棋盘.显示飘字(e.目标, e.数值.ToString(), 色, 60f, e.暴击 ? 1.35f : 1f);   // 暴击 缩放 放大
+        棋盘.显示飘字(e.目标, e.数值.ToString(), 色, 80f, e.暴击 ? 1.35f : 1f);   // 暴击 缩放 放大
         棋盘.受击抖动(e.暴击 ? 0.45f : 0.14f);   // 暴击 抖 更 强
     }
 
     private void 处理治疗反馈(治疗事件 e)
     {
         if (棋盘 == null || e.目标 == null || e.数值 <= 0) return;
-        棋盘.显示飘字(e.目标, "+" + e.数值, 飘字治疗, 60f);
+        棋盘.显示飘字(e.目标, "+" + e.数值, 飘字治疗, 80f);
     }
 
     // ===== 结算 =====

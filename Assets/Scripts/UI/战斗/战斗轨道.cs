@@ -210,6 +210,9 @@ public sealed class 战斗轨道 : MonoBehaviour
         外壳.点击单位(单位);
     }
 
+    // 面板 是否 正在 目标 选择（点 卡 反馈/选中 只 在 选择 技能·道具 时）
+    public bool 正在选目标 => 外壳 != null && 外壳.正在选目标;
+
     // 点 身体 圆：同节点 多单位 → 循环 切换 选中；单个 → 直接
     public void 处理圆点击(战斗单位 单位)
     {
@@ -225,8 +228,8 @@ public sealed class 战斗轨道 : MonoBehaviour
 
     // ===== 战斗反馈（伤害/治疗 飘字 + 受击 相机 抖动；面板 订阅 事件 调用） =====
 
-    // 飘字：生成在 目标 信息卡 的 左/右（友左敌右），置顶 不被 卡 遮；浮起 淡出；数字 用 ASCII
-    public void 显示飘字(战斗单位 单位, string 文本, Color 色, float 字号 = 60f, float 缩放 = 1f)
+    // 飘字：生成在 目标 信息卡 的 左/右（友左敌右）＋随机 xy 防 叠，置顶；浮起 慢 淡出（存活 1.1s）
+    public void 显示飘字(战斗单位 单位, string 文本, Color 色, float 字号 = 80f, float 缩放 = 1f)
     {
         if (轨道容器 == null || 单位 == null || !单位表.TryGetValue(单位, out var 视图) || 视图 == null || string.IsNullOrEmpty(文本)) return;
         var 物体 = new GameObject("飘字", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -236,7 +239,7 @@ public sealed class 战斗轨道 : MonoBehaviour
         矩.anchorMin = new Vector2(0f, 0.5f); 矩.anchorMax = new Vector2(0f, 0.5f);
         矩.pivot = new Vector2(0.5f, 0.5f);
         矩.anchoredPosition = 飘字锚点(单位, 视图);
-        矩.sizeDelta = new Vector2(360f, 130f);
+        矩.sizeDelta = new Vector2(520f, 190f);
         矩.localScale = new Vector3(缩放, 缩放, 1f);   // 暴击 等 放大
         var 字 = 物体.GetComponent<TextMeshProUGUI>();
         字.text = 文本;
@@ -247,18 +250,19 @@ public sealed class 战斗轨道 : MonoBehaviour
         StartCoroutine(飘字动画(矩, 字));
     }
 
-    // 飘字 生成 点：目标 信息卡 的 左右——友方 = 卡 左 边，敌方 = 卡 右 边（垂直 小 抖动 防 叠）
-    private const float 飘字左右偏移 = 60f;
+    // 飘字 生成 点：目标 信息卡 的 左右——友方 = 卡 左 边，敌方 = 卡 右 边；再 加 随机 xy 防 同 列 叠 字
+    private const float 飘字左右偏移 = 110f;
     private Vector2 飘字锚点(战斗单位 单位, 战斗单位视图 视图)
     {
         Vector2 卡位 = 视图.卡变换 != null ? 视图.卡变换.localPosition : Vector2.zero;
         float 方向 = 单位.是否我方 ? -1f : 1f;   // 友 左 / 敌 右
-        return new Vector2(单位.列 * 节点间距 + 卡位.x + 方向 * 飘字左右偏移, 卡位.y + Random.Range(-6f, 6f));
+        return new Vector2(单位.列 * 节点间距 + 卡位.x + 方向 * 飘字左右偏移 + Random.Range(-35f, 35f),
+            卡位.y + Random.Range(-26f, 26f));
     }
 
     private IEnumerator 飘字动画(RectTransform 矩, TextMeshProUGUI 字)
     {
-        const float 时长 = 0.7f;
+        const float 时长 = 1.1f;   // 存在 世界 稍 长（可读）
         var 起点 = 矩.anchoredPosition;
         var 原色 = 字.color;
         float t = 0f;
@@ -266,8 +270,12 @@ public sealed class 战斗轨道 : MonoBehaviour
         {
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / 时长);
-            if (矩 != null) 矩.anchoredPosition = 起点 + new Vector2(0f, 34f * k);
-            if (字 != null) 字.color = new Color(原色.r, 原色.g, 原色.b, Mathf.Lerp(1f, 0f, Mathf.Clamp01(k * 1.5f)));
+            if (矩 != null) 矩.anchoredPosition = 起点 + new Vector2(0f, 90f * k);
+            if (字 != null)   // 尾部 30% 才 开始 淡出
+            {
+                float 明度 = k < 0.7f ? 1f : Mathf.Lerp(1f, 0f, (k - 0.7f) / 0.3f);
+                字.color = new Color(原色.r, 原色.g, 原色.b, 明度);
+            }
             yield return null;
         }
         if (矩 != null) Destroy(矩.gameObject);

@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -107,12 +108,43 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
     }
 
     private float 上次点卡时间;   // 防 双 触发（本组件 处理 + 旧 Button 并存 时）
+    private Coroutine 弹性句柄;
 
     public void 点卡()
     {
+        // 无 目标 选择 时：点 卡 不 给 任何 反馈（不 响、不 弹）
+        if (轨道 == null || !轨道.正在选目标) return;
         if (Time.unscaledTime - 上次点卡时间 < 0.05f) return;   // 同一 次 点击 只 响应 一次
         上次点卡时间 = Time.unscaledTime;
         音效管理器.实例?.播放成功();   // 点击 反馈：按钮 音效
+        弹性反馈();
         if (单位 != null) 轨道?.处理卡点击(单位);
+    }
+
+    // 弹性 反馈：信息卡 先 缩 后 回弹 复位（0.88 → 1.08 → 1）
+    private void 弹性反馈()
+    {
+        if (信息卡 == null) return;
+        if (弹性句柄 != null) StopCoroutine(弹性句柄);
+        弹性句柄 = StartCoroutine(弹性动画());
+    }
+
+    private IEnumerator 弹性动画()
+    {
+        var 卡 = 信息卡;
+        const float 总时 = 0.22f;
+        float t = 0f;
+        while (t < 总时)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / 总时);
+            float s = k < 0.35f ? Mathf.Lerp(1f, 0.88f, k / 0.35f)              // 先 缩
+                : k < 0.85f ? Mathf.Lerp(0.88f, 1.08f, (k - 0.35f) / 0.5f)      // 回弹 过冲
+                : Mathf.Lerp(1.08f, 1f, (k - 0.85f) / 0.15f);                   // 复位
+            卡.localScale = new Vector3(s, s, 1f);
+            yield return null;
+        }
+        卡.localScale = Vector3.one;
+        弹性句柄 = null;
     }
 }
