@@ -43,7 +43,15 @@ public sealed class 家具网格面板 : 网格面板基类
 
     protected override bool 允许跨面板() => false;   // 家具：只 同 网格（禁止 拖 出 房间）
     protected override bool 允许开始拖拽(物品堆叠 堆叠)
-        => 家具宿主 != null && 家具宿主.编辑模式 && !家具宿主.摆放中;   // 非 编辑 模式：家具 不可 拖拽；摆放 模式 忽略
+        => 家具宿主 != null && 家具宿主.编辑模式 && !家具宿主.摆放中 && !是门(堆叠);   // 门 不 允许 被 移动（含 换位/拖拽旋转）
+
+    // 门：基础 家具，位置 固定 不可 移动（解码 实例标识 → 基础 标识）
+    private static bool 是门(物品堆叠 堆叠)
+    {
+        if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return false;
+        var (定义标识, _) = 家具工具.解码(堆叠.标识);
+        return 定义标识 == "门";
+    }
 
     protected override void 创建代理内容(Image 图, 物品堆叠 堆叠)
     {
