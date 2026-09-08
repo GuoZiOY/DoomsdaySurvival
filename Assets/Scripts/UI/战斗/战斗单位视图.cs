@@ -15,7 +15,7 @@ using UnityEngine.UI;
 //       ├─ 名字     TMP_Text（中文用 Silver 等 TMP 字体；字号 16~18）
 //       ├─ 血条     Slider（0~1 只读显示：背景=暗轨，Fill Area 前景=亮红）← 血条 引用位
 //       └─ 行动条   Slider（0~1 只读显示：Fill 前景=橙黄）              ← 行动条 引用位
-//     可选：状态文本 TMP_Text（卡 顶 上方 显示 眩晕/流血…，自 搭 后 拖 引用位；不 拖 = 不 显示）
+//     可选：状态文本 TMP_Text（可 不 搭——运行时 自动 生成：我方 贴 卡 左缘 往 左 扩 / 敌方 贴 右缘 往 右 扩；拖 引用位 则 用之 并 同样 自动 摆位）
 //
 // 【Slider 只读条 搭建要点】（血条/行动条 不用 Scrollbar——Scrollbar 语义是滚动内容；
 //   用 Slider：填充区靠锚点拉伸，无 sprite 依赖，不会再出现 裸 Image.Filled 不成条 的坑）
@@ -31,7 +31,7 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TMP_Text 名字;           // 名字（绑定 单位.名称）
     [SerializeField] private Slider 血条;             // 血条（Slider 0~1 只读：背景 暗轨 + Fill Area 前景）
     [SerializeField] private Slider 行动条;           // 行动条（Slider 0~1 只读：Fill 前景）
-    [SerializeField] private TMP_Text 状态文本;       // 状态 文本（眩晕/流血… 显示在 卡 顶 上方，场景 自 搭 后 接线；可空 = 不显示）
+    [SerializeField] private TMP_Text 状态文本;       // 状态 文本 引用位（可选覆盖：不 拖 则 运行时 自动 生成；均 按 阵营 贴边 外扩 摆位）
 
     private static readonly Color 我方色 = new Color(0.30f, 0.55f, 0.36f, 1f);
     private static readonly Color 敌色 = new Color(0.62f, 0.30f, 0.28f, 1f);
@@ -82,18 +82,60 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
         刷新状态文本();
     }
 
-    // ===== 信息卡 状态 文本（眩晕/流血 等 Buff 名 拼接；状态文本 = 场景 自 搭 的 TMP，接线；改变 才 重设） =====
+    // ===== 信息卡 状态 文本（眩晕/流血…；自动 生成 且 按 阵营 贴边 外扩——我方 贴 卡 左缘 向左 扩，敌方 贴 右缘 向右 扩）
+    //      若 场景 已 拖 状态文本 引用位 则 用之（同样 自动 摆位） =====
+    private TMP_Text 状态文本实例;
     private string 上次状态文本 = "";
 
     private void 刷新状态文本()
     {
-        if (状态文本 == null) return;   // 未 接线（场景 自 搭）→ 跳过
+        if (状态文本实例 == null)
+        {
+            if (状态文本 != null) 状态文本实例 = 状态文本;   // 场景 拖 的 引用位 优先
+            else if (信息卡 != null)                          // 否则 运行时 生成
+            {
+                var 物体 = new GameObject("状态文本", typeof(RectTransform), typeof(TMP_Text));
+                物体.transform.SetParent(信息卡, false);
+                var 字 = 物体.GetComponent<TMP_Text>();
+                if (字 == null) return;
+                if (名字 != null && 名字.font != null) 字.font = 名字.font;   // 沿用 名字 的 中文字体（Silver）
+                字.fontSize = 20f;
+                字.color = new Color(1f, 0.85f, 0.4f, 1f);
+                字.raycastTarget = false;
+                字.enableWordWrapping = false;
+                状态文本实例 = 字;
+            }
+            if (状态文本实例 == null) return;
+            摆位状态文本();
+        }
         string 内容 = 状态内容();
         if (内容 == 上次状态文本) return;
         上次状态文本 = 内容;
         bool 有 = !string.IsNullOrEmpty(内容);
-        if (状态文本.gameObject.activeSelf != 有) 状态文本.gameObject.SetActive(有);
-        if (有) 状态文本.text = 内容;
+        if (状态文本实例.gameObject.activeSelf != 有) 状态文本实例.gameObject.SetActive(有);
+        if (有) 状态文本实例.text = 内容;
+    }
+
+    // 阵营 贴边 外扩：我方 → 锚 卡 左缘、pivot 右 → 文本 从 左缘 往 左 扩（Right 对齐）；敌方 → 锚 右缘、pivot 左 → 往 右 扩（Left 对齐）
+    private void 摆位状态文本()
+    {
+        if (状态文本实例 == null || 单位 == null) return;
+        bool 我方 = 单位.是否我方;
+        var 矩 = (RectTransform)状态文本实例.transform;
+        if (我方)
+        {
+            矩.anchorMin = new Vector2(0f, 1f); 矩.anchorMax = new Vector2(0f, 1f);
+            矩.pivot = new Vector2(1f, 1f);
+            状态文本实例.alignment = TextAlignmentOptions.TopRight;
+        }
+        else
+        {
+            矩.anchorMin = new Vector2(1f, 1f); 矩.anchorMax = new Vector2(1f, 1f);
+            矩.pivot = new Vector2(0f, 1f);
+            状态文本实例.alignment = TextAlignmentOptions.TopLeft;
+        }
+        矩.sizeDelta = new Vector2(240f, 28f);
+        矩.anchoredPosition = Vector2.zero;
     }
 
     // 状态 摘要：眩晕 + 各 Buff（层数 >1 带 ×n）
