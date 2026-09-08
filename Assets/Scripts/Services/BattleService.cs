@@ -129,6 +129,13 @@ public sealed class BattleService
         foreach (var 单位 in 全部单位())
         {
             if (!单位.存活) continue;
+            // 受控（眩晕/定身 类 Buff）：读条 冻结 + 意图 作废 + 玩家 蓄力 预约 一并 取消（被控 = 断 一切 读条）
+            if (单位.无法行动)
+            {
+                if (单位.行动条 > 0.01f) 中断读条(单位, null);
+                else if (单位 == 玩家 && 待动类型 != 待动类别.无) 取消待行动作();
+                continue;
+            }
             if (!单位.意图已选) { 选定下一意图(单位); 单位.意图已选 = true; }
             float 每秒填充 = 100f / 意图间隔秒(单位);
             单位.行动条 = Mathf.Min(200f, 单位.行动条 + 每秒填充 * 现实秒);
@@ -878,10 +885,34 @@ public sealed class BattleService
         if (尾 + 方向 < 0 || 尾 + 方向 >= 棋盘宽) return false;   // 顶 到 边界
         for (int c = 尾; ; c -= 方向)
         {
-            foreach (var 敌 in 对方) if (敌.存活 && 敌.列 == c) 敌.列 = c + 方向;
+            foreach (var 敌 in 对方)
+                if (敌.存活 && 敌.列 == c)
+                {
+                    敌.列 = c + 方向;
+                    // 冲撞 命中：读条 大招（技能 意图）被 撞 断
+                    if (敌.意图已选 && 敌.当前意图 == 战斗单位.意图类型.技能 && 敌.行动条 > 0.01f)
+                    {
+                        string 招名 = string.IsNullOrEmpty(敌.意图技能) ? "读条大招" : 敌.意图技能;
+                        中断读条(敌, $"的「{招名}」读条被撞断");
+                    }
+                }
             if (c == 起点列) break;
         }
         return true;
+    }
+
+    // 中断读条（被打断）：行动条清零 + 意图 作废 + 玩家 蓄力 预约 一并 取消（不 扣 物品/资源）
+    // 玩家/敌人 双向 通用：受控（无法行动）断 一切 读条；位移/控制 命中 读条 大招 同样 触发
+    private void 中断读条(战斗单位 单位, string 描述)
+    {
+        if (单位 == null || !单位.存活) return;
+        bool 在读条 = 单位.行动条 > 0.01f || (单位 == 玩家 && 待动类型 != 待动类别.无);
+        if (!在读条) return;
+        单位.行动条 = 0f;
+        单位.意图已选 = false;
+        单位.意图技能 = null;
+        if (单位 == 玩家 && 待动类型 != 待动类别.无) 取消待行动作();
+        if (!string.IsNullOrEmpty(描述)) 发消息($"{名(单位)} {描述}！");
     }
 
     private static string 位移动作名(string 类型) => 类型 switch
