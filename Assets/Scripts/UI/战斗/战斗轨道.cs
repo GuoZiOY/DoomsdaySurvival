@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -219,5 +221,70 @@ public sealed class 战斗轨道 : MonoBehaviour
         节点点击计数.TryGetValue(单位.列, out int n);
         节点点击计数[单位.列] = n + 1;
         外壳.点击单位(同节点[n % 同节点.Count]);
+    }
+
+    // ===== 战斗反馈（伤害/治疗 飘字 + 受击 相机 抖动；面板 订阅 事件 调用） =====
+
+    // 飘字：挂在 轨道容器（与单位同坐标），列 上 浮起 淡出；数字 用 ASCII（缺省 TMP 字体 保证 显示）
+    public void 显示飘字(战斗单位 单位, string 文本, Color 色, float 字号 = 20f)
+    {
+        if (轨道容器 == null || 单位 == null || !单位表.TryGetValue(单位, out var 视图) || 视图 == null || string.IsNullOrEmpty(文本)) return;
+        var 物体 = new GameObject("飘字", typeof(RectTransform), typeof(TextMeshProUGUI));
+        物体.transform.SetParent(轨道容器, false);
+        var 矩 = (RectTransform)物体.transform;
+        矩.anchorMin = new Vector2(0f, 0.5f); 矩.anchorMax = new Vector2(0f, 0.5f);
+        矩.pivot = new Vector2(0.5f, 0.5f);
+        矩.anchoredPosition = new Vector2(单位.列 * 节点间距 + Random.Range(-26f, 26f), 棋子直径 * 0.45f);
+        矩.sizeDelta = new Vector2(150f, 42f);
+        var 字 = 物体.GetComponent<TextMeshProUGUI>();
+        字.text = 文本;
+        字.fontSize = 字号;
+        字.color = 色;
+        字.alignment = TextAlignmentOptions.Center;
+        字.raycastTarget = false;
+        StartCoroutine(飘字动画(矩, 字));
+    }
+
+    private IEnumerator 飘字动画(RectTransform 矩, TextMeshProUGUI 字)
+    {
+        const float 时长 = 0.7f;
+        var 起点 = 矩.anchoredPosition;
+        var 原色 = 字.color;
+        float t = 0f;
+        while (t < 时长)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / 时长);
+            if (矩 != null) 矩.anchoredPosition = 起点 + new Vector2(0f, 34f * k);
+            if (字 != null) 字.color = new Color(原色.r, 原色.g, 原色.b, Mathf.Lerp(1f, 0f, Mathf.Clamp01(k * 1.5f)));
+            yield return null;
+        }
+        if (矩 != null) Destroy(矩.gameObject);
+    }
+
+    private Coroutine 抖动句柄;
+    public void 受击抖动(float 幅度)
+    {
+        if (幅度 <= 0f) return;
+        if (抖动句柄 != null) StopCoroutine(抖动句柄);
+        抖动句柄 = StartCoroutine(抖动动画(幅度));
+    }
+
+    private IEnumerator 抖动动画(float 幅度)
+    {
+        var 相机 = Camera.main;
+        if (相机 == null) { 抖动句柄 = null; yield break; }
+        var 原 = 相机.transform.localPosition;
+        const float 时长 = 0.16f;
+        float t = 0f;
+        while (t < 时长)
+        {
+            t += Time.deltaTime;
+            float k = 1f - Mathf.Clamp01(t / 时长);
+            相机.transform.localPosition = 原 + (Vector3)Random.insideUnitCircle * 幅度 * k;
+            yield return null;
+        }
+        if (相机 != null) 相机.transform.localPosition = 原;
+        抖动句柄 = null;
     }
 }
