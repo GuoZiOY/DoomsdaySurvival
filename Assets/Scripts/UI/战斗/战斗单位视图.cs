@@ -198,6 +198,9 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
         if (单位 != null) 轨道?.处理卡点击(单位);
     }
 
+    // 键盘 焦点 提示（Tab 循环）：仅 弹 卡，不 触发 选择
+    public void 播放选中提示() => 弹性反馈();
+
     // 弹性 反馈：信息卡 先 缩 后 回弹 复位（0.88 → 1.08 → 1）
     private void 弹性反馈()
     {

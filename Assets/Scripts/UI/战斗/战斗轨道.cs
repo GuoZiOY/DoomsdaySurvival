@@ -213,6 +213,13 @@ public sealed class 战斗轨道 : MonoBehaviour
     // 面板 是否 正在 目标 选择（点 卡 反馈/选中 只 在 选择 技能·道具 时）
     public bool 正在选目标 => 外壳 != null && 外壳.正在选目标;
 
+    // 键盘 焦点 提示：目标 卡 弹 一下（Tab 循环 时）
+    public void 提示目标(战斗单位 单位)
+    {
+        if (单位 == null || !单位表.TryGetValue(单位, out var 视图) || 视图 == null) return;
+        视图.播放选中提示();
+    }
+
     // 点 身体 圆：同节点 多单位 → 循环 切换 选中；单个 → 直接
     public void 处理圆点击(战斗单位 单位)
     {

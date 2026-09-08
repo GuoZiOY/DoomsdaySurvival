@@ -27,6 +27,7 @@ public sealed class 战斗沙盒面板 : 面板基类
     private EventBus 事件;
     private string 待选技能;    // 目标选择中："技能标识" 或 "道具:标识"；null = 未选择
     private readonly List<战斗单位> 当前可选目标 = new List<战斗单位>();
+    private int 焦点序号 = -1;   // Tab 循环：当前 焦点 目标 序号（-1 = 无；Enter/Space 释放）
 
     void Awake()
     {
@@ -64,6 +65,7 @@ public sealed class 战斗沙盒面板 : 面板基类
         if (继续按钮 != null) 继续按钮.gameObject.SetActive(false);
         待选技能 = null;
         当前可选目标.Clear();
+        焦点序号 = -1;
         if (棋盘 != null) 棋盘.布阵(战斗.棋盘宽);   // 节点式轨道：节点数 = 棋盘宽
         绑定道具容器();
         刷新技能槽();
@@ -122,6 +124,7 @@ public sealed class 战斗沙盒面板 : 面板基类
         if (待选技能 == 标识) { 取消选择(); return; }
         待选技能 = 标识;
         当前可选目标.Clear();
+        焦点序号 = -1;
         foreach (var 目标 in 战斗.技能可选目标(标识))
             if (目标.存活) 当前可选目标.Add(目标);
     }
@@ -132,6 +135,7 @@ public sealed class 战斗沙盒面板 : 面板基类
         if (待选技能 == "道具:" + 标识) { 取消选择(); return; }
         待选技能 = "道具:" + 标识;
         当前可选目标.Clear();
+        焦点序号 = -1;
         foreach (var 目标 in 战斗.道具可选目标(标识))
             if (目标.存活) 当前可选目标.Add(目标);
     }
@@ -140,6 +144,7 @@ public sealed class 战斗沙盒面板 : 面板基类
     {
         待选技能 = null;
         当前可选目标.Clear();
+        焦点序号 = -1;
     }
 
     // 棋盘网格 转发：点击 棋子 → 释放 待选技能/道具
@@ -170,6 +175,37 @@ public sealed class 战斗沙盒面板 : 面板基类
 
     // 是否 正在 目标 选择（待选技能/道具 ≠ null）：无 选择 时 点 信息卡 不 反馈
     public bool 正在选目标 => 待选技能 != null;
+
+    // ===== 键盘 目标 焦点（Tab 循环 / Enter·Space 确认 释放） =====
+    private 战斗单位 焦点单位
+    {
+        get
+        {
+            if (焦点序号 < 0 || 当前可选目标 == null || 焦点序号 >= 当前可选目标.Count) return null;
+            return 当前可选目标[焦点序号];
+        }
+    }
+
+    private void 循环焦点()
+    {
+        if (待选技能 == null || 当前可选目标.Count == 0) { 焦点序号 = -1; return; }
+        焦点序号++;
+        // 跳过 已死/离场
+        int 兜底 = 当前可选目标.Count;
+        while (兜底-- > 0 && (当前可选目标[焦点序号 % 当前可选目标.Count] == null || !当前可选目标[焦点序号 % 当前可选目标.Count].存活))
+            焦点序号++;
+        焦点序号 %= 当前可选目标.Count;
+        棋盘?.提示目标(当前可选目标[焦点序号]);   // 卡 弹 一下 作 焦点 提示
+    }
+
+    private void 释放焦点()
+    {
+        if (待选技能 == null || 战斗 == null) return;
+        var 目标 = 焦点单位;
+        if (目标 == null && 当前可选目标.Count == 1) 目标 = 当前可选目标[0];
+        if (目标 == null) return;
+        点击单位(目标);
+    }
 
     // ===== 战斗 反馈：伤害/治疗 → 飘字 + 相机抖动（配色 在此 集中） =====
     private static readonly Color 飘字近战 = new Color(1f, 0.95f, 0.9f, 1f);
@@ -204,6 +240,7 @@ public sealed class 战斗沙盒面板 : 面板基类
         if (!gameObject.activeInHierarchy) return;
         待选技能 = null;
         当前可选目标.Clear();
+        焦点序号 = -1;
         if (继续按钮 != null) 继续按钮.gameObject.SetActive(true);   // 战斗结束 → 激活继续，点击返回
         if (结算文本 != null) 结算文本.text = e.结算文本;             // 结算 摘要（场景 接线 则 显示）
         // 世界 沙盒 前：胜利 后 自动 进入 尸体 搜索（搜刮 战利品；之后 由 世界 在 原地 生成 尸体 自行 搜）
@@ -234,7 +271,25 @@ public sealed class 战斗沙盒面板 : 面板基类
                 }
             }
         // 弹挂/腰封 网格：物品使用 扣量 由 背包变化事件 自动刷新（物品网格面板 机制），无需此处轮询
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) 取消选择();
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.escapeKey.wasPressedThisFrame) 取消选择();
+            // 快捷键：1~6 放 对应 槽 技能（主键区 + 小键盘）
+            var 数字键 = new[] { Keyboard.current.digit1Key, Keyboard.current.digit2Key, Keyboard.current.digit3Key,
+                Keyboard.current.digit4Key, Keyboard.current.digit5Key, Keyboard.current.digit6Key };
+            var 小键盘键 = new[] { Keyboard.current.numpad1Key, Keyboard.current.numpad2Key, Keyboard.current.numpad3Key,
+                Keyboard.current.numpad4Key, Keyboard.current.numpad5Key, Keyboard.current.numpad6Key };
+            for (int i = 0; i < 6 && i < (技能槽位?.Length ?? 0); i++)
+            {
+                if (数字键[i].wasPressedThisFrame || 小键盘键[i].wasPressedThisFrame)
+                {
+                    var 槽 = 技能槽位[i];
+                    if (槽 != null && !string.IsNullOrEmpty(槽.当前技能标识)) { 点击技能槽(槽.当前技能标识); break; }
+                }
+            }
+            if (Keyboard.current.tabKey.wasPressedThisFrame) 循环焦点();
+            if (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame) 释放焦点();
+        }
     }
 
     private void 刷新模式按钮()
