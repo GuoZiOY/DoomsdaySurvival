@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // 战斗单位视图：战斗单位（身体圆 + 信息卡 合一）预制体的 手动组件（场景/预制体 搭建，Inspector 接线）。
@@ -20,10 +21,10 @@ using UnityEngine.UI;
 //   ③ Background/Fill 的 Image 全部取消 Raycast Target——否则会挡 信息卡 的点击选中。
 //
 // 观感（字号/卡宽高/配色/素材）以预制体为准；本组件只按 单位 数据覆盖：名字、圆色(阵营/可选)、条 value/颜色。
-public sealed class 战斗单位视图 : MonoBehaviour
+public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
 {
-    [SerializeField] private RectTransform 信息卡;    // 信息卡 根（代码 摆 上下槽位 y；含 Button 与卡底）
-    [SerializeField] private Image 身体圆;            // 身体圆（可点：重叠循环；需 sprite 才可见）
+    [SerializeField] private RectTransform 信息卡;    // 信息卡 根（代码 摆 上下槽位 y；含 Image 卡底——点击 由 本组件 处理，无需 Button）
+    [SerializeField] private Image 身体圆;            // 身体圆（纯 视觉：raycast 关；需 sprite 才可见）
     [SerializeField] private TMP_Text 名字;           // 名字（绑定 单位.名称）
     [SerializeField] private Slider 血条;             // 血条（Slider 0~1 只读：背景 暗轨 + Fill Area 前景）
     [SerializeField] private Slider 行动条;           // 行动条（Slider 0~1 只读：Fill 前景）
@@ -97,14 +98,21 @@ public sealed class 战斗单位视图 : MonoBehaviour
         };
     }
 
-    // —— Button 回调（预制体里：信息卡.Button → 点卡）——
-    // 身体圆 不再 用于 目标 选择（纯 视觉；点 身体圆 无 交互），点圆 回调 保留 但 空（旧 预制体 接线 不 报错）
+    // —— 点击（无需 预制体 Button）：信息卡 卡底 Image 开 Raycast → 点击 事件 冒泡 到 根 → 本组件 处理 ——
+    public void OnPointerClick(PointerEventData 事件) => 点卡();
+
+    // 身体圆 纯 视觉（点 无 交互）；点圆 回调 保留 但 空（旧 预制体 若 接线 不 报错）
     public void 点圆()
     {
     }
 
+    private float 上次点卡时间;   // 防 双 触发（本组件 处理 + 旧 Button 并存 时）
+
     public void 点卡()
     {
+        if (Time.unscaledTime - 上次点卡时间 < 0.05f) return;   // 同一 次 点击 只 响应 一次
+        上次点卡时间 = Time.unscaledTime;
+        音效管理器.实例?.播放成功();   // 点击 反馈：按钮 音效
         if (单位 != null) 轨道?.处理卡点击(单位);
     }
 }
