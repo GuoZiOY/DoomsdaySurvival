@@ -472,14 +472,11 @@ public sealed class 快速测试面板 : MonoBehaviour
         if (战斗服务 == null || 数据() == null || 档案() == null) { 日志("[测试] 战斗服务未装配。", true); return; }
         if (!数据().敌人组.ContainsKey(敌人组)) { 日志($"[测试] 敌人组 {敌人组} 不存在。", true); return; }
         随机装备武器防具();
-        // 补基础战斗技能（新档无技能时技能栏空，无法测主动技能；学习自动填入 战斗技能槽）
-        foreach (var 标识 in new[] { "重击", "急救", "肾上腺素" })
-            if (数据().技能.TryGetValue(标识, out var 技能) && !档案().已学技能.Exists(s => s.标识 == 标识))
-                档案().成长管理.学习技能(技能);
-        // 补 位移技 默认可用（测试）：推进/后撤/冲撞 强制 上槽（槽满 → 顶掉 末位；仅供 测试 战斗）
+        // 补 测试 技能包：学习 + 强制 上槽（槽满 顶 末位；想换 组合 改 此 数组 即可）
+        var 测试技能包 = new[] { "重击", "蓄力重斩", "砸晕", "破甲斩", "绷带包扎", "推进" };
         var 测试槽 = 档案().战斗技能槽;
         if (测试槽 == null) 测试槽 = 档案().战斗技能槽 = new System.Collections.Generic.List<string>();
-        foreach (var 标识 in new[] { "推进", "后撤", "冲撞" })
+        foreach (var 标识 in 测试技能包)
         {
             if (!数据().技能.TryGetValue(标识, out var 技能)) continue;
             if (!档案().已学技能.Exists(s => s.标识 == 标识)) 档案().成长管理.学习技能(技能);
