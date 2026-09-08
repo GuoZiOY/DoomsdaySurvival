@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -758,7 +757,7 @@ public sealed class BattleService
     private bool 是弹药类(string 标识) => !string.IsNullOrEmpty(标识) && 数据.物品.TryGetValue(标识, out var 模板) && 模板.类型 == "弹药";
 
     // 弹挂/腰封 中 找 首个 满足 条件 的 堆叠
-    private 物品堆叠 找战斗容器堆叠(Func<物品堆叠, bool> 匹配)
+    private 物品堆叠 找战斗容器堆叠(System.Func<物品堆叠, bool> 匹配)
     {
         if (档案 == null || 匹配 == null) return null;
         foreach (var 槽位 in new[] { "弹挂", "腰封" })
