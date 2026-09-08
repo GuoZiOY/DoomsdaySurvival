@@ -45,6 +45,7 @@ public sealed class 战斗单位视图 : MonoBehaviour
     {
         this.单位 = 单位;
         if (单位 == null) return;
+        整理只读条(血条); 整理只读条(行动条);   // 条 只读 + 不 挡 卡 的 点击（选中 目标 走 信息卡）
         if (名字 != null) 名字.text = 单位.名称;
         if (身体圆 != null)
         {
@@ -53,6 +54,14 @@ public sealed class 战斗单位视图 : MonoBehaviour
             身体圆.color = 单位.是否我方 ? 我方色 : 敌色;
         }
         刷新外观(false);
+    }
+
+    // 血条/行动条 = 只读 显示条：禁 交互 + 子 Image 关 Raycast（否则 会 挡 信息卡 的 点击 选中）
+    private static void 整理只读条(Slider 条)
+    {
+        if (条 == null) return;
+        条.interactable = false;
+        foreach (var 图 in 条.GetComponentsInChildren<Image>(true)) 图.raycastTarget = false;
     }
 
     // 每帧 刷新：可选 高亮（圆/名字 变金 + 可选框）+ 血条/行动条 fill

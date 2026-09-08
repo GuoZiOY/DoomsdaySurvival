@@ -225,17 +225,18 @@ public sealed class 战斗轨道 : MonoBehaviour
 
     // ===== 战斗反馈（伤害/治疗 飘字 + 受击 相机 抖动；面板 订阅 事件 调用） =====
 
-    // 飘字：挂在 轨道容器（与单位同坐标），列 上 浮起 淡出；数字 用 ASCII（缺省 TMP 字体 保证 显示）
-    public void 显示飘字(战斗单位 单位, string 文本, Color 色, float 字号 = 20f)
+    // 飘字：生成在 目标 的 信息卡 上（随 上/下 槽位 与 侧偏），置顶 不被 卡 遮；浮起 淡出；数字 用 ASCII（缺省 TMP 字体 保证 显示）
+    public void 显示飘字(战斗单位 单位, string 文本, Color 色, float 字号 = 40f)
     {
         if (轨道容器 == null || 单位 == null || !单位表.TryGetValue(单位, out var 视图) || 视图 == null || string.IsNullOrEmpty(文本)) return;
         var 物体 = new GameObject("飘字", typeof(RectTransform), typeof(TextMeshProUGUI));
         物体.transform.SetParent(轨道容器, false);
+        物体.transform.SetAsLastSibling();   // 高 层级：不被 信息卡 遮住
         var 矩 = (RectTransform)物体.transform;
         矩.anchorMin = new Vector2(0f, 0.5f); 矩.anchorMax = new Vector2(0f, 0.5f);
         矩.pivot = new Vector2(0.5f, 0.5f);
-        矩.anchoredPosition = new Vector2(单位.列 * 节点间距 + Random.Range(-26f, 26f), 棋子直径 * 0.45f);
-        矩.sizeDelta = new Vector2(150f, 42f);
+        矩.anchoredPosition = 飘字锚点(单位, 视图);
+        矩.sizeDelta = new Vector2(280f, 96f);
         var 字 = 物体.GetComponent<TextMeshProUGUI>();
         字.text = 文本;
         字.fontSize = 字号;
@@ -243,6 +244,13 @@ public sealed class 战斗轨道 : MonoBehaviour
         字.alignment = TextAlignmentOptions.Center;
         字.raycastTarget = false;
         StartCoroutine(飘字动画(矩, 字));
+    }
+
+    // 飘字 生成 点 = 目标 信息卡（含 槽位 y 与 侧偏 x），加 小 随机 抖动 防 叠
+    private Vector2 飘字锚点(战斗单位 单位, 战斗单位视图 视图)
+    {
+        Vector2 卡位 = 视图.卡变换 != null ? 视图.卡变换.localPosition : Vector2.zero;
+        return new Vector2(单位.列 * 节点间距 + 卡位.x + Random.Range(-24f, 24f), 卡位.y + Random.Range(-6f, 6f));
     }
 
     private IEnumerator 飘字动画(RectTransform 矩, TextMeshProUGUI 字)
