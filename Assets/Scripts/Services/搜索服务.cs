@@ -26,6 +26,10 @@ using UnityEngine;
         // 键 = 容器标识（搜索容器.标识 或 嵌套物品容器.标识 统一）
         private readonly Dictionary<string, HashSet<物品堆叠>> 已搜索 = new Dictionary<string, HashSet<物品堆叠>>();
 
+        // 战斗 尸体 容器：战利品 供 搜索（每场 战斗 唯一 标识；世界沙盒 前 由 战斗 结束 自动 打开）
+        private int 尸体序号;
+        private readonly Dictionary<string, 搜索容器> 尸体定义 = new Dictionary<string, 搜索容器>();
+
         public bool 已搜索物品(string 容器标识, 物品堆叠 堆叠)
         {
             if (string.IsNullOrEmpty(容器标识) || 堆叠 == null) return false;
@@ -79,6 +83,30 @@ using UnityEngine;
 
         // 撤离/结束战局：清空全部已生成容器（下次打开重新随机）
         public void 清空战局() => 已生成.Clear();
+
+        // 注册 尸体 容器（战斗 胜利 战利品）：物品 按 顺序 智能 旋转 放入；返回 标识（空 → ""）
+        public string 注册尸体容器(string 名称, int 列, int 行, List<物品堆叠> 物品, float 搜索时间 = 4f)
+        {
+            if (物品 == null || 物品.Count == 0 || 列 <= 0 || 行 <= 0) return "";
+            string 标识 = $"尸体_{++尸体序号}";
+            var 视图 = new 网格服务 { 网格列 = 列, 网格行 = 行, 网格物品 = new List<物品堆叠>() };
+            注入解析器(视图);
+            foreach (var 堆叠 in 物品)
+            {
+                if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) continue;
+                if (数据.物品.TryGetValue(堆叠.标识, out var 模板) && 模板.是容器) 容器.初始化容器(堆叠);   // 箱中箱
+                var 空位 = 视图.寻找可放置格智能旋转(堆叠, out bool 需旋转);
+                if (空位 == null) continue;   // 放不下 → 跳过
+                堆叠.旋转 = 需旋转;
+                堆叠.列 = 空位.Value.列;
+                堆叠.行 = 空位.Value.行;
+                视图.网格物品.Add(堆叠);
+            }
+            if (视图.网格物品.Count == 0) return "";
+            尸体定义[标识] = new 搜索容器 { 标识 = 标识, 名称 = 名称, 容器列 = 列, 容器行 = 行, 搜索时间 = 搜索时间 };
+            已生成[标识] = 视图;   // 命中 缓存：打开 不再 随机 生成
+            return 标识;
+        }
 
         // ================= 随机生成 =================
 
@@ -137,10 +165,11 @@ using UnityEngine;
             return Mathf.Clamp(价值 * 0.08f, 0.5f, 2.5f);   // 价值2→0.5s / 价值25→2s
         }
 
-        // 按 容器标识 反查 定义（校验后的数据；找不到返回 null）
+        // 按 容器标识 反查 定义（尸体 优先；找不到返回 null）
         public 搜索容器 查找容器(string 容器标识)
         {
             if (string.IsNullOrEmpty(容器标识)) return null;
+            if (尸体定义.TryGetValue(容器标识, out var 尸体)) return 尸体;
             foreach (var 类型 in 数据.搜索地图类型.Values)
                 if (类型.房间 != null)
                     foreach (var 房间 in 类型.房间)

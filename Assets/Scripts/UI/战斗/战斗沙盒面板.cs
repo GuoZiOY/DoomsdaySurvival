@@ -20,6 +20,7 @@ public sealed class 战斗沙盒面板 : 面板基类
     [SerializeField] private 战斗道具网格 弹挂网格;       // 弹挂 容器网格（场景侧栏，战斗内只读+单击使用）
     [SerializeField] private 战斗道具网格 腰封网格;       // 腰封 容器网格（场景侧栏，战斗内只读+单击使用）
     [SerializeField] private Button 继续按钮;            // 战斗结束激活，点击结算返回
+    [SerializeField] private TMP_Text 结算文本;          // 结算 摘要（胜利/失败 文本；可空，空则 只看 日志）
 
     // —— 动态渲染状态 ——
     private BattleService 战斗;
@@ -204,6 +205,13 @@ public sealed class 战斗沙盒面板 : 面板基类
         待选技能 = null;
         当前可选目标.Clear();
         if (继续按钮 != null) 继续按钮.gameObject.SetActive(true);   // 战斗结束 → 激活继续，点击返回
+        if (结算文本 != null) 结算文本.text = e.结算文本;             // 结算 摘要（场景 接线 则 显示）
+        // 世界 沙盒 前：胜利 后 自动 进入 尸体 搜索（搜刮 战利品；之后 由 世界 在 原地 生成 尸体 自行 搜）
+        if (e.胜利 && !string.IsNullOrEmpty(e.尸体容器) && 面板管理器.实例 != null)
+        {
+            var 搜索 = ServiceRegistry.Get<搜索服务>();
+            if (搜索?.查找容器(e.尸体容器) != null) 搜索面板.打开搜索(e.尸体容器);
+        }
     }
 
     // ===== 每帧驱动 + 渲染 =====

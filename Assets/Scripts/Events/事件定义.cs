@@ -115,8 +115,9 @@
 
     public readonly struct 战斗结束事件
     {
-        public readonly bool 胜利; public readonly string 结算文本;
-        public 战斗结束事件(bool 胜利, string 结算文本) { this.胜利 = 胜利; this.结算文本 = 结算文本; }
+        public readonly bool 胜利; public readonly string 结算文本; public readonly string 尸体容器;
+        public 战斗结束事件(bool 胜利, string 结算文本, string 尸体容器 = "")
+        { this.胜利 = 胜利; this.结算文本 = 结算文本; this.尸体容器 = 尸体容器; }
     }
 
     // 战斗消息：战斗视图正文渲染用

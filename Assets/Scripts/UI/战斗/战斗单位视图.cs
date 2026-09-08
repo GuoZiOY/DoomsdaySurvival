@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -76,6 +77,56 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
         if (血条 != null) 血条.value = Mathf.Clamp01(血比);
         if (行动条 != null) 行动条.value = Mathf.Clamp01(单位.行动条 / 100f);
         行动条意图色(单位.当前意图);
+        刷新状态文本();
+    }
+
+    // ===== 信息卡 状态 文本（眩晕/流血 等 Buff 名 拼接；悬浮 卡 顶 上方，改变 才 重设） =====
+    private TMP_Text 状态文本实例;
+    private string 上次状态文本 = "";
+
+    private void 刷新状态文本()
+    {
+        if (信息卡 == null) return;
+        string 内容 = 状态内容();
+        if (内容 == 上次状态文本) return;
+        上次状态文本 = 内容;
+        if (string.IsNullOrEmpty(内容))
+        {
+            if (状态文本实例 != null) 状态文本实例.gameObject.SetActive(false);
+            return;
+        }
+        if (状态文本实例 == null)
+        {
+            var 物体 = new GameObject("状态", typeof(RectTransform), typeof(TMP_Text));
+            物体.transform.SetParent(信息卡, false);
+            var 矩 = (RectTransform)物体.transform;
+            矩.anchorMin = new Vector2(0.5f, 1f); 矩.anchorMax = new Vector2(0.5f, 1f);   // 卡 顶
+            矩.pivot = new Vector2(0.5f, 0f);                                             // 顶 上 外 侧 延伸
+            矩.sizeDelta = new Vector2(260f, 30f);
+            矩.anchoredPosition = new Vector2(0f, 2f);
+            var 字 = 物体.GetComponent<TMP_Text>();
+            if (名字 != null && 名字.font != null) 字.font = 名字.font;   // 沿用 名字 的 中文字体（Silver）
+            字.fontSize = 20f;
+            字.alignment = TextAlignmentOptions.Center;
+            字.color = new Color(1f, 0.85f, 0.4f, 1f);
+            字.raycastTarget = false;
+            字.enableWordWrapping = false;
+            状态文本实例 = 字;
+        }
+        状态文本实例.text = 内容;
+        状态文本实例.gameObject.SetActive(true);
+    }
+
+    // 状态 摘要：眩晕 + 各 Buff（层数 >1 带 ×n）
+    private string 状态内容()
+    {
+        if (单位 == null) return "";
+        var 片段 = new List<string>();
+        if (单位.眩晕剩余秒 > 0f) 片段.Add("眩晕");
+        foreach (var b in 单位.Buffs)
+            if (b != null && b.定义 != null)
+                片段.Add(b.层数 > 1 ? $"{b.定义.名称}×{b.层数}" : b.定义.名称);
+        return string.Join("·", 片段);
     }
 
     // 行动条 前景 颜色：按 读条 意图（移动 金 / 攻击 血红 / 技能 紫 / 戒备 灰蓝）；前景 自动 找（Slider fillRect 的 Image）
