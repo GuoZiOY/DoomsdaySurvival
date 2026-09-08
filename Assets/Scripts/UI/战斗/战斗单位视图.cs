@@ -52,6 +52,7 @@ public sealed class 战斗单位视图 : MonoBehaviour
             float 宽 = 棋子直径 * Mathf.Max(1, 单位.身形);
             身体圆.rectTransform.sizeDelta = new Vector2(宽, 棋子直径);
             身体圆.color = 单位.是否我方 ? 我方色 : 敌色;
+            身体圆.raycastTarget = false;   // 身体圆 纯 视觉：目标 选中 统一 走 信息卡
         }
         刷新外观(false);
     }
@@ -99,10 +100,10 @@ public sealed class 战斗单位视图 : MonoBehaviour
         };
     }
 
-    // —— Button 回调（预制体里：身体圆.Button → 点圆；信息卡.Button → 点卡）——
+    // —— Button 回调（预制体里：信息卡.Button → 点卡）——
+    // 身体圆 不再 用于 目标 选择（纯 视觉；点 身体圆 无 交互），点圆 回调 保留 但 空（旧 预制体 接线 不 报错）
     public void 点圆()
     {
-        if (单位 != null) 轨道?.处理圆点击(单位);
     }
 
     public void 点卡()
