@@ -108,8 +108,12 @@ public sealed class 战斗单位
         return true;
     }
 
-    // 控制类异常（麻痹/眩晕）：该单位行动时跳过
-    public bool 无法行动 => Buffs.Exists(b => b.定义.类型枚举 == Buff类型.异常 && b.定义.控制);
+    // 眩晕（秒制 控制）：此 期间 无法 行动、行动条 不 推进（读条 清零）；0 = 无。与 Buff 控制 共用 无法行动
+    public float 眩晕剩余秒;
+    public void 施加眩晕(float 秒) { if (秒 > 0f) 眩晕剩余秒 = Mathf.Max(眩晕剩余秒, 秒); }   // 刷新 取 更长
+
+    // 控制类异常（麻痹/眩晕 Buff）或 眩晕秒：该单位 无法 行动 / 读条 冻结
+    public bool 无法行动 => Buffs.Exists(b => b.定义.类型枚举 == Buff类型.异常 && b.定义.控制) || 眩晕剩余秒 > 0f;
 
     // 某属性当前百分比修正（增益为正、减益为负）
     public int 属性修正(string 属性)
