@@ -110,3 +110,7 @@ InitTestScene*.unity*
 Tools/**/bin/
 Tools/**/obj/
 Tools/~$*
+
+# 废弃归档里的 dotnet 构建产物（不要进版本库）
+_废弃/**/bin/
+_废弃/**/obj/

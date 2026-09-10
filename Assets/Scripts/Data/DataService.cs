@@ -28,9 +28,11 @@ using UnityEngine;
         public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
         public Dictionary<string, 天气数据> 天气 { get; private set; } = new Dictionary<string, 天气数据>();
         public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
+        public 视野数据 视野 { get; private set; } = new 视野数据();   // 视野规则（角色 + 时段）
         public List<情报条目> 情报 { get; private set; } = new List<情报条目>();   // 收音机 情报池（无标识，列表承载）
         public Dictionary<string, 搜索地图类型> 搜索地图类型 { get; private set; } = new Dictionary<string, 搜索地图类型>();
         public Dictionary<string, 战斗棋盘数据> 战斗棋盘 { get; private set; } = new Dictionary<string, 战斗棋盘数据>();
+        public Dictionary<string, 房间模板> 房间模板 { get; private set; } = new Dictionary<string, 房间模板>();
 
         public List<string> 校验错误 { get; } = new List<string>();
 
@@ -66,6 +68,8 @@ using UnityEngine;
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
             加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
             加载("战斗棋盘", 战斗棋盘, (战斗棋盘根 根) => 根.棋盘);   // 允许缺失（战斗沙盒）
+            加载("房间模板", 房间模板, (房间模板根 根) => 根.房间);   // 允许缺失（房间层 · 单房间模板）
+            加载视野();
             加载情报();
             加载助战组与区域剧情();
         }
@@ -94,6 +98,15 @@ using UnityEngine;
             加载("物品/items_任务品", 物品, (物品根 根) => 根.物品);
             加载("物品/items_容器", 物品, (物品根 根) => 根.物品);
             加载("物品/items_书籍", 物品, (物品根 根) => 根.物品);   // 书籍：技能书/配方书/蓝图（允许缺失——书籍系统）
+        }
+
+        // 视野规则（单条配置；允许缺失 → 用默认值兜底）
+        private void 加载视野()
+        {
+            var 资产 = Resources.Load<TextAsset>("Data/视野");
+            if (资产 == null) { Debug.LogWarning("[数据] 缺失 Data/视野.json —— 视野规则用默认值"); return; }
+            var 根 = JsonUtility.FromJson<视野数据根>(资产.text);
+            if (根?.视野 != null && 根.视野.Length > 0) 视野 = 根.视野[0];
         }
 
         // 情报池（收音机 收听 播报内容；无标识，列表承载）
@@ -358,6 +371,39 @@ using UnityEngine;
                             foreach (var 材 in 需.材料)
                                 if (!物品.ContainsKey(材.物品)) 校验错误.Add($"家具[{标识}] 升{i + 2}级 → 材料[{材.物品}] 不存在");
                     }
+            }
+            // ================= 房间层（房间模板） =================
+            // —— 房间模板：尺寸 / 入口边 / 容器池（地图类型+房间 必须存在）/ 敌人组 / 棋盘 ——
+            foreach (var (标识, 房) in 房间模板)
+            {
+                string 名 = $"房间模板[{标识}]";
+                if (房.列 < 8 || 房.行 < 6) 校验错误.Add($"{名} 房间尺寸过小（至少 8×6）");
+                if (房.列 > 26 || 房.行 > 18) 校验错误.Add($"{名} 房间尺寸过大（至多 26×18）");
+                if (房.容器池 == null || 房.容器池.Length == 0) 校验错误.Add($"{名} 没有 容器池（房间里会空无一物）");
+                else
+                    foreach (var 池 in 房.容器池)
+                    {
+                        if (池 == null) continue;
+                        if (池.数量最大 < 池.数量最小) 校验错误.Add($"{名} → 容器池[{池.地图类型}/{池.房间}] 数量区间非法");
+                        if (!搜索地图类型.TryGetValue(池.地图类型, out var 类型))
+                        {
+                            校验错误.Add($"{名} → 地图类型[{池.地图类型}] 不存在（容器来源）");
+                            continue;
+                        }
+                        if (string.IsNullOrEmpty(池.房间)) continue;
+                        bool 命中 = false;
+                        if (类型.房间 != null)
+                            foreach (var 房项 in 类型.房间)
+                                if (房项 != null && 房项.标识 == 池.房间) { 命中 = true; break; }
+                        if (!命中) 校验错误.Add($"{名} → 地图类型[{池.地图类型}] 里没有房间[{池.房间}]");
+                    }
+                if (房.敌人数量最大 > 0)
+                {
+                    if (string.IsNullOrEmpty(房.敌人组)) 校验错误.Add($"{名} 有敌人数量但没有 敌人组");
+                    else if (!敌人组.ContainsKey(房.敌人组)) 校验错误.Add($"{名} → 敌人组[{房.敌人组}] 不存在");
+                }
+                if (!string.IsNullOrEmpty(房.战斗棋盘) && !战斗棋盘.ContainsKey(房.战斗棋盘))
+                    校验错误.Add($"{名} → 战斗棋盘[{房.战斗棋盘}] 不存在");
             }
         }
     }

@@ -21,6 +21,7 @@ public sealed class BattleService
     // —— 战斗沙盒（即时制 + 节点式轨道） ——
     public int 棋盘宽 { get; private set; } = 12;   // 轨道节点数（横向战线：0 ~ 棋盘宽-1）；节点间前后移动，无行维度
     public float 战斗分钟 { get; private set; }   // 本回合已累计分钟（满 60 结算一轮）
+    public string 当前战斗棋盘 => 当前棋盘标识;      // 本次战斗实际使用的棋盘（遭遇来源传入后可用于自检/调试）
     public const float 每现实秒游戏分钟 = 1f;      // 战斗时间流速：1 现实秒 = 1 游戏分钟（2 倍正常流速，可调）
 
     // 战斗结束衔接
@@ -28,6 +29,7 @@ public sealed class BattleService
     private string 返回节点;
     private string 结果节点;
     private int 先手模式;   // 0=速度序 1=敌方先手 2=我方先手
+    private string 当前棋盘标识 = "街头";   // 本次战斗使用的 战斗棋盘.标识（遭遇来源按所在场景给：房间=室内 / 街道=街头 / 工厂=工厂）
     private readonly List<string> 消耗道具 = new List<string>();
     private int 累计金币, 累计经验;
     private readonly List<物品堆叠> 尸体战利品 = new List<物品堆叠>();   // 胜利 战利品（进 尸体 供 搜索，不 直接 入包）
@@ -42,7 +44,7 @@ public sealed class BattleService
     // ===== 开始战斗（即时制：棋盘 + 行动条） =====
     // 先手：0=速度序（遇见） 1=敌方绝对先手（被偷袭） 2=我方绝对先手（偷袭）
     // 助战组：encounters 助战组标识（可选）；助战单位以 是否我方=true 加入我方，自动 AI 行动（轻量助战）
-    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点, int 先手 = 0, string 助战组标识 = "")
+    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点, int 先手 = 0, string 助战组标识 = "", string 棋盘标识 = "")
     {
         if (!数据.敌人组.TryGetValue(敌人组标识, out var 组))
         {
@@ -76,22 +78,28 @@ public sealed class BattleService
         // 玩家攻击距离按当前武器射程；棋盘与落位先于 战斗开始事件（面板订阅事件布阵时数据已就绪）
         玩家.攻击距离 = 武器攻击距离(玩家.当前武器标识);
         刷新玩家速率();   // 敏捷 + 武器攻速/装备移速（含 重型 负面）→ 攻速/移速倍率
-        初始化棋盘();
+        初始化棋盘(棋盘标识);   // 遭遇场景决定棋盘（街头/室内/工厂…；空 = 街头）
         落位单位(先手);
         事件.发布(new 战斗开始事件(我方.ToArray(), 敌方.ToArray()));
     }
 
     // 轨道生成：节点数 = 战斗棋盘.宽（默认 12）；无行维度、无障碍物——单位沿节点前后移动
-    private void 初始化棋盘()
+    // 棋盘标识：由遭遇来源给（房间层 = 室内 / 街道 = 街头 …）；空或不存在 → 回落 "街头"
+    private void 初始化棋盘(string 棋盘标识)
     {
-        if (数据.战斗棋盘.TryGetValue("街头", out var 默认)) 棋盘宽 = Mathf.Max(4, 默认.宽);
+        当前棋盘标识 = string.IsNullOrEmpty(棋盘标识) ? "街头" : 棋盘标识;
+        if (!数据.战斗棋盘.TryGetValue(当前棋盘标识, out var 棋盘))
+        {
+            if (数据.战斗棋盘.TryGetValue("街头", out var 兜底)) 棋盘 = 兜底;
+            当前棋盘标识 = 棋盘 != null ? 棋盘.标识 : "";
+        }
+        if (棋盘 != null) 棋盘宽 = Mathf.Max(4, 棋盘.宽);
     }
 
     // 落位：我方节点 0，敌方节点 棋盘宽-1（同节点多单位重叠，视觉错位由轨道面板处理）
     private void 落位单位(int 先手)
     {
         int 我方列 = 0, 敌方列 = 棋盘宽 - 1;
-        if (数据.战斗棋盘.TryGetValue("街头", out var 棋盘)) 敌方列 = Mathf.Max(我方列 + 1, 棋盘.宽 - 1);
         if (先手 == 1)   // 被偷袭：敌方先手（行动条领先）
         {
             foreach (var 敌 in 敌方) 敌.行动条 = 60f;
@@ -1252,6 +1260,8 @@ public sealed class BattleService
     {
         if (结果节点 == "__探索胜利") { ServiceRegistry.Get<探索服务>().战斗胜利(); return; }
         if (结果节点 == "__探索返回") { ServiceRegistry.Get<探索服务>().战斗逃跑(); return; }
+        if (结果节点 == "__房间胜利") { ServiceRegistry.Get<房间探索服务>()?.战斗胜利(); return; }
+        if (结果节点 == "__房间返回") { ServiceRegistry.Get<房间探索服务>()?.战斗逃跑(); return; }
         if (!string.IsNullOrEmpty(结果节点)) ServiceRegistry.Get<DialogueService>().进入节点(结果节点);
     }
 

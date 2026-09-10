@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 面板管理器 = 导航路由器：订阅导航事件，决定"哪个事件 → 显示哪个面板"。
-// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 探索 / 城市地图 / 营地 / 背包 / 交易 / 任务 / 角色。
+// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 探索(文本区域) / 房间(网格) / 城市地图 / 营地 / 背包 / 交易 / 任务。
 // 设施功能 → 面板 由 功能面板注册表 路由（替代原硬编码 switch）。
 public sealed class 面板管理器 : MonoBehaviour
 {
@@ -14,7 +14,8 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 角色创建面板 角色创建;
     [SerializeField] private 对话面板 对话;        // 短事件正文+选项（保留改造）
     [SerializeField] private 战斗沙盒面板 战斗;    // 即时制战斗棋盘面板（场景手动搭建）
-    [SerializeField] private 探索面板 探索;
+    [SerializeField] private 探索面板 探索;        // 文本闯关式区域探索（深度分层状态机）
+    [SerializeField] private 房间面板 房间;        // 房间层（程序化网格探索：中空大房间 + 容器 + 敌人）
     [SerializeField] private 角色面板 角色;        // 属性/装备（改造中）
 
     // 末日新建面板（阶段 B 逐个补，先声明引用位）
@@ -65,7 +66,7 @@ public sealed class 面板管理器 : MonoBehaviour
     private void 收集可切换面板()
     {
         可切换面板.Clear();
-        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 探索, 角色, 城市地图, 营地, 背包, 交易, 任务 };
+        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 探索, 房间, 角色, 城市地图, 营地, 背包, 交易, 任务 };
         foreach (var 面板 in 全部)
             if (面板 != null) 可切换面板.Add(面板);
     }
@@ -80,6 +81,7 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<探索显示事件>(e => 显示(探索, e));
         事件.订阅<打开探索事件>(e => 显示(探索, e));
         事件.订阅<打开野外面板事件>(e => 显示(探索, e));
+        事件.订阅<打开房间事件>(e => 显示(房间, e));   // 房间层：进入房间时切面板
         事件.订阅<打开角色面板事件>(_ => 显示(角色));
         事件.订阅<打开任务面板事件>(_ => 显示(任务));
         事件.订阅<打开营地事件>(_ => 显示(营地));   // 安全屋面板（返回营地/进入营地）

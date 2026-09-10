@@ -831,3 +831,56 @@ using System;
     [Serializable]
     public class 战斗棋盘根 { public 战斗棋盘数据[] 棋盘; }
 
+    // ================= 视野（房间层迷雾：角色 + 时段 决定） =================
+    [Serializable]
+    public class 视野数据
+    {
+        public int 白天边长 = 7;        // 白天核心亮区边长（格；单数，玩家在正中）
+        public int 夜晚边长 = 3;        // 夜晚核心亮区边长（格；单数）
+        public int 夜晚弱视野 = 5;      // 夜晚核心之外那圈"弱视野"（只看得见建筑）的边长
+        public float 阴影压暗 = 0.65f;  // 阴影区（白天记忆 / 夜晚弱视野）的压暗程度
+        public int 白天起 = 6;          // 白天起始小时（含）
+        public int 夜晚起 = 18;         // 夜晚起始小时（含）
+    }
+
+    [Serializable]
+    public class 视野数据根 { public 视野数据[] 视野; }
+    // ================= 房间层（第 1 刀：单个中空大房间） =================
+    // 定位：四层结构（世界→区域→建筑→房间）最里面那一层。
+    // 内容分工（重要）：房间「里有什么容器」不在这里写，而是引用 搜索_地图类型（地图类型→房间→容器），
+    //                   敌人引用 encounters.json 的「敌人组」——本表只描述「这间房多大、怎么摆、放多少」。
+
+    [Serializable]
+    public class 房间模板
+    {
+        public string 标识;                 // "便利店_门厅"
+        public string 名称;
+        public string 描述;
+        public int 危险度 = 1;              // 1 低 / 2 中 / 3 高
+        public int 列 = 16;                 // 房间网格尺寸（受 网格面板基类.格尺寸=90 上限约束，见方案文档）
+        public int 行 = 10;
+        public string 布局 = "散点";         // 散点 / 贴墙 / 成排（第 1 刀只实现 散点）
+        public string 入口边 = "下";         // 上 / 下 / 左 / 右（玩家起始格贴哪条边）
+
+        public 房间容器池项[] 容器池;         // 容器来源（地图类型 + 房间）+ 数量区间
+
+        public string 敌人组;                // encounters.json 敌人组标识（空 = 无敌人）
+        public int 敌人数量最小 = 0;          // 对「敌人组展开后」的裁剪区间
+        public int 敌人数量最大 = 3;
+        public string 战斗棋盘 = "室内";       // 遭遇战用的棋盘标识
+    }
+
+    // 房间容器池一项：从 搜索_地图类型 的某个「地图类型 + 房间」取容器（房间 空 = 该类型全部房间）
+    [Serializable]
+    public class 房间容器池项
+    {
+        public string 地图类型 = "便利店";
+        public string 房间;                  // 空 = 该地图类型下所有房间
+        public int 权重 = 1;
+        public int 数量最小 = 1;
+        public int 数量最大 = 1;
+    }
+
+    [Serializable]
+    public class 房间模板根 { public 房间模板[] 房间; }
+

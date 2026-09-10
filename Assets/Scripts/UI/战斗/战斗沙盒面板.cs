@@ -243,8 +243,10 @@ public sealed class 战斗沙盒面板 : 面板基类
         焦点序号 = -1;
         if (继续按钮 != null) 继续按钮.gameObject.SetActive(true);   // 战斗结束 → 激活继续，点击返回
         if (结算文本 != null) 结算文本.text = e.结算文本;             // 结算 摘要（场景 接线 则 显示）
-        // 世界 沙盒 前：胜利 后 自动 进入 尸体 搜索（搜刮 战利品；之后 由 世界 在 原地 生成 尸体 自行 搜）
-        if (e.胜利 && !string.IsNullOrEmpty(e.尸体容器) && 面板管理器.实例 != null)
+        // 房间层 前：胜利 后 自动 进入 尸体 搜索（搜刮 战利品）。
+        // 房间层 里：尸体留在原地格子上，由玩家走过去搜（不再自动弹面板）——所以这里跳过。
+        bool 房间战斗 = ServiceRegistry.Get<房间探索服务>()?.本次战斗来自房间 == true;
+        if (e.胜利 && !string.IsNullOrEmpty(e.尸体容器) && 面板管理器.实例 != null && !房间战斗)
         {
             var 搜索 = ServiceRegistry.Get<搜索服务>();
             if (搜索?.查找容器(e.尸体容器) != null) 搜索面板.打开搜索(e.尸体容器);

@@ -1,0 +1,89 @@
+using System;
+using UnityEngine;
+
+// ============================================================
+// 房间面板：房间层的宿主面板（对位 安全屋面板）——只做两件事：
+//   ① 管网格（引用位 `网格面板`；场景没接线时自动建一个，零接线可测）；
+//   ② 侧边栏取消 / Esc = 离开房间。
+//
+// 信息展示**不在本面板**（定版口径）：
+//   · 房间名 · 危险 · 已搜 · 敌 → 发布 地图位置事件，由常驻 **HUD 的「地点」位**显示；
+//   · 房间里的提示（"你拉开了货架" 等）→ 发布 **日志事件（探索类）**，由左下角日志播报。
+//
+// 引用位（场景手动搭建）：`网格面板`（拖 房间网格面板；同一物体挂 房间图层）。
+// 容器不做容器卡：一切交互走 右键菜单（搜索 / 查看），状态直接画在格子上（已搜 = 灰化 + 打勾）。
+// ============================================================
+public sealed class 房间面板 : 面板基类
+{
+    [SerializeField] private 房间网格面板 网格面板;   // 拖：房间网格面板（同物体挂 房间图层）
+
+    private bool 已订阅;
+    private Action<房间显示事件> 显示回调;
+
+    private 房间探索服务 服务 => ServiceRegistry.Get<房间探索服务>();
+
+    public override string 取消文本 => "离开";
+
+    // 侧边栏取消 / Esc：离开房间（清本局状态）并回上一个面板
+    public override bool 回退()
+    {
+        服务?.离开();
+        if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
+        return true;
+    }
+
+    protected override void 刷新(object 上下文)
+    {
+        确保订阅();
+        确保网格();
+        var 服 = 服务;
+        if (服 == null || !服.探索中) return;
+        if (网格面板 == null) return;
+        网格面板.数据源 = 服.网格;
+        网格面板.请求刷新();
+        网格面板.图层()?.刷新();
+    }
+
+    // ===== 订阅（面板销毁必须退订） =====
+
+    private void 确保订阅()
+    {
+        if (已订阅) return;
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        if (事件 == null) return;
+        显示回调 = e => 刷新网格();
+        事件.订阅(显示回调);
+        已订阅 = true;
+    }
+
+    private void 刷新网格()
+    {
+        if (!gameObject.activeInHierarchy) return;
+        if (网格面板 == null) return;
+        网格面板.请求刷新();
+        网格面板.图层()?.刷新();
+    }
+
+    void OnDestroy()
+    {
+        if (!已订阅) return;
+        if (!ServiceRegistry.已注册<EventBus>()) return;
+        ServiceRegistry.Get<EventBus>().取消订阅(显示回调);
+        已订阅 = false;
+    }
+
+    // ===== 零接线兜底：场景里没搭网格时，自动建一个 =====
+
+    private void 确保网格()
+    {
+        if (网格面板 != null) return;
+        var 物体 = new GameObject("网格容器", typeof(RectTransform));
+        var 容器 = (RectTransform)物体.transform;
+        容器.SetParent(transform, false);
+        UI工具.设锚(容器, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1500f, 940f));
+        网格面板 = 物体.AddComponent<房间网格面板>();
+        网格面板.绑定网格容器(容器);
+        物体.AddComponent<房间图层>();
+        Debug.LogWarning("[房间] 场景未接线 房间面板.网格面板 —— 已在面板下自动建一个（要美观请手动搭建并拖引用位）。");
+    }
+}

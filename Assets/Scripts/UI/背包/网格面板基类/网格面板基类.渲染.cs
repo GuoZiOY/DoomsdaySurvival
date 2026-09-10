@@ -60,7 +60,7 @@ public abstract partial class 网格面板基类
             for (int 列 = 0; 列 < 当前列; 列++)
                 创建底格(列, 行);
         画分隔线();
-        更新布局快照();
+
         清空物品框表();
     }
 
@@ -72,23 +72,11 @@ public abstract partial class 网格面板基类
     }
 
     // 增量刷新实体框：遍历 服务.网格物品 —— 新增创建（钩子）/ 已有更新（钩子）/ 移除销毁
+    // 注意：分格线**不再随物品变化重画**（格线 = 统一淡网格，物品边界 = 实体框自己的描边）
     private void 刷新物品()
     {
         if (物品层 == null) return;
         if (当前列 != 服务.网格列 || 当前行 != 服务.网格行 || Mathf.Abs(上次格尺寸 - 格尺寸) > 0.01f) { 刷新网格(); return; }
-        bool 布局变化 = false;
-        if (上次布局.Count != 服务.网格物品.Count) 布局变化 = true;
-        else
-        {
-            for (int i = 0; i < 服务.网格物品.Count && !布局变化; i++)
-            {
-                var s = 服务.网格物品[i];
-                if (s == null) continue;
-                if (!上次布局.TryGetValue(s, out var 上次)) { 布局变化 = true; break; }
-                if (上次.列 != s.列 || 上次.行 != s.行 || 上次.旋转 != s.旋转) 布局变化 = true;
-            }
-        }
-        if (布局变化) { 重画分隔线(); 更新布局快照(); }
         foreach (var kv in 物品框表) kv.Value.存活 = false;
         foreach (var 堆叠 in 服务.网格物品)
         {
@@ -121,20 +109,6 @@ public abstract partial class 网格面板基类
                 if (物品框表.TryGetValue(堆叠, out var 框) && 框.根 != null) Destroy(框.根.gameObject);
                 物品框表.Remove(堆叠);
             }
-    }
-
-    protected void 更新布局快照()
-    {
-        上次布局.Clear();
-        foreach (var s in 服务.网格物品)
-            if (s != null) 上次布局[s] = (s.列, s.行, s.旋转);
-    }
-
-    private void 重画分隔线()
-    {
-        if (线层 == null) return;
-        清空层(线层);
-        画分隔线();
     }
 
     private void 准备层()
@@ -204,6 +178,8 @@ public abstract partial class 网格面板基类
         return 网格底层缓存;
     }
 
+    // 分格线：**统一淡网格**（列+1 竖线 / 行+1 横线）——不再按"该格有没有物品"查表加粗：
+    // 物品边界改由实体框自己的描边负责（见 物品描边色），因此这里与物品无关，物品移动也不需要重画。
     private void 画分隔线()
     {
         if (服务.形状块 != null && 服务.形状块.Count > 0)
@@ -213,12 +189,13 @@ public abstract partial class 网格面板基类
         }
         for (int i = 0; i <= 当前列; i++)
             for (int j = 0; j < 当前行; j++)
-                画竖线段(i, j, 竖线边界(i, j));
+                画竖线段(i, j, false);
         for (int j = 0; j <= 当前行; j++)
             for (int i = 0; i < 当前列; i++)
-                画横线段(i, j, 横线边界(i, j));
+                画横线段(i, j, false);
     }
 
+    // 口袋（形状块）轮廓：每块四边独立闭合框；粗细统一，不再按"块内有没有物品"加粗
     protected virtual void 画块网格线()
     {
         for (int 列 = 0; 列 <= 当前列; 列++)
@@ -229,12 +206,12 @@ public abstract partial class 网格面板基类
                 if (左块 < 0 && 右块 < 0) continue;
                 if (左块 >= 0 && 右块 >= 0 && 左块 != 右块)
                 {
-                    画竖线段(列, 行, true, false, true, 块内有物品(左块));
-                    画竖线段(列, 行, true, true, true, 块内有物品(右块));
+                    画竖线段(列, 行, false, false, true);
+                    画竖线段(列, 行, false, true, true);
                     continue;
                 }
-                if (左块 >= 0 && 右块 >= 0) { 画竖线段(列, 行, 竖线边界(列, 行)); continue; }
-                画竖线段(列, 行, true, false, true, 块内有物品(左块 >= 0 ? 左块 : 右块));
+                if (左块 >= 0 && 右块 >= 0) { 画竖线段(列, 行, false); continue; }
+                画竖线段(列, 行, false, false, true);
             }
         for (int 行 = 0; 行 <= 当前行; 行++)
             for (int 列 = 0; 列 < 当前列; 列++)
@@ -243,53 +220,18 @@ public abstract partial class 网格面板基类
                 int 下块 = 行 < 当前行 ? 服务.该格块(列, 行) : -1;
                 if (上块 < 0 && 下块 < 0) continue;
                 if (上块 >= 0 && 下块 >= 0 && 上块 != 下块) { 画横缝隙(列, 行); continue; }
-                if (上块 >= 0 && 下块 >= 0) { 画横线段(列, 行, 横线边界(列, 行)); continue; }
-                画横线段(列, 行, true, true, 块内有物品(上块 >= 0 ? 上块 : 下块));
+                if (上块 >= 0 && 下块 >= 0) { 画横线段(列, 行, false); continue; }
+                画横线段(列, 行, false, true);
             }
     }
 
-    private bool 块内有物品(int 块索引)
-    {
-        var 块们 = 服务.形状块;
-        if (块们 == null || 块索引 < 0 || 块索引 >= 块们.Count) return false;
-        var 块 = 块们[块索引];
-        foreach (var s in 服务.网格物品)
-        {
-            if (s == null || s.列 < 0) continue;
-            var (宽, 高) = 服务.物品占格(s);
-            if (s.列 < 块.列 + 块.宽 && s.列 + 宽 > 块.列 && s.行 < 块.行 + 块.高 && s.行 + 高 > 块.行) return true;
-        }
-        return false;
-    }
-
     private void 画竖缝隙(int 列, int 行) { }
-    // 上下 口袋 缝：上块 底边（参考行 = 行-1，y 到 底）+ 下块 顶边（参考行 = 行，y 到 顶）两条 横线（缝 留白）
+    // 上下 口袋 缝：上块 底边（参考行 = 行-1）+ 下块 顶边（参考行 = 行）两条 横线（缝 留白）
     private void 画横缝隙(int 列, int 行)
     {
-        int 上块 = 行 > 0 ? 服务.该格块(列, 行 - 1) : -1;
-        int 下块 = 行 < 当前行 ? 服务.该格块(列, 行) : -1;
-        画横线段(列, 行, true, true, 块内有物品(上块), 行 - 1);   // 上块 底边
-        画横线段(列, 行, true, true, 块内有物品(下块), 行);       // 下块 顶边
+        画横线段(列, 行, false, true, false, 行 - 1);   // 上块 底边
+        画横线段(列, 行, false, true, false, 行);        // 下块 顶边
     }
-
-    private bool 竖线边界(int i, int j)
-    {
-        var 左格 = i > 0 ? 该格物品(i - 1, j) : null;
-        var 右格 = i < 当前列 ? 该格物品(i, j) : null;
-        if (左格 == null && 右格 == null) return false;
-        if (左格 != null && 左格 == 右格) return false;
-        return true;
-    }
-
-    private bool 横线边界(int i, int j)
-    {
-        var 上格 = j > 0 ? 该格物品(i, j - 1) : null;
-        var 下格 = j < 当前行 ? 该格物品(i, j) : null;
-        if (上格 == null && 下格 == null) return false;
-        if (上格 != null && 上格 == 下格) return false;
-        return true;
-    }
-
     private void 画竖线段(int 列, int 行, bool 亮, bool 贴右 = false, bool 形状线 = false, bool 加粗 = false)
     {
         bool 左可用 = 列 > 0 && 服务.该格可用(列 - 1, 行);
@@ -299,7 +241,7 @@ public abstract partial class 网格面板基类
         var 物体 = new GameObject($"竖线_{列}_{行}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(线层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
+        图.color = 形状线 ? 网格面板配色.形状边界色 : 网格面板配色.线条色;
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
         // y 用 有效 块 格（优先 左格；右格 空洞/越界 时 左格 才是 口袋 内——右边界 线 不 错位）
@@ -318,7 +260,7 @@ public abstract partial class 网格面板基类
         var 物体 = new GameObject($"横线_{行}_{列}", typeof(RectTransform), typeof(Image));
         物体.transform.SetParent(线层, false);
         var 图 = 物体.GetComponent<Image>();
-        图.color = 形状线 ? 网格面板配色.形状边界色 : (亮 ? 网格面板配色.物品边界色 : 网格面板配色.线条色);
+        图.color = 形状线 ? 网格面板配色.形状边界色 : 网格面板配色.线条色;
         图.raycastTarget = false;
         var 矩形 = 物体.GetComponent<RectTransform>();
         // y = 参考行 顶部（含 块 y 偏移）；参考行 < 行（上块 底边）时 再 + 格尺寸 到 底部
@@ -327,11 +269,37 @@ public abstract partial class 网格面板基类
     }
 
     private static float 线宽判定(bool 亮, bool 形状线, bool 加粗)
-        => ((亮 && !形状线) || 加粗) ? 网格面板配色.物品边界线宽 : 网格面板配色.线宽;
+        => 形状线 ? 网格面板配色.物品边界线宽 : 网格面板配色.线宽;
 
     // 该格被哪个实体覆盖（领域判定，UI 只查询不计算）
     protected 物品堆叠 该格物品(int 列, int 行) => 服务.该格物品(列, 行);
 
+    // 物品边界线：**从 线层 剥离到物品自己身上** —— 4 条细条贴住实体框四边（用 物品边界色 / 物品边界线宽）。
+    // 这样物品移动/旋转/换尺寸都只是它自己的事，线层无需重画、也不用逐格查"这格有没有物品"。
+    // 注：细条用拉伸锚点贴边（与 创建底盘 同款写法），因此实体框尺寸一变，线自动跟着变。
+    protected void 建边界线(Transform 父)
+    {
+        if (父 == null) return;
+        float 线 = Mathf.Max(1f, 网格面板配色.物品边界线宽);
+        建条(父, "边界上", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -线), new Vector2(0f, 0f));
+        建条(父, "边界下", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(0f, 线));
+        建条(父, "边界左", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(线, 0f));
+        建条(父, "边界右", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-线, 0f), new Vector2(0f, 0f));
+    }
+
+    private static void 建条(Transform 父, string 名, Vector2 锚最小, Vector2 锚最大, Vector2 偏移最小, Vector2 偏移最大)
+    {
+        var 物 = new GameObject(名, typeof(RectTransform), typeof(Image));
+        物.transform.SetParent(父, false);
+        var 图 = 物.GetComponent<Image>();
+        图.color = 网格面板配色.物品边界色;
+        图.raycastTarget = false;
+        var 矩 = 物.GetComponent<RectTransform>();
+        矩.anchorMin = 锚最小;
+        矩.anchorMax = 锚最大;
+        矩.offsetMin = 偏移最小;
+        矩.offsetMax = 偏移最大;
+    }
     // 左上锚定定位：列/行 起点 + 宽×高 跨格（x/y 均 含 块偏移——左右/上下 口袋 缝）
     protected void 定位(RectTransform 矩形, int 列, int 行, int 宽, int 高)
     {

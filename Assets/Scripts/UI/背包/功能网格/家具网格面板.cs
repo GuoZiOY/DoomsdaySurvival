@@ -168,6 +168,7 @@ public sealed class 家具网格面板 : 网格面板基类
         UI工具.设锚(数.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-5f, -2f), new Vector2(70f, 34f));
         框.数量 = 数;
         框.上次数量 = 等级;
+        建边界线(物体.transform);   // 家具边界线：同上（从 线层 剥离）
         挂接交互(框, 堆叠, 内容图.rectTransform);
         return 框;
     }

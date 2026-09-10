@@ -13,7 +13,7 @@ using UnityEngine.InputSystem;
 // 子类 = 网格上的"实体"语义：
 //   物品网格面板（背包/仓库/容器/穿戴/搜索——物品网格面板.cs）
 //   家具网格面板（安全屋 房间网格——家具网格面板.cs）
-//   探索网格面板（未来 多重网格 世界地图）
+//   房间网格面板（探索类网格：房间/墙体/容器/敌我令牌）
 // 本文件 = 门面：字段 / 生命周期 / 刷新调度 / 钩子声明 / 公共 API / Update 调度。
 // 分部文件：网格面板基类.渲染.cs（渲染框架）/ 网格面板基类.拖拽.cs（拖拽框架）/ 网格面板基类.交互.cs（交互分派+内部组件）。
 // 原则：子类 只写 实体 语义；本类 不含 任何 具体 实体 渲染/交互 代码。
@@ -87,8 +87,6 @@ public abstract partial class 网格面板基类 : MonoBehaviour
     protected int 落点列, 落点行;
     protected bool 落点有效;
 
-    // ===== 布局快照（分隔线 重画 判定） =====
-    protected readonly Dictionary<物品堆叠, (int 列, int 行, bool 旋转)> 上次布局 = new Dictionary<物品堆叠, (int, int, bool)>();
 
     // ===== 容器形状 块偏移（口袋 缝隙：x=右缝、y=下缝——左右/上下 并排 口袋 之间 留 缝隙） =====
     private const float 块缝隙宽 = 10f;
