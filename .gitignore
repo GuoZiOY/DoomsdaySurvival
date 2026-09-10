@@ -106,11 +106,7 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-# �������� / Office ��ʱ�ļ���Tools��
+# 构建产物 / Office 临时文件（Tools）
 Tools/**/bin/
 Tools/**/obj/
 Tools/~$*
-
-# 废弃归档里的 dotnet 构建产物（不要进版本库）
-_废弃/**/bin/
-_废弃/**/obj/
