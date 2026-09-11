@@ -110,3 +110,7 @@ InitTestScene*.unity*
 Tools/**/bin/
 Tools/**/obj/
 Tools/~$*
+
+# Tools/ 下的离线验证器工程是**手写**的（不是 Unity 生成的），必须入库：
+# Unity 只在仓库根生成 *.csproj/*.sln（那些该忽略），Tools/ 里的 .csproj 是"怎么跑验证器"的唯一凭据。
+!Tools/**/*.csproj

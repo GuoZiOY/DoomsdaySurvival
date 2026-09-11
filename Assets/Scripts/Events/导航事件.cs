@@ -15,13 +15,6 @@ public readonly struct 打开战斗事件
     public 打开战斗事件(string 返回节点) { this.返回节点 = 返回节点; }
 }
 
-// 打开探索面板
-public readonly struct 打开探索事件
-{
-    public readonly string 返回节点;
-    public 打开探索事件(string 返回节点) { this.返回节点 = 返回节点; }
-}
-
 // 打开结局面板
 public readonly struct 打开结局事件 { }
 

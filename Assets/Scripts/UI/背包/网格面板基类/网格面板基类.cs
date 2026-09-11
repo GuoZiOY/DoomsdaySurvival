@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -24,7 +24,7 @@ public abstract partial class 网格面板基类 : MonoBehaviour
     [SerializeField] protected RectTransform 网格容器;   // 网格区域（左上锚定；代码动态生成底座与物品）。可运行时 绑定网格容器 覆盖（动态容器面板）
     [SerializeField] private int 固定列数 = 6;         // Inspector 固定覆盖 服务.网格列（0 = 用服务尺寸；主背包测试参数）
     [SerializeField] private int 固定行数 = 10;        // Inspector 固定覆盖 服务.网格行（0 = 用服务尺寸；主背包测试参数）
-    public const float 格尺寸 = 90f;                   // 单格像素：全项目统一 90（主背包/仓库/容器/穿戴容器 一致，2K 基准，90 兼顾格内文字可读性）
+    public const float 格尺寸 = 90f;                   // 单格像素：**全项目统一 90**（主背包/仓库/容器/穿戴容器/家具/房间/区域 一致，2K 基准，兼顾格内文字可读性）
     [SerializeField] private int 固定列数最小 = 1;
     [SerializeField] private int 固定列数最大 = 100;
     [SerializeField] private int 固定行数最小 = 1;

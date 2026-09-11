@@ -347,6 +347,7 @@ using System.Collections.Generic;
         public void 移除堆叠实例(物品堆叠 堆叠) => 持有管理.移除堆叠实例(堆叠);
         public List<词缀条> 背包词缀(string 标识) => 持有管理.背包词缀(标识);
         public int 背包当前耐久(string 标识) => 持有管理.背包当前耐久(标识);
+        public bool 扣背包耐久(string 标识, int 量) => 持有管理.扣背包耐久(标识, 量, 有效最大耐久);
         public int 放入物品(string 标识, int 数量 = 1) => 持有管理.放入物品(标识, 数量);
         public int 放入堆叠(物品堆叠 堆叠) => 持有管理.放入堆叠(堆叠);
         public 网格服务 穿戴容器视图(string 槽位) => 持有管理.穿戴容器视图(槽位);

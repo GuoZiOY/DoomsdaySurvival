@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>房间验证</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接链接 Assets 下的源文件：验证用的就是游戏里跑的那份代码，不复制副本（避免漂移） -->
+    <Compile Include="Program.cs" />
+    <Compile Include="桩.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\确定性随机.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格数据.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\约束摆放.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\房间\房间生成器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格寻路.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格视野.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\视野规则.cs" />
+  </ItemGroup>
+</Project>

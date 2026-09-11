@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 面板管理器 = 导航路由器：订阅导航事件，决定"哪个事件 → 显示哪个面板"。
-// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 探索(文本区域) / 房间(网格) / 城市地图 / 营地 / 背包 / 交易 / 任务。
+// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 房间(网格) / 城市地图 / 营地 / 背包 / 交易 / 任务。
 // 设施功能 → 面板 由 功能面板注册表 路由（替代原硬编码 switch）。
 public sealed class 面板管理器 : MonoBehaviour
 {
@@ -14,8 +14,8 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 角色创建面板 角色创建;
     [SerializeField] private 对话面板 对话;        // 短事件正文+选项（保留改造）
     [SerializeField] private 战斗沙盒面板 战斗;    // 即时制战斗棋盘面板（场景手动搭建）
-    [SerializeField] private 探索面板 探索;        // 文本闯关式区域探索（深度分层状态机）
     [SerializeField] private 房间面板 房间;        // 房间层（程序化网格探索：中空大房间 + 容器 + 敌人）
+    [SerializeField] private 区域面板 区域;        // 区域层（一屏网格：地块制摆若干建筑 + 街道，走到楼门口进楼）
     [SerializeField] private 角色面板 角色;        // 属性/装备（改造中）
 
     // 末日新建面板（阶段 B 逐个补，先声明引用位）
@@ -31,6 +31,51 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private GameObject HUD;             // HUD 顶栏（独立 挂 Canvas 顶层）：安全屋/持有 面板 显示；主菜单/角色创建 隐藏
 
     public 角色创建面板 角色创建面板引用() => 角色创建;
+
+    // ================= 零接线兜底：面板引用位没接时，当场补一个 =================
+    // 为什么要有这个：引用位没接 → 事件订阅里 显示(null) 是空操作 → 表现就是"点了完全没反应"，
+    // 而且 Console 里一条相关日志都没有，很难查。这里让它在运行时自建并**打一条明确的警告**。
+    private 房间面板 自动房间;
+    private 区域面板 自动区域;
+
+    private 房间面板 取房间面板()
+    {
+        if (房间 != null) return 房间;
+        if (自动房间 == null)
+        {
+            自动房间 = 建面板<房间面板>("房间面板（自动建）");
+            Debug.LogWarning("[面板管理器] 房间 引用位没接 —— 已自动建一个 房间面板（能玩；要美观请手动搭好并拖引用位）。");
+        }
+        return 自动房间;
+    }
+
+    private 区域面板 取区域面板()
+    {
+        if (区域 != null) return 区域;
+        if (自动区域 == null)
+        {
+            自动区域 = 建面板<区域面板>("区域面板（自动建）");
+            Debug.LogWarning("[面板管理器] 区域 引用位没接 —— 已自动建一个 区域面板（能玩；要美观请手动搭好并拖引用位）。");
+        }
+        return 自动区域;
+    }
+
+    // 在**本管理器所在的那个 Canvas 下**新建一个铺满的面板（和手动搭的面板同级）
+    private T 建面板<T>(string 名) where T : 面板基类
+    {
+        var 父 = transform.parent != null ? transform.parent : transform;
+        var 物体 = new GameObject(名, typeof(RectTransform));
+        物体.transform.SetParent(父, false);
+        var 矩形 = (RectTransform)物体.transform;
+        矩形.anchorMin = Vector2.zero;
+        矩形.anchorMax = Vector2.one;
+        矩形.offsetMin = Vector2.zero;
+        矩形.offsetMax = Vector2.zero;
+        var 面板 = 物体.AddComponent<T>();
+        可切换面板.Add(面板);
+        物体.SetActive(false);
+        return 面板;
+    }
 
     // 功能面板注册表：功能标识 -> 面板（末日营地/交易/制作等入口；替代硬编码 switch）
     private readonly Dictionary<string, Func<object, 面板基类>> 功能面板注册表 = new Dictionary<string, Func<object, 面板基类>>();
@@ -66,7 +111,7 @@ public sealed class 面板管理器 : MonoBehaviour
     private void 收集可切换面板()
     {
         可切换面板.Clear();
-        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 探索, 房间, 角色, 城市地图, 营地, 背包, 交易, 任务 };
+        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 房间, 区域, 角色, 城市地图, 营地, 背包, 交易, 任务 };
         foreach (var 面板 in 全部)
             if (面板 != null) 可切换面板.Add(面板);
     }
@@ -78,10 +123,12 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<显示剧情事件>(e => 显示(对话, e));   // 短事件 → 对话面板（保留改造）
         事件.订阅<打开结局事件>(e => 显示(对话, e));
         事件.订阅<打开战斗事件>(e => 显示(战斗, e));   // 即时制战斗棋盘面板（布阵走 战斗开始事件）
-        事件.订阅<探索显示事件>(e => 显示(探索, e));
-        事件.订阅<打开探索事件>(e => 显示(探索, e));
-        事件.订阅<打开野外面板事件>(e => 显示(探索, e));
-        事件.订阅<打开房间事件>(e => 显示(房间, e));   // 房间层：进入房间时切面板
+        事件.订阅<打开房间事件>(e => 显示(取房间面板(), e));   // 房间层：进入房间时切面板
+        事件.订阅<打开区域事件>(_ => 显示(取区域面板()));       // 区域层：进了一片区域时切面板
+         // 大地图 → 荒野节点：生成这一片区域（每次进入随机种子；以后接日程/情报再定"同一天同一片"）
+        事件.订阅<打开野外面板事件>(e =>
+            ServiceRegistry.Get<区域探索服务>()?.进入区域(e.区域标识, UnityEngine.Random.Range(1, 999999)));
+        事件.订阅<回到房间事件>(_ => 显示(房间));       // 房间里的战斗结算完 → 切回房间面板（战斗面板会随之隐藏）
         事件.订阅<打开角色面板事件>(_ => 显示(角色));
         事件.订阅<打开任务面板事件>(_ => 显示(任务));
         事件.订阅<打开营地事件>(_ => 显示(营地));   // 安全屋面板（返回营地/进入营地）
@@ -117,7 +164,10 @@ public sealed class 面板管理器 : MonoBehaviour
         bool 当前侧边 = 当前显示面板 != null && 当前显示面板.侧边式面板;
         bool 目标侧边 = 目标.侧边式面板;
         bool 上下互切 = 目标侧边 && 当前侧边;
-        if (!上下互切) 上一个面板 = 当前显示面板;
+        // 战斗这类"瞬时面板"不占"上一个面板"：从它切走时保留更早那一层（地图/探索），
+        // 否则打完战斗回到房间后，房间的"返回上一面板"会指回战斗结算面板
+        bool 当前瞬时 = 当前显示面板 != null && 当前显示面板.瞬时面板;
+        if (!上下互切 && !当前瞬时) 上一个面板 = 当前显示面板;
         bool 返回方向 = _返回意图;
         _返回意图 = false;
         // HUD 调控：HUD 顶栏 在 主菜单 与 角色创建 时 收起（未开档/创建角色 无 HUD）；

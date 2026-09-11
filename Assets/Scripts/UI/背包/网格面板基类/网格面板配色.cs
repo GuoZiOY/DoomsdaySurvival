@@ -36,7 +36,7 @@ public static class 网格面板配色
     public static readonly Color 房间地板斑色 = new Color(0.215f, 0.215f, 0.245f, 1f);    // 地格噪点/污渍（程序化贴图用）
     public static readonly Color 房间墙顶色 = new Color(0.40f, 0.38f, 0.36f, 1f);          // 墙顶（加深块）
     public static readonly Color 房间墙身色 = new Color(0.26f, 0.25f, 0.235f, 1f);         // 墙身竖纹
-    public static readonly Color 房间实体描边 = new Color(0f, 0f, 0f, 0.60f);              // 实体框黑描边
+    public static readonly Color 网格实体描边 = new Color(0f, 0f, 0f, 0.60f);              // 实体框黑描边
     public static readonly Color 容器体色 = new Color(0.44f, 0.345f, 0.245f, 1f);          // 家具型容器
     public static readonly Color 容器高柜色 = new Color(0.34f, 0.28f, 0.22f, 1f);          // 高柜（挡视线那类）
     public static readonly Color 尸体体色 = new Color(0.30f, 0.30f, 0.325f, 1f);           // 尸体
@@ -50,5 +50,18 @@ public static class 网格面板配色
     public static readonly Color 路径终色 = new Color(1f, 0.88f, 0.42f, 0.95f);            // 终点准星
     public static readonly Color 悬停格色 = new Color(1f, 1f, 1f, 0.08f);                  // 悬停格高亮
     public static readonly Color 不可达色 = new Color(0.85f, 0.30f, 0.30f, 0.45f);         // 目标不可达：闪一下淡红
+    public static readonly Color 门框色 = new Color(0.52f, 0.44f, 0.30f, 1f);              // 门框（外墙洞里那圈木框）
+    public static readonly Color 门扇色 = new Color(0.62f, 0.50f, 0.33f, 1f);              // 门扇（半开着的那片）
+    public static readonly Color 门槛色 = new Color(0.30f, 0.26f, 0.21f, 1f);              // 门槛（洞里的地面）
     public static readonly float 已搜灰化 = 0.35f;                                           // 已搜容器：整体降到该不透明度 + 打勾
+
+    // ===== 区域层（区域网格面板 + 区域图层）：街道 / 楼体 / 障碍 用色 =====
+    // 迷雾/阴影相关色：房间层与区域层**共用同一套**（两片格子层都有战争迷雾，读上面房间段那几个）
+    public static readonly Color 区域地面色 = new Color(0.10f, 0.105f, 0.12f, 1f);          // 沥青路面底色
+    public static readonly Color 区域地面斑色 = new Color(0.155f, 0.16f, 0.18f, 1f);        // 路面斑块 / 裂缝
+    public static readonly Color 建筑体色 = new Color(0.235f, 0.21f, 0.195f, 1f);           // 楼体
+    public static readonly Color 建筑顶色 = new Color(0.33f, 0.29f, 0.26f, 1f);             // 楼顶压边
+    public static readonly Color 建筑窗色 = new Color(0.38f, 0.42f, 0.40f, 1f);             // 窗（暗玻璃）
+    public static readonly Color 障碍体色 = new Color(0.30f, 0.285f, 0.27f, 1f);            // 街道障碍（废车 / 砖堆）
+    public static readonly Color 障碍深色 = new Color(0.19f, 0.18f, 0.17f, 1f);             // 障碍暗部（轮子 / 阴影）
 }

@@ -16,9 +16,11 @@ using UnityEngine;
 public sealed class 房间面板 : 面板基类
 {
     [SerializeField] private 房间网格面板 网格面板;   // 拖：房间网格面板（同物体挂 房间图层）
+    [SerializeField] private Vector2 视口 = new Vector2(1720f, 960f);   // **相机窗口大小**（像素）；填 0 = 自动铺满面板
 
     private bool 已订阅;
     private Action<房间显示事件> 显示回调;
+    private Action<离开房间事件> 出楼回调;
 
     private 房间探索服务 服务 => ServiceRegistry.Get<房间探索服务>();
 
@@ -40,6 +42,7 @@ public sealed class 房间面板 : 面板基类
         if (服 == null || !服.探索中) return;
         if (网格面板 == null) return;
         网格面板.数据源 = 服.网格;
+        网格面板.视口 = 视口;
         网格面板.请求刷新();
         网格面板.图层()?.刷新();
     }
@@ -53,6 +56,9 @@ public sealed class 房间面板 : 面板基类
         if (事件 == null) return;
         显示回调 = e => 刷新网格();
         事件.订阅(显示回调);
+        // 走大门出去（服务发 离开房间事件）→ 和 Esc 同一条路：清房间态 + 回上一个面板
+        出楼回调 = _ => 回退();
+        事件.订阅(出楼回调);
         已订阅 = true;
     }
 
@@ -60,6 +66,10 @@ public sealed class 房间面板 : 面板基类
     {
         if (!gameObject.activeInHierarchy) return;
         if (网格面板 == null) return;
+        var 服 = 服务;
+        // 走门换房时数据源也换了：这条"显示刷新"路径也要重绑一次（不只是 刷新(上下文) 那条路）
+        if (服 != null && 服.探索中) 网格面板.数据源 = 服.网格;
+        网格面板.视口 = 视口;
         网格面板.请求刷新();
         网格面板.图层()?.刷新();
     }
@@ -68,22 +78,38 @@ public sealed class 房间面板 : 面板基类
     {
         if (!已订阅) return;
         if (!ServiceRegistry.已注册<EventBus>()) return;
-        ServiceRegistry.Get<EventBus>().取消订阅(显示回调);
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        事件.取消订阅(显示回调);
+        if (出楼回调 != null) 事件.取消订阅(出楼回调);
         已订阅 = false;
     }
 
-    // ===== 零接线兜底：场景里没搭网格时，自动建一个 =====
-
+    // ===== 零接线兜底 + 图层自检 =====
+    // 引用位没接 → 面板下自动建；接了但**漏挂 / 挂错图层** → 喊出来（挂错的表现就是"点了没反应"）
     private void 确保网格()
     {
-        if (网格面板 != null) return;
-        var 物体 = new GameObject("网格容器", typeof(RectTransform));
-        var 容器 = (RectTransform)物体.transform;
-        容器.SetParent(transform, false);
-        UI工具.设锚(容器, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1500f, 940f));
-        网格面板 = 物体.AddComponent<房间网格面板>();
-        网格面板.绑定网格容器(容器);
-        物体.AddComponent<房间图层>();
-        Debug.LogWarning("[房间] 场景未接线 房间面板.网格面板 —— 已在面板下自动建一个（要美观请手动搭建并拖引用位）。");
+        if (网格面板 == null)
+        {
+            var 物体 = new GameObject("网格容器", typeof(RectTransform));
+            var 容器 = (RectTransform)物体.transform;
+            容器.SetParent(transform, false);
+            UI工具.设锚(容器, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(Mathf.Max(320f, 视口.x), Mathf.Max(240f, 视口.y)));   // 相机窗口大小 = 视口字段
+            网格面板 = 物体.AddComponent<房间网格面板>();
+            网格面板.绑定网格容器(容器);
+            物体.AddComponent<房间图层>();
+            Debug.LogWarning("[房间] 场景未接线 房间面板.网格面板 —— 已在面板下自动建一个（要美观请手动搭建并拖引用位）。");
+            return;
+        }
+        if (网格面板.GetComponent<房间图层>() != null) return;
+        var 错图层 = 网格面板.GetComponent<探索图层>();
+        if (错图层 != null)
+            Debug.LogError($"[房间] {网格面板.name} 上挂的是 {错图层.GetType().Name}，不是 房间图层 —— 请改挂 房间图层；"
+                         + "（挂错的表现：地表/路径/落点都没有，点击也完全没反应）");
+        else
+        {
+            网格面板.gameObject.AddComponent<房间图层>();
+            Debug.LogWarning($"[房间] {网格面板.name} 上漏挂 房间图层 —— 已自动补上（没它：没有地表/路径/落点，点击也没人处理）。");
+        }
     }
 }

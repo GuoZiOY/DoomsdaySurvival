@@ -44,9 +44,15 @@ public sealed class BattleService
     // ===== 开始战斗（即时制：棋盘 + 行动条） =====
     // 先手：0=速度序（遇见） 1=敌方绝对先手（被偷袭） 2=我方绝对先手（偷袭）
     // 助战组：encounters 助战组标识（可选）；助战单位以 是否我方=true 加入我方，自动 AI 行动（轻量助战）
-    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点, int 先手 = 0, string 助战组标识 = "", string 棋盘标识 = "")
+    // 指定敌人：**一人一项的具体名单**（房间层用）——列表里有几项就打几只，
+    //          传了名单就**不再按 敌人组 的 数量 重新展开**（否则"房间里 2 只、打起来 4 只"）；
+    //          每项的 实例标识 会写进 战斗单位.实例标识（网格实体标识），保证"一个标识 = 一个单位"。
+    //          不传 = 旧语义（探索/剧情：按 敌人组 展开，单位标识 = 定义标识#序号）
+    public void 开始战斗(string 敌人组标识, string 胜利后节点, string 返回节点, int 先手 = 0,
+        string 助战组标识 = "", string 棋盘标识 = "", IList<(string 定义标识, string 实例标识)> 指定敌人 = null)
     {
-        if (!数据.敌人组.TryGetValue(敌人组标识, out var 组))
+        bool 有组 = 数据.敌人组.TryGetValue(敌人组标识, out var 组);
+        if (!有组 && 指定敌人 == null)
         {
             Debug.LogError($"[战斗] 敌人组不存在: {敌人组标识}");
             return;
@@ -69,12 +75,32 @@ public sealed class BattleService
                 if (!数据.敌人.TryGetValue(项.标识, out var 助)) continue;
                 for (int i = 0; i < Mathf.Max(1, 项.数量); i++) 我方.Add(战斗单位.从助战生成(助));
             }
-        if (组.敌人 != null)
+        if (指定敌人 != null)
+        {
+            // 一人一项：列表几项就几只，**一项一个单位**（不再乘 敌人组.数量）
+            int 序 = 0;
+            foreach (var (定义标识, 实例标识) in 指定敌人)
+            {
+                if (string.IsNullOrEmpty(定义标识) || !数据.敌人.TryGetValue(定义标识, out var 敌)) continue;
+                var 单位 = 战斗单位.从敌人生成(敌);
+                单位.实例标识 = string.IsNullOrEmpty(实例标识) ? $"{定义标识}#{++序}" : 实例标识;
+                敌方.Add(单位);
+            }
+        }
+        else if (组?.敌人 != null)
+        {
+            int 序 = 0;
             foreach (var 项 in 组.敌人)
             {
                 if (!数据.敌人.TryGetValue(项.敌人, out var 敌)) continue;
-                for (int i = 0; i < Mathf.Max(1, 项.数量); i++) 敌方.Add(战斗单位.从敌人生成(敌));
+                for (int i = 0; i < Mathf.Max(1, 项.数量); i++)
+                {
+                    var 单位 = 战斗单位.从敌人生成(敌);
+                    单位.实例标识 = $"{项.敌人}#{++序}";   // 一个单位一个标识（同种多只也不重复）
+                    敌方.Add(单位);
+                }
             }
+        }
         // 玩家攻击距离按当前武器射程；棋盘与落位先于 战斗开始事件（面板订阅事件布阵时数据已就绪）
         玩家.攻击距离 = 武器攻击距离(玩家.当前武器标识);
         刷新玩家速率();   // 敏捷 + 武器攻速/装备移速（含 重型 负面）→ 攻速/移速倍率
@@ -1225,6 +1251,9 @@ public sealed class BattleService
         // 战斗结果摘要沉淀入日志（非过程消息；战斗过程逐条已标记 过程=true 不入历史）
         if (!string.IsNullOrEmpty(文本))
             事件.发布(new 日志事件(日志类型.战斗, 文本));
+        // **房间 / 探索 的战斗不需要点[继续]**：结算完直接回原面板（结果摘要已进日志）。
+        // 剧情战斗（结果节点 = 剧情节点）不走这条：那边要把控制权交给对话流程。
+        if (!string.IsNullOrEmpty(结果节点) && 结果节点.StartsWith("__")) 返回();
     }
 
     // 失败惩罚：末日版——掉 10% 价值物资 + 回营地半状态（不再满血复活）
@@ -1256,13 +1285,16 @@ public sealed class BattleService
     }
 
     // 战斗结束后面板 [继续]：进入结果节点
+    // 房间 的战斗现在**在 结束战斗 里自动调用本方法**（不用点继续）；剧情战斗仍由面板的 [继续] 按钮触发。
+    // 幂等：走完一次就把结果节点清空，防止"自动返回 + 面板按钮"两边都调到。
     public void 返回()
     {
-        if (结果节点 == "__探索胜利") { ServiceRegistry.Get<探索服务>().战斗胜利(); return; }
-        if (结果节点 == "__探索返回") { ServiceRegistry.Get<探索服务>().战斗逃跑(); return; }
-        if (结果节点 == "__房间胜利") { ServiceRegistry.Get<房间探索服务>()?.战斗胜利(); return; }
-        if (结果节点 == "__房间返回") { ServiceRegistry.Get<房间探索服务>()?.战斗逃跑(); return; }
-        if (!string.IsNullOrEmpty(结果节点)) ServiceRegistry.Get<DialogueService>().进入节点(结果节点);
+        string 节点 = 结果节点;
+        if (string.IsNullOrEmpty(节点)) return;
+        结果节点 = "";
+        if (节点 == "__房间胜利") { ServiceRegistry.Get<房间探索服务>()?.战斗胜利(); return; }
+        if (节点 == "__房间返回") { ServiceRegistry.Get<房间探索服务>()?.战斗逃跑(); return; }
+        ServiceRegistry.Get<DialogueService>().进入节点(节点);
     }
 
     public List<战斗单位> 全部单位()

@@ -26,6 +26,9 @@ public static class Program
     static readonly Color 容器体色 = Color.FromArgb(112, 88, 62);
     static readonly Color 容器高柜色 = Color.FromArgb(87, 71, 56);
     static readonly Color 尸体色 = Color.FromArgb(76, 76, 83);
+    static readonly Color 门框色 = Color.FromArgb(133, 112, 77);
+    static readonly Color 门扇色 = Color.FromArgb(158, 128, 84);
+    static readonly Color 门槛色 = Color.FromArgb(76, 66, 54);
     static readonly Color 敌人色 = Color.FromArgb(158, 51, 51);
     static readonly Color 玩家色 = Color.FromArgb(61, 184, 158);
     static readonly Color 迷雾未探索 = Color.FromArgb(5, 5, 8);
@@ -65,7 +68,7 @@ public static class Program
 
     // ================= 画一屏 =================
 
-    static void 画一屏(房间数据 房, string 路径)
+    static void 画一屏(网格数据 房, string 路径)
     {
         int 宽 = 左边距 * 2 + 房.列 * 格;
         int 高 = 上边距 + 房.行 * 格 + 下边距 + 40;
@@ -78,7 +81,7 @@ public static class Program
         using var 小字体 = new Font("Microsoft YaHei", 16f, FontStyle.Regular, GraphicsUnit.Pixel);
         using var 信息字体 = new Font("Microsoft YaHei", 20f, FontStyle.Regular, GraphicsUnit.Pixel);
 
-        var 可见 = 房间视野.可见集(房, 房.入口列, 房.入口行, 房.视野边长);
+        var 可见 = 网格视野.可见集(房, 房.入口列, 房.入口行, 房.视野边长);
 
         // 信息条
         using (var 笔 = new SolidBrush(文字色))
@@ -94,14 +97,17 @@ public static class Program
         // ③ 物件（容器/尸体；只有"探索过"的才画 —— 对应游戏里的迷雾记忆）
         foreach (var e in 房.实体)
         {
-            if (e == null || e.类型 == 房间实体类型.墙 || e.是玩家 || e.类型 == 房间实体类型.敌人) continue;
+            if (e == null || e.类型 == 网格实体类型.墙 || e.类型 == 网格实体类型.门 || e.是玩家 || e.类型 == 网格实体类型.敌人) continue;
             if (!已探索(房, 可见, e.列, e.行)) continue;
             画容器(g, 房, e, 字体, 小字体);
         }
+        // 门：外墙上的洞（门槛 + 门框 + 半开门扇），只要不是纯黑就画（和墙同规则）
+        foreach (var e in 房.类型为(网格实体类型.门))
+            画门(g, e, 小字体);
         // 敌人：只在"当前可见"时画
-        foreach (var e in 房.类型为(房间实体类型.敌人))
+        foreach (var e in 房.类型为(网格实体类型.敌人))
         {
-            if (!可见.Contains(房间数据.编码(e.列, e.行))) continue;
+            if (!可见.Contains(网格数据.编码(e.列, e.行))) continue;
             画敌人(g, e, 小字体);
         }
 
@@ -121,7 +127,7 @@ public static class Program
         图.Save(路径, ImageFormat.Png);
     }
 
-    static void 画地表(Graphics g, 房间数据 房)
+    static void 画地表(Graphics g, 网格数据 房)
     {
         var 随机 = new Random(20260911);
         using var 刷 = new SolidBrush(地板色);
@@ -146,7 +152,7 @@ public static class Program
             }
     }
 
-    static void 画墙(Graphics g, 房间数据 房)
+    static void 画墙(Graphics g, 网格数据 房)
     {
         using var 顶刷 = new SolidBrush(墙顶色);
         using var 边笔 = new Pen(Color.FromArgb(150, 0, 0, 0), 2f);
@@ -154,7 +160,7 @@ public static class Program
         {
             if (!房.界内(c, r)) return true;
             var e = 房.格上实体(c, r);
-            return e != null && e.类型 == 房间实体类型.墙;
+            return e != null && e.类型 == 网格实体类型.墙;
         }
         for (int r = 0; r < 房.行; r++)
             for (int c = 0; c < 房.列; c++)
@@ -172,7 +178,49 @@ public static class Program
             }
     }
 
-    static void 画容器(Graphics g, 房间数据 房, 房间实体 e, Font 字体, Font 小字体)
+    // 门：那一格原本是墙 → 铺门槛 + 两侧门框 + 门扇（开门 = 斜开一片；锁着 = 关严 + 锁点）
+    static void 画门(Graphics g, 网格实体 e, Font 小字体)
+    {
+        int x = 左边距 + e.列 * 格, y = 上边距 + e.行 * 格;
+        bool 竖 = e.朝向 == 0 || e.朝向 == 2;   // 上下边的门 → 洞是横向的，门框立两侧
+        bool 锁着 = e.锁着;
+        using var 槛刷 = new SolidBrush(门槛色);
+        using var 框刷 = new SolidBrush(门框色);
+        using var 扇刷 = new SolidBrush(门扇色);
+        using var 描笔 = new Pen(Color.FromArgb(200, 0, 0, 0), 2f);
+        g.FillRectangle(槛刷, x, y, 格, 格);
+        int 框厚 = Math.Max(6, 格 / 6), 扇厚 = Math.Max(6, 格 / 6);
+        if (竖)
+        {
+            g.FillRectangle(框刷, x, y, 框厚, 格);
+            g.FillRectangle(框刷, x + 格 - 框厚, y, 框厚, 格);
+            g.DrawLine(描笔, x, y, x + 格, y);
+            g.DrawLine(描笔, x, y + 格, x + 格, y + 格);
+            if (锁着) g.FillRectangle(扇刷, x + 框厚, y, 格 - 框厚 * 2, 格);            // 关严
+            else g.FillRectangle(扇刷, x + 框厚, y + 格 / 4, 格 - 框厚 * 2, 扇厚);       // 斜开一片
+        }
+        else
+        {
+            g.FillRectangle(框刷, x, y, 格, 框厚);
+            g.FillRectangle(框刷, x, y + 格 - 框厚, 格, 框厚);
+            g.DrawLine(描笔, x, y, x, y + 格);
+            g.DrawLine(描笔, x + 格, y, x + 格, y + 格);
+            if (锁着) g.FillRectangle(扇刷, x, y + 框厚, 格, 格 - 框厚 * 2);
+            else g.FillRectangle(扇刷, x + 格 / 4, y + 框厚, 扇厚, 格 - 框厚 * 2);
+        }
+        if (锁着)   // 锁点
+        {
+            using var 锁刷 = new SolidBrush(Color.FromArgb(217, 199, 115));
+            int 锁边 = Math.Max(6, 格 / 8);
+            g.FillRectangle(锁刷, x + 格 / 2 - 锁边 / 2, y + 格 / 2 - 锁边 / 2, 锁边, 锁边);
+        }
+        using var 字刷 = new SolidBrush(暗字色);
+        var 文本 = (e.是大门 ? "大门" : "门") + (锁着 ? "（锁）" : "");
+        var 尺 = g.MeasureString(文本, 小字体);
+        g.DrawString(文本, 小字体, 字刷, x + (格 - 尺.Width) / 2f, y + 格 - 尺.Height);
+    }
+
+    static void 画容器(Graphics g, 网格数据 房, 网格实体 e, Font 字体, Font 小字体)
     {
         int x = 左边距 + e.列 * 格 + 5, y = 上边距 + e.行 * 格 + 5;
         int w = e.宽 * 格 - 10, h = e.高 * 格 - 10;
@@ -203,7 +251,7 @@ public static class Program
         g.DrawString(名, 字体, 字刷, x + (w - 尺寸.Width) / 2f, y + (h - 尺寸.Height) / 2f);
     }
 
-    static void 画敌人(Graphics g, 房间实体 e, Font 小字体)
+    static void 画敌人(Graphics g, 网格实体 e, Font 小字体)
     {
         int cx = 左边距 + e.列 * 格 + 格 / 2, cy = 上边距 + e.行 * 格 + 格 / 2;
         int 半径 = 格 / 2 - 12;
@@ -219,13 +267,13 @@ public static class Program
         g.FillRectangle(血刷, cx - 半径, cy - 半径 - 12, 半径 * 2, 6);
     }
 
-    static void 画迷雾(Graphics g, 房间数据 房, HashSet<int> 可见)
+    static void 画迷雾(Graphics g, 网格数据 房, HashSet<int> 可见)
     {
         for (int r = 0; r < 房.行; r++)
             for (int c = 0; c < 房.列; c++)
             {
                 int x = 左边距 + c * 格, y = 上边距 + r * 格;
-                if (可见.Contains(房间数据.编码(c, r))) continue;
+                if (可见.Contains(网格数据.编码(c, r))) continue;
                 if (已探索(房, 可见, c, r))
                 {
                     using var 暗 = new SolidBrush(Color.FromArgb(115, 0, 0, 0));
@@ -239,12 +287,12 @@ public static class Program
             }
     }
 
-    static void 画路径(Graphics g, 房间数据 房)
+    static void 画路径(Graphics g, 网格数据 房)
     {
         // 取最近的容器，画"走过去"的真实 A* 路径
-        房间实体 目标 = null;
+        网格实体 目标 = null;
         int 最近 = int.MaxValue;
-        foreach (var e in 房.类型为(房间实体类型.容器))
+        foreach (var e in 房.类型为(网格实体类型.容器))
         {
             int 距 = Math.Abs(e.列 - 房.入口列) + Math.Abs(e.行 - 房.入口行);
             if (距 >= 最近) continue;
@@ -252,7 +300,7 @@ public static class Program
             目标 = e;
         }
         if (目标 == null) return;
-        var 路 = 房间寻路.寻路到相邻(房, (房.入口列, 房.入口行), 目标);
+        var 路 = 网格寻路.寻路到相邻(房, (房.入口列, 房.入口行), 目标);
         if (路 == null || 路.Count == 0) return;
         using var 格刷 = new SolidBrush(Color.FromArgb(76, 路径格色));
         foreach (var (c, r) in 路)
@@ -272,7 +320,7 @@ public static class Program
         g.DrawLine(终笔, tx, ty - 16, tx, ty + 16);
     }
 
-    static void 画玩家(Graphics g, 房间数据 房, Font 小字体)
+    static void 画玩家(Graphics g, 网格数据 房, Font 小字体)
     {
         int cx = 左边距 + 房.入口列 * 格 + 格 / 2, cy = 上边距 + 房.入口行 * 格 + 格 / 2;
         int 半径 = 格 / 2 - 10;
@@ -291,24 +339,24 @@ public static class Program
 
     // ================= 工具 =================
 
-    static bool 已探索(房间数据 房, HashSet<int> 可见, int 列, int 行)
-        => 可见.Contains(房间数据.编码(列, 行)) || 邻近可见(房, 可见, 列, 行);
+    static bool 已探索(网格数据 房, HashSet<int> 可见, int 列, int 行)
+        => 可见.Contains(网格数据.编码(列, 行)) || 邻近可见(房, 可见, 列, 行);
 
     // 样张用简化记忆：可见格及其周围 3 格算"探索过"（游戏里由 已探索 集合负责）
-    static bool 邻近可见(房间数据 房, HashSet<int> 可见, int 列, int 行)
+    static bool 邻近可见(网格数据 房, HashSet<int> 可见, int 列, int 行)
     {
         for (int r = 行 - 2; r <= 行 + 2; r++)
             for (int c = 列 - 2; c <= 列 + 2; c++)
-                if (可见.Contains(房间数据.编码(c, r))) return true;
+                if (可见.Contains(网格数据.编码(c, r))) return true;
         return false;
     }
 
-    static int 到可见的距离(房间数据 房, HashSet<int> 可见, int 列, int 行)
+    static int 到可见的距离(网格数据 房, HashSet<int> 可见, int 列, int 行)
     {
         for (int 距 = 1; 距 <= 5; 距++)
             for (int r = 行 - 距; r <= 行 + 距; r++)
                 for (int c = 列 - 距; c <= 列 + 距; c++)
-                    if (Math.Max(Math.Abs(c - 列), Math.Abs(r - 行)) == 距 && 可见.Contains(房间数据.编码(c, r)))
+                    if (Math.Max(Math.Abs(c - 列), Math.Abs(r - 行)) == 距 && 可见.Contains(网格数据.编码(c, r)))
                         return 距;
         return 5;
     }
@@ -394,7 +442,7 @@ public static class Program
 }
 
 // 便捷扩展：按类型筛实体（样张里用着顺手）
-public static class 房间实体扩展
+public static class 网格实体扩展
 {
-    public static List<房间实体> 类型为(this 房间数据 房, 房间实体类型 类型) => 房.取类型(类型);
+    public static List<网格实体> 类型为(this 网格数据 房, 网格实体类型 类型) => 房.取类型(类型);
 }

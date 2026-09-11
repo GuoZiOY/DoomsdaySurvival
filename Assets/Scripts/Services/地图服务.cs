@@ -2,22 +2,21 @@ using System;
 using UnityEngine;
 
 // 地图服务：大地图/城镇小地图 的节点逐步移动与到达处理。
-// 大地图=城镇/荒野大节点；城镇=设施节点网络；荒野=闯关式野外面板（由 探索服务 承担）。
+// 大地图=城镇/荒野大节点；城镇=设施节点网络；荒野=**区域网格**（尚未接：现在只发 打开野外面板事件）。
 public sealed class 地图服务
 {
     private readonly EventBus 事件;
     private readonly DataService 数据;
     private readonly PlayerService 玩家;
-    private readonly 探索服务 探索;
     private readonly DialogueService 对话;
 
     public 地图模式 所在模式 { get; private set; } = 地图模式.大地图;
     public string 当前大节点 { get; private set; } = "营地";
     public string 当前小节点 { get; private set; } = "";
 
-    public 地图服务(EventBus 事件, DataService 数据, PlayerService 玩家, 探索服务 探索, DialogueService 对话)
+    public 地图服务(EventBus 事件, DataService 数据, PlayerService 玩家, DialogueService 对话)
     {
-        this.事件 = 事件; this.数据 = 数据; this.玩家 = 玩家; this.探索 = 探索; this.对话 = 对话;
+        this.事件 = 事件; this.数据 = 数据; this.玩家 = 玩家; this.对话 = 对话;
     }
 
     // 打开大地图：玩家置于指定大节点（末日默认营地）
@@ -121,7 +120,9 @@ public sealed class 地图服务
         事件.发布(new 打开大地图事件());
     }
 
-    // 进入荒野：先查区域剧情路由（自动触发主线剧情），未命中才进入探索模式
+    // 进入荒野：先查区域剧情路由（自动触发主线剧情），未命中才进入野外模式
+    // 注：**旧的文本探索（探索服务/探索面板）已移除** —— 这里只发 打开野外面板事件，
+    //     等 区域探索服务（区域网格）接上后，由它订阅这个事件并 进入区域(...)。
     private void 进入荒野(地图地点 地点)
     {
         string 区域标识 = string.IsNullOrEmpty(地点.区域) ? 地点.标识 : 地点.区域;
@@ -129,7 +130,6 @@ public sealed class 地图服务
         所在模式 = 地图模式.野外;
         事件.发布(new 地图位置事件(所在模式, 当前大节点, ""));
         事件.发布(new 打开野外面板事件(区域标识, 当前大节点));
-        探索.进入区域(区域标识, 当前大节点);
     }
 
     // 区域剧情路由：当前主线阶段 + 地点 → 命中即自动进入剧情节点（阶段前进后不再命中，防重复）

@@ -122,6 +122,21 @@ public sealed class 持有管理器
         return 0;
     }
 
+    // 扣背包里某个物品的耐久（如 撬锁失败 磨损撬棍）；返回 true = 真扣到了（该物品有耐久上限）。
+    // 无耐久（有效最大耐久 <= 0，例如钳子这类"材料工具"）→ 返回 false 且不改动，调用方按"用不坏"处理。
+    public bool 扣背包耐久(string 标识, int 量, Func<string, int> 有效最大耐久解析)
+    {
+        if (量 <= 0 || string.IsNullOrEmpty(标识)) return false;
+        if ((有效最大耐久解析?.Invoke(标识) ?? 0) <= 0) return false;
+        foreach (var 堆叠 in 所有持有物品())
+            if (堆叠.标识 == 标识 && 堆叠.数量 > 0)
+            {
+                堆叠.当前耐久 = Math.Max(0, 堆叠.当前耐久 - 量);
+                return true;
+            }
+        return false;
+    }
+
     // —— 统一放入（获得物品入口） ——
 
     // 放入物品（按标识，可堆叠）：优先 3 穿戴容器（弹挂→腰封→背包 找空位），满 → 仓库兜底；返回 实际放入数

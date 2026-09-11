@@ -185,6 +185,8 @@ using System;
         public string 使用效果;         // "恢复"/"增益"/"减益"
         public 效果类型 使用效果枚举 => 数据解析.枚举<效果类型>(使用效果);
         public string 挂载Buff;         // 增益/减益挂载的buff标识
+        public string 用途;             // 特殊用途标记（数据驱动的"这东西能干什么"）：目前只有 "撬锁"（撬棍/螺丝刀/钳子）
+                                        // —— 房间层 开锁 判定读它；空 = 没有特殊用途
         // —— 宝石（保留，末日可作稀有材料） ——
         public string 指定词缀属性;
         public 词缀属性 指定词缀属性枚举 => 数据解析.枚举<词缀属性>(指定词缀属性);
@@ -463,83 +465,8 @@ using System;
     [Serializable]
     public class 地图根 { public 地图地点[] 地点; }
 
-    // ================= 区域（探索系统：深度分层） =================
-
-    // 区域遭遇项：敌人组 + 出现权重 + 遭遇形态（空=遇见 [战斗][逃跑]；"被偷袭"=敌方先手强制战；"偷袭"=我方先手可选）
-    [Serializable]
-    public class 遭遇项 { public string 敌人; public int 权重; public string 形态; }
-
-    // 区域发现项：地点剧情节点 + 权重
-    [Serializable]
-    public class 发现项 { public string 节点; public int 权重; }
-
-    // 区域资源项：效果 + 描述 + 权重 + 获取消耗精力（[是]=扣精力+获得 / [否]=略过）
-    [Serializable]
-    public class 资源项 { public 剧情效果 效果; public string 文本; public int 权重; public int 消耗精力 = 1; }
-
-    // 选择选项：选择类事件的一个选项（战斗 / 效果 / 进剧情节点 三选一或组合）
-    [Serializable]
-    public class 选择选项
-    {
-        public string 文本;
-        public string 战斗;        // 可选：敌人组标识（遭遇）
-        public 剧情效果 效果;      // 可选：获得/损失（资源）
-        public string 节点;        // 可选：剧情节点（发现）
-    }
-
-    // 选择事件：宝箱陷阱等多分支事件（选项走 战斗/效果/节点）
-    [Serializable]
-    public class 选择事件 { public string 文本; public 选择选项[] 选项; }
-
-    // 探索事件表：一层（或岔路一侧）的随机事件池
-    [Serializable]
-    public class 探索事件表
-    {
-        public 遭遇项[] 遭遇;
-        public 资源项[] 资源;
-        public 发现项[] 发现;
-        public string[] 无事文本;
-        public 选择事件[] 选择;
-    }
-
-    // 岔路数据：进入层先选路，锁定一侧事件表
-    [Serializable]
-    public class 岔路数据
-    {
-        public string 文本;
-        public 探索事件表 安全;
-        public 探索事件表 危险;
-    }
-
-    // 探索层：事件表 或 岔路 或 Boss 层（Boss 通关后普通化，用 通关后 事件表）
-    [Serializable]
-    public class 探索层数据
-    {
-        public int 编号;
-        public string 描述;
-        public int 搜索阈值 = 3;       // 搜索满后通路进入候选
-        public float 通路概率 = 0.5f;  // 之后每次搜索发现通路的概率
-        public string 通路文本;        // 可选：发现通路时的事件文本（缺省通用文案）
-        public 探索事件表 事件表;      // 普通层
-        public 岔路数据 岔路;          // 岔路层（优先于 事件表）
-        public string Boss;            // Boss 层：敌人组标识（优先于 事件表）
-        public 探索事件表 通关后;      // Boss 层通关后的事件表（缺省=无事）
-    }
-
-    // 区域：探索的舞台，层[] 数据驱动（数组长度 = 层数，底层 Boss）
-    [Serializable]
-    public class 区域数据
-    {
-        public string 标识;
-        public string 名称;
-        public string 描述;
-        public int 危险度;        // 1 低 / 2 中 / 3 高
-        public string 通关文案;
-        public 探索层数据[] 层;
-    }
-
-    [Serializable]
-    public class 区域根 { public 区域数据[] 区域; }
+    // ================= 区域（旧"深度分层闯关"那一套已随 探索服务/探索面板 一起删除） =================
+    // 区域层现在的定位：**区域网格**（四层结构 世界→区域→建筑→房间 的第 2 层），数据见下方的 区域模板。
 
     // ================= 设施 =================
 
@@ -860,7 +787,11 @@ using System;
         public int 列 = 16;                 // 房间网格尺寸（受 网格面板基类.格尺寸=90 上限约束，见方案文档）
         public int 行 = 10;
         public string 布局 = "散点";         // 散点 / 贴墙 / 成排（第 1 刀只实现 散点）
-        public string 入口边 = "下";         // 上 / 下 / 左 / 右（玩家起始格贴哪条边）
+        public string 入口边 = "下";         // 上 / 下 / 左 / 右：外墙上的**大门**开在这条边（也是从外面进来的落点边）
+
+        // 内门：外墙上开的洞，通向别的房间（位置由种子在这条边上定，不是写死的坐标）。
+        // 大门不写在这里——它由 入口边 推出来，而且只在"这一趟进来的第一间房"存在。
+        public 房间门项[] 门;
 
         public 房间容器池项[] 容器池;         // 容器来源（地图类型 + 房间）+ 数量区间
 
@@ -881,6 +812,104 @@ using System;
         public int 数量最大 = 1;
     }
 
+    // 房间内门：在外墙的某条边上开个洞，通向另一间房的模板
+    [Serializable]
+    public class 房间门项
+    {
+        public string 边 = "上";             // 上 / 下 / 左 / 右：洞开在哪条外墙上
+        public string 通向;                  // 目标房间模板标识（必须存在；建议两间房互开门）
+        public string 锁;                    // 钥匙物品标识（空 = 无锁，踩上去就过）；写了 = 锁着，得开锁才能过
+    }
+
     [Serializable]
     public class 房间模板根 { public 房间模板[] 房间; }
+
+    // ================= 区域层（区域网格：一屏里摆若干建筑 + 街道） =================
+    // 定位：四层结构（世界 → 区域 → 建筑 → 房间）的**第 2 层**。
+    //   区域 = 一张格子世界：建筑占多格（外墙上有一格"入口"，走上去就进楼）+ 街道 + 街道上的障碍。
+    //   分工：区域只说"这一片有哪些楼、多大、多危险"；楼里面有什么由 建筑模板 / 房间模板 说了算。
+    //   布局口径（第 1 刀）：**地块制** —— 网格切成若干"地块"，一栋楼占一个地块，地块之间留 1 格街道。
+    //     好处：天然连通、入口必在街上、同种子同布局（不需要摆放重试，也不会出现"楼堵住路"）。
+
+    [Serializable]
+    public class 区域模板
+    {
+        public string 标识;             // "西区"
+        public string 名称;             // "西区"
+        public string 描述;
+        public int 危险度 = 2;           // 1 低 / 2 中 / 3 高
+        public int 列 = 16;              // 区域网格尺寸（受 网格面板基类.格尺寸 = 90 约束：一屏 16×10 最稳）
+        public int 行 = 10;
+        public string 入口边 = "下";      // 从大地图进来时，落点在区域边缘的哪条边
+        public 区域建筑项[] 建筑;         // 这一片要摆哪些楼（按 数量 展开）
+        public int 街道障碍数 = 0;        // 街道上撒几个障碍（废弃汽车/路障），0 = 不撒
+        public string 战斗棋盘 = "街上";   // 街上打起来用哪个棋盘（第 1 刀街上还没有遭遇，先占位）
+    }
+
+    // 区域建筑项：一栋要摆进区域的楼
+    [Serializable]
+    public class 区域建筑项
+    {
+        public string 建筑模板;   // 建筑模板标识（第 3 层接管后优先用它）
+        public string 房间模板;   // 还没做建筑层时的临时口径：直接把一个房间当"一栋小房子"
+        public int 数量 = 1;
+        public int 宽 = 4, 高 = 3;    // 在地块里最多占几格（地块放不下就按地块收窄）
+    }
+
+    [Serializable]
+    public class 区域模板根 { public 区域模板[] 区域; }
+
+    // ================= 建筑层（一栋楼：楼层 + 楼梯） =================
+    // 定位：四层结构（世界 → 区域 → 建筑 → 房间）的**第 3 层**。
+    //   建筑 = 楼层表；一层 = 若干房间（第 1 刀每层只填 1 间，多间就该层内用门横向串联）；
+    //   楼层之间只有**楼梯**（外墙上那一格"凸"）：走到楼梯格 → 右键 上楼 / 下楼。
+    // 硬规则（第 1 刀）：
+    //   ① **同一栋楼所有楼层同尺寸**（= 建筑模板.列×行，由各层首间房模板保证）——楼梯坐标才能对齐；
+    //   ② **楼梯坐标全楼相同**（由 建筑模板.楼梯边 + 种子定一次，各层共用同一格）；
+    //   ③ 门只在**本层内**串联（门.通向 必须也在这一层的 房间 列表里），跨层一律走楼梯。
+
+    [Serializable]
+    public class 建筑模板
+    {
+        public string 标识;              // "西街便利店"
+        public string 名称;              // "便利店（西街店）"
+        public string 描述;
+        public int 危险度 = 2;
+        public int 列 = 16, 行 = 10;      // 所有楼层的统一尺寸（校验各层首间房模板必须与它一致）
+        public 建筑楼层项[] 楼层;         // 索引 0 = 1F；楼层[0] 是从区域进来时落的那一层
+        public string 楼梯边 = "右";      // 楼梯开在哪条外墙上（上 / 下 / 左 / 右）
+        public int 楼梯位 = -1;           // 沿那条边的第几格（-1 = 取中点，按种子抖一下）
+        public string 战斗棋盘 = "室内";
+        public 建筑外形数据 外形;          // **在区域地图上占地的形状**（空 = 按 区域建筑项.宽/高 的矩形）
+    }
+
+    // 建筑外形（区域地图上的占地形状）：配方名 + 尺寸 + 参数，掩码在运行时生成（确定性）
+    //   配方库：矩形 / L / 凸 / 凹（`[` 三面围合已按拍板删掉）
+    //   朝向/镜像是一层**通用变换**，以后加 T / + / H / 条 / S 都自动支持换朝向
+    [Serializable]
+    public class 建筑外形数据
+    {
+        public string 形状 = "矩形";       // "矩形" / "L" / "凸" / "凹"
+        public int 宽 = 6, 高 = 5;         // 包围盒（朝向 90/270 时会自动对调）
+        public int 切角宽 = 3;             // L：缺掉的那个角有多大
+        public int 切角高 = 2;
+        public int 突出宽;                 // 凸：上面突出多宽（0 = 自动）
+        public int 突出高;                 // 凸：上面突出多高（0 = 自动）
+        public int 凹口宽;                 // 凹：上面挖掉多宽（0 = 自动）
+        public int 凹口深;                 // 凹：上面挖掉多深（0 = 自动）
+        public int 朝向;                   // 0 / 90 / 180 / 270（顺时针）
+        public bool 左右镜像;
+    }
+
+    // 建筑楼层项：一层楼
+    [Serializable]
+    public class 建筑楼层项
+    {
+        public string 名称;             // "1F 门厅"（空 = 自动 "N F"）
+        public string[] 房间;           // 这一层的房间模板（第 1 刀只填 1 个；[0] = 楼梯间）
+        public bool 大门 = false;       // 这一层的外墙上有大门（= 从区域/外面进来，只该有一层为 true）
+    }
+
+    [Serializable]
+    public class 建筑模板根 { public 建筑模板[] 建筑; }
 

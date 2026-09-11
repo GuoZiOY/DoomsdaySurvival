@@ -15,7 +15,6 @@ using UnityEngine;
         public Dictionary<string, 技能数据> 技能 { get; private set; } = new Dictionary<string, 技能数据>();
         public Dictionary<string, 任务数据> 任务 { get; private set; } = new Dictionary<string, 任务数据>();
         public Dictionary<string, 地图地点> 地图 { get; private set; } = new Dictionary<string, 地图地点>();
-        public Dictionary<string, 区域数据> 区域 { get; private set; } = new Dictionary<string, 区域数据>();
         public Dictionary<string, 设施定义> 设施 { get; private set; } = new Dictionary<string, 设施定义>();
         public Dictionary<string, 训练项目> 训练项目 { get; private set; } = new Dictionary<string, 训练项目>();
         public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
@@ -33,8 +32,12 @@ using UnityEngine;
         public Dictionary<string, 搜索地图类型> 搜索地图类型 { get; private set; } = new Dictionary<string, 搜索地图类型>();
         public Dictionary<string, 战斗棋盘数据> 战斗棋盘 { get; private set; } = new Dictionary<string, 战斗棋盘数据>();
         public Dictionary<string, 房间模板> 房间模板 { get; private set; } = new Dictionary<string, 房间模板>();
+        public Dictionary<string, 区域模板> 区域模板 { get; private set; } = new Dictionary<string, 区域模板>();
+        public Dictionary<string, 建筑模板> 建筑模板 { get; private set; } = new Dictionary<string, 建筑模板>();
 
         public List<string> 校验错误 { get; } = new List<string>();
+        // 校验警告：不致命（游戏照进），但多半是数据写歪了——例如"门通向那间房，可那边没门通回来"
+        public List<string> 校验警告 { get; } = new List<string>();
 
         public DataService(EventBus 事件)
         {
@@ -52,7 +55,6 @@ using UnityEngine;
             加载("skills", 技能, (技能根 根) => 根.技能);
             加载("quests", 任务, (任务根 根) => 根.任务);
             加载("map", 地图, (地图根 根) => 根.地点);
-            加载("regions", 区域, (区域根 根) => 根.区域);
             加载("facilities", 设施, (设施根 根) => 根.设施);   // 允许缺失（M4 才有）
             加载("training", 训练项目, (训练项目根 根) => 根.训练项目);
             加载("buffs", Buffs, (Buff根 根) => 根.Buffs);
@@ -69,6 +71,8 @@ using UnityEngine;
             加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
             加载("战斗棋盘", 战斗棋盘, (战斗棋盘根 根) => 根.棋盘);   // 允许缺失（战斗沙盒）
             加载("房间模板", 房间模板, (房间模板根 根) => 根.房间);   // 允许缺失（房间层 · 单房间模板）
+            加载("区域模板", 区域模板, (区域模板根 根) => 根.区域);   // 允许缺失（区域层 · 区域网格）
+            加载("建筑模板", 建筑模板, (建筑模板根 根) => 根.建筑);   // 允许缺失（建筑层 · 楼层 + 楼梯）
             加载视野();
             加载情报();
             加载助战组与区域剧情();
@@ -157,10 +161,11 @@ using UnityEngine;
             return 字段?.GetValue(项) as string;
         }
 
-        // 全量跨引用校验：清空后重查，错误写入 校验错误
+        // 全量跨引用校验：清空后重查，错误写入 校验错误（警告写入 校验警告，不拦进游戏）
         public void 重新校验()
         {
             校验错误.Clear();
+            校验警告.Clear();
 
             // —— 剧情：选项目标 / 强制战斗敌人 / 下一节点 ——
             foreach (var (标识, 节点) in 剧情)
@@ -253,51 +258,8 @@ using UnityEngine;
                     校验错误.Add($"书籍[{标识}] → 技能[{物品.技能}] 不存在");
             }
 
-            // —— 区域（层结构）：事件表遭遇敌人 / 发现节点 / Boss 组 / 选择事件 ——
-            // 区域事件表校验：遭遇敌人组 / 发现节点 / 选择选项
-            void 校验事件表(string 层名, 探索事件表 表)
-            {
-                if (表 == null) return;
-                if (表.遭遇 != null)
-                    foreach (var 遭遇 in 表.遭遇)
-                        if (!string.IsNullOrEmpty(遭遇.敌人) && !敌人组.ContainsKey(遭遇.敌人))
-                            校验错误.Add($"{层名} → 敌人组[{遭遇.敌人}] 不存在");
-                if (表.发现 != null)
-                    foreach (var 发现 in 表.发现)
-                        if (!string.IsNullOrEmpty(发现.节点) && !剧情.ContainsKey(发现.节点))
-                            校验错误.Add($"{层名} → 节点[{发现.节点}] 不存在");
-                if (表.选择 != null)
-                    foreach (var 选择 in 表.选择)
-                    {
-                        if (选择.选项 == null) continue;
-                        foreach (var 选项 in 选择.选项)
-                        {
-                            if (!string.IsNullOrEmpty(选项.战斗) && !敌人组.ContainsKey(选项.战斗))
-                                校验错误.Add($"{层名} 选择[{选择.文本}] → 敌人组[{选项.战斗}] 不存在");
-                            if (!string.IsNullOrEmpty(选项.节点) && !剧情.ContainsKey(选项.节点))
-                                校验错误.Add($"{层名} 选择[{选择.文本}] → 节点[{选项.节点}] 不存在");
-                        }
-                    }
-            }
-
-            foreach (var (标识, 区) in 区域)
-            {
-                if (区.层 == null) { 校验错误.Add($"区域[{标识}] 缺少 层 定义"); continue; }
-                for (int i = 0; i < 区.层.Length; i++)
-                {
-                    var 层 = 区.层[i];
-                    string 层名 = $"区域[{标识}]·层{i + 1}";
-                    校验事件表(层名, 层.事件表);
-                    校验事件表(层名, 层.通关后);
-                    if (层.岔路 != null)
-                    {
-                        校验事件表($"{层名}·安全", 层.岔路.安全);
-                        校验事件表($"{层名}·危险", 层.岔路.危险);
-                    }
-                    if (!string.IsNullOrEmpty(层.Boss) && !敌人组.ContainsKey(层.Boss))
-                        校验错误.Add($"{层名} Boss组[{层.Boss}] 不存在");
-                }
-            }
+            // —— 区域（旧"深度分层闯关"的事件表校验已随 探索服务/探索面板 一起删除）——
+            // 区域网格的校验（建筑模板 / 街道敌人组）等 区域生成器 落地后再加在这里。
 
             // —— 配方：产物/材料/图纸 物品存在 + 类型/等级 合法 ——
             foreach (var (标识, 配方) in 配方)
@@ -404,6 +366,116 @@ using UnityEngine;
                 }
                 if (!string.IsNullOrEmpty(房.战斗棋盘) && !战斗棋盘.ContainsKey(房.战斗棋盘))
                     校验错误.Add($"{名} → 战斗棋盘[{房.战斗棋盘}] 不存在");
+
+                // —— 门：边合法 / 通向存在 / 建议互开（开不出的门 = 走不过去的路） ——
+                if (房.门 == null) continue;
+                foreach (var 门 in 房.门)
+                {
+                    if (门 == null) continue;
+                    if (门.边 != "上" && 门.边 != "下" && 门.边 != "左" && 门.边 != "右")
+                        校验错误.Add($"{名} → 门 的边[{门.边}] 非法（只能 上/下/左/右）");
+                    if (string.IsNullOrEmpty(门.通向))
+                    {
+                        校验错误.Add($"{名} → 门 没有写 通向（通向外面的大门由 入口边 推出来，不用写）");
+                        continue;
+                    }
+                    if (门.通向 == 标识) 校验错误.Add($"{名} → 门 通向自己");
+                    if (!房间模板.ContainsKey(门.通向))
+                    {
+                        校验错误.Add($"{名} → 门 通向的房间模板[{门.通向}] 不存在");
+                        continue;
+                    }
+                    // 门锁：钥匙物品必须存在（钥匙会随机塞进这间房的某个容器里，所以这间房也得有容器可放）
+                    if (!string.IsNullOrEmpty(门.锁))
+                    {
+                        if (!物品.ContainsKey(门.锁)) 校验错误.Add($"{名} → 门 的锁 需要物品[{门.锁}]，但 items 里没有这件东西");
+                        else if (物品[门.锁].类型 != "任务品") 校验警告.Add($"{名} → 门 的锁 用了[{门.锁}]（类型 {物品[门.锁].类型}）——钥匙一般是 任务品");
+                        // 钥匙得有地方放：本房要能有"可搜索容器"（柜子 / 或打赢后的战利品尸体）
+                        bool 有柜子 = 房.容器池 != null && 房.容器池.Length > 0;
+                        bool 有敌人 = 房.敌人数量最大 > 0 && !string.IsNullOrEmpty(房.敌人组);
+                        if (!有柜子 && !有敌人)
+                            校验警告.Add($"{名} → 门 有锁，但这间房既没有容器池也没有敌人：钥匙会无处可放，运行时那扇门会自动取消锁");
+                    }
+                    // 互开检查：目标房应当也有一扇门通回来（否则进去只能靠按 Esc / 走不到别的门）
+                    var 回房 = 房间模板[门.通向];
+                    bool 有回路 = false;
+                    if (回房.门 != null)
+                        foreach (var 回门 in 回房.门)
+                            if (回门 != null && 回门.通向 == 标识) { 有回路 = true; break; }
+                    if (!有回路) 校验警告.Add($"{名} → 门 通向[{门.通向}]，但那边没有门通回来（建议补一扇，否则回不去）");
+                }
+            }
+
+            // ================= 区域层（区域模板） =================
+            // —— 区域模板：尺寸 / 建筑（房间模板必须存在）/ 地块够不够 / 棋盘 ——
+            // 注：这里只做**数据级**校验；"摆出来连不连通"由 Tools/区域验证 离线跑种子断言。
+            foreach (var (标识, 区) in 区域模板)
+            {
+                string 名 = $"区域模板[{标识}]";
+                if (区.列 < 12 || 区.行 < 8 || 区.列 > 40 || 区.行 > 28)
+                    校验警告.Add($"{名} 区域尺寸 {区.列}×{区.行} 超出推荐范围（12×8 ~ 40×28；相机窗口一屏约看 26×15 格）");
+                if (区.建筑 == null || 区.建筑.Length == 0) 校验错误.Add($"{名} 没有 建筑（区域里会空无一物）");
+                else
+                {
+                    int 展开 = 0;
+                    foreach (var 项 in 区.建筑)
+                    {
+                        if (项 == null) continue;
+                        展开 += Math.Max(1, 项.数量);
+                        string 定 = string.IsNullOrEmpty(项.建筑模板) ? 项.房间模板 : 项.建筑模板;
+                        if (string.IsNullOrEmpty(定)) { 校验错误.Add($"{名} → 建筑项 既没写 建筑模板 也没写 房间模板"); continue; }
+                        // 建筑模板 优先（一栋多层的楼）；没写就退化成"一个房间模板当一栋小房子"
+                        if (!string.IsNullOrEmpty(项.建筑模板) && !建筑模板.ContainsKey(项.建筑模板))
+                            校验错误.Add($"{名} → 建筑模板[{项.建筑模板}] 不存在");
+                        if (!string.IsNullOrEmpty(项.房间模板) && !房间模板.ContainsKey(项.房间模板))
+                            校验错误.Add($"{名} → 房间模板[{项.房间模板}] 不存在（建筑里叫不出房间）");
+                        if (项.宽 < 2 || 项.高 < 2) 校验错误.Add($"{名} → 建筑[{定}] 占地 {项.宽}×{项.高} 太小（至少 2×2）");
+                    }
+                    // 地块数 = 区域生成器.地块列数 × 地块行数（2×2 = 4）；多写的建筑不会摆出来
+                    if (展开 > 4) 校验警告.Add($"{名}：写了 {展开} 栋建筑，但一屏只有 4 个地块（2×2）—— 多出来的不会摆");
+                }
+                if (!string.IsNullOrEmpty(区.战斗棋盘) && !战斗棋盘.ContainsKey(区.战斗棋盘))
+                    校验错误.Add($"{名} → 战斗棋盘[{区.战斗棋盘}] 不存在");
+            }
+
+            // ================= 建筑层（建筑模板） =================
+            // —— 楼层表：房间模板存在 / 楼梯间尺寸与建筑一致（楼梯才对得齐）/ 门只在本层内 / 楼梯与大门别挤同一面墙 ——
+            foreach (var (标识, 建) in 建筑模板)
+            {
+                string 名 = $"建筑模板[{标识}]";
+                if (建.楼层 == null || 建.楼层.Length == 0) { 校验错误.Add($"{名} 没有 楼层（一栋楼至少一层）"); continue; }
+                if (建.楼梯边 != "上" && 建.楼梯边 != "下" && 建.楼梯边 != "左" && 建.楼梯边 != "右")
+                    校验错误.Add($"{名} → 楼梯边[{建.楼梯边}] 非法（只能 上/下/左/右）");
+                int 大门层数 = 0;
+                for (int 层 = 0; 层 < 建.楼层.Length; 层++)
+                {
+                    var 楼层 = 建.楼层[层];
+                    string 层名 = $"{名}·{层 + 1}F";
+                    if (楼层?.房间 == null || 楼层.房间.Length == 0) { 校验错误.Add($"{层名} 没有 房间（每层至少一间）"); continue; }
+                    if (楼层.大门) 大门层数++;
+                    for (int i = 0; i < 楼层.房间.Length; i++)
+                    {
+                        string 房标 = 楼层.房间[i];
+                        if (string.IsNullOrEmpty(房标) || !房间模板.TryGetValue(房标, out var 房))
+                        { 校验错误.Add($"{层名} → 房间模板[{房标}] 不存在"); continue; }
+                        // 楼梯间（每层 房间[0]）的尺寸 = 全楼统一尺寸：否则楼上楼下的楼梯格对不齐
+                        if (i == 0 && (房.列 != 建.列 || 房.行 != 建.行))
+                            校验错误.Add($"{层名} → 首间房[{房标}] 尺寸 {房.列}×{房.行} ≠ 建筑 {建.列}×{建.行}（楼梯会上下错位）");
+                        if (i == 0 && 楼层.大门 && 房.入口边 == 建.楼梯边)
+                            校验警告.Add($"{层名} → 大门（入口边 {房.入口边}）和楼梯开在同一面墙：建议把 楼梯边 挪到别的边");
+                        // 门只在**本层内**串联（跨层一律走楼梯）
+                        if (房.门 != null)
+                            foreach (var 门 in 房.门)
+                            {
+                                if (门 == null || string.IsNullOrEmpty(门.通向)) continue;
+                                bool 在本层 = false;
+                                foreach (var 同层 in 楼层.房间) if (同层 == 门.通向) { 在本层 = true; break; }
+                                if (!在本层) 校验错误.Add($"{层名} → 房间[{房标}] 的门通向[{门.通向}]，但它不在本层的 房间 列表里（跨层只能走楼梯）");
+                            }
+                    }
+                }
+                if (大门层数 == 0) 校验警告.Add($"{名} 没有任何一层写了 大门 = true（进了楼就出不去了）");
+                if (大门层数 > 1) 校验警告.Add($"{名} 有 {大门层数} 层写了 大门 = true（一栋楼只该有一扇正门）");
             }
         }
     }

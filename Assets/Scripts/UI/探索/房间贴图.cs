@@ -14,6 +14,8 @@ public static class 房间贴图
 
     private static Sprite 地板缓存, 墙顶缓存, 柜子缓存, 冰箱缓存, 纸箱缓存, 货架缓存, 尸体缓存;
     private static Sprite 圆盘缓存, 圆环缓存, 剪影缓存, 圆点缓存;
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite> 门缓存 = new System.Collections.Generic.Dictionary<string, Sprite>();
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite> 楼梯缓存 = new System.Collections.Generic.Dictionary<string, Sprite>();
 
     // ================= 地表 / 墙 =================
 
@@ -266,6 +268,110 @@ public static class 房间贴图
                 纹理.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(边长 / 2f - 1f - d)));
             }
         return 圆点缓存 = 成图(纹理);
+    }
+
+    // ================= 门（墙上那个洞） =================
+    // 门画在"原本是墙的那一格"上：门槛（洞里的地面）+ 两侧门框立柱 + 门扇。
+    // 朝向与 网格实体.朝向 同义：0下 1左 2上 3右（上下边的门框是竖的，左右边是横的）。
+    // 锁着 = 门扇关严（+ 一个小锁点）；开着 = 门扇斜开（洞口通着）。
+    public static Sprite 门(int 朝向) => 门图(朝向, false);
+
+    public static Sprite 门(int 朝向, bool 锁着) => 门图(朝向, 锁着);
+
+    private static Sprite 门图(int 朝向, bool 锁着)
+    {
+        bool 竖 = 朝向 == 0 || 朝向 == 2;   // 门开在上下边 → 洞是横向的，门框立两侧
+        string 名 = (竖 ? "门_横" : "门_竖") + (锁着 ? "_锁" : "");
+        if (门缓存.TryGetValue(名, out var 有) && 有 != null) return 有;
+        var 真图 = Resources.Load<Sprite>(资源目录 + 名);
+        if (真图 != null) return 门缓存[名] = 真图;
+
+        const int 边长 = 96;
+        const int 框厚 = 11;      // 门框立柱厚度
+        const int 扇厚 = 13;      // 门扇厚度
+        var 纹理 = 新纹理(边长, 边长);
+        var 框 = 网格面板配色.门框色;
+        var 框深 = 乘(框, 0.72f);
+        var 扇 = 网格面板配色.门扇色;
+        var 扇深 = 乘(扇, 0.78f);
+        var 槛 = 网格面板配色.门槛色;
+        var 锁色 = new Color(0.85f, 0.78f, 0.45f, 1f);
+        for (int y = 0; y < 边长; y++)
+            for (int x = 0; x < 边长; x++)
+            {
+                var 色 = 槛;   // 洞里先铺一层门槛地面
+                色 = 画门格(x, y, 边长, 框厚, 扇厚, 竖, 锁着, 框, 框深, 扇, 扇深, 槛, 锁色);
+                // 锁着：门扇关严，锁芯在门扇中间标一块亮色
+                if (锁着)
+                {
+                    int 中 = 边长 / 2;
+                    if (竖)
+                    {
+                        if (Mathf.Abs(x - 中) <= 5 && Mathf.Abs(y - (框厚 + 扇厚 / 2 + 2)) <= 4) 色 = 锁色;
+                    }
+                    else if (Mathf.Abs(y - 中) <= 5 && Mathf.Abs(x - (框厚 + 扇厚 / 2 + 2)) <= 4) 色 = 锁色;
+                }
+                纹理.SetPixel(x, y, 色);
+            }
+        return 门缓存[名] = 成图(纹理);
+    }
+
+    // 一格门像素：门槛 + 两侧门框 + 门扇（锁着 = 关严铺满洞口；开着 = 斜开一片）
+    private static Color 画门格(int x, int y, int 边长, int 框厚, int 扇厚, bool 竖, bool 锁着,
+        Color 框, Color 框深, Color 扇, Color 扇深, Color 槛, Color 锁色)
+    {
+        var 色 = 槛;
+        if (竖)
+        {
+            bool 左柱 = x < 框厚, 右柱 = x >= 边长 - 框厚;
+            if (左柱 || 右柱) return (x == 框厚 - 1 || x == 边长 - 框厚) ? 框深 : 框;
+            if (锁着) return 扇;   // 关着：门扇直接把洞口铺满
+            int 扇位 = 框厚 + (int)((边长 - 框厚 * 2) * 0.30f);
+            int 摆动 = (int)((y / (float)边长) * 10f);   // 上端外摆 → 看起来是开着的
+            if (x >= 扇位 - 摆动 && x < 扇位 - 摆动 + 扇厚) 色 = 扇;
+        }
+        else
+        {
+            bool 上梁 = y < 框厚, 下梁 = y >= 边长 - 框厚;
+            if (上梁 || 下梁) return (y == 框厚 - 1 || y == 边长 - 框厚) ? 框深 : 框;
+            if (锁着) return 扇;
+            int 扇位 = 框厚 + (int)((边长 - 框厚 * 2) * 0.30f);
+            int 摆动 = (int)((x / (float)边长) * 10f);
+            if (y >= 扇位 - 摆动 && y < 扇位 - 摆动 + 扇厚) 色 = 扇;
+        }
+        return 色;
+    }
+
+    // ================= 楼梯（建筑层：外墙上那一格"凸"） =================
+    // 画法：一块"往外鼓"的楼梯间剪影 —— 边缘描深 + 台阶亮纹 + 正中一个 ↑↓ 记号。
+    // 面板会把它按 1.35 倍摆在墙格上、朝墙外偏移，于是这一格就"凸"出了外墙（贴图本身只管画那块）。
+    public static Sprite 楼梯(int 朝向)
+    {
+        bool 竖 = 朝向 == 0 || 朝向 == 2;
+        string 名 = 竖 ? "楼梯_横" : "楼梯_竖";
+        if (楼梯缓存.TryGetValue(名, out var 有) && 有 != null) return 有;
+        var 真图 = Resources.Load<Sprite>(资源目录 + 名);
+        if (真图 != null) return 楼梯缓存[名] = 真图;
+
+        const int 边长 = 96;
+        var 纹理 = 新纹理(边长, 边长);
+        var 体 = new Color(0.46f, 0.42f, 0.36f, 1f);   // 楼梯间体
+        var 缘 = 乘(体, 0.62f);                         // 边缘（外框）
+        var 阶 = 乘(体, 1.22f);                         // 台阶亮面
+        var 号 = 网格面板配色.路径终色;                   // ↑↓ 记号（和路径终点同色）
+        for (int y = 0; y < 边长; y++)
+            for (int x = 0; x < 边长; x++)
+            {
+                bool 边 = x < 5 || y < 5 || x >= 边长 - 5 || y >= 边长 - 5;
+                var 色 = 边 ? 缘 : 体;
+                if (!边 && y % 12 < 4) 色 = 阶;                     // 台阶
+                int cx = 边长 / 2, cy = 边长 / 2;
+                if (Mathf.Abs(x - cx) <= 3 && Mathf.Abs(y - cy) <= 20) 色 = 号;         // 记号竖杆
+                if (Mathf.Abs(x - cx) <= 10 && Mathf.Abs(y - (cy + 20)) <= 7) 色 = 号;  // 上箭头
+                if (Mathf.Abs(x - cx) <= 10 && Mathf.Abs(y - (cy - 20)) <= 7) 色 = 号;  // 下箭头
+                纹理.SetPixel(x, y, 色);
+            }
+        return 楼梯缓存[名] = 成图(纹理);
     }
 
     // ================= 工具 =================

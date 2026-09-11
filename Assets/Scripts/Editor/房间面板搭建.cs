@@ -172,7 +172,7 @@ public static class 房间面板搭建
 
     private static Transform 找面板父级(面板管理器 管理器)
     {
-        Component 参考 = Object.FindAnyObjectByType<探索面板>(FindObjectsInactive.Include);
+        Component 参考 = Object.FindAnyObjectByType<房间面板>(FindObjectsInactive.Include);
         if (参考 == null) 参考 = Object.FindAnyObjectByType<安全屋面板>(FindObjectsInactive.Include);
         if (参考 != null && 参考.transform.parent != null && 参考.transform.parent.GetComponent<Canvas>() != null)
             return 参考.transform.parent;
