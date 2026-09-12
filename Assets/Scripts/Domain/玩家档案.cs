@@ -195,6 +195,49 @@ using System.Collections.Generic;
         // 派生链：区域布局种子 = 确定性随机.派生(世界种子, "区域:" + 区域标识) → **同一存档内那片区域永远同一套楼**。
         // 副本"可重复刷"靠的是**回安全屋重置**（v48/v49 定版），不是第二把钥匙 —— 见同名文档 §3.1 的设计纠正。
         public int 世界种子;
+        // —— **永久迷雾记忆**（v52）——
+        // "这一张图我走过哪些格"。大世界（1 张）与区域（7 张）随档保留；**房间层不进这里**。
+        // 元素格式：`"{键}|{Base64(位图)}"`，键 = `"{层标签}|{种子}#{标识}"`。
+        //   · 键里带种子 → 换了种子/换了图**自动失配**（记忆自然作废），不用另外写失效逻辑；
+        //   · 只放**有界**的东西：大世界 100×100（1250 字节）+ 区域 32×22 ×7（88 字节）≈ 2.5 KB 文本。
+        //     ⚠ 房间层**不能**放进来：它的记忆键是"每个房间实例"，而临时建筑每趟都新增实例 → **无界增长**。
+        // 用 string[] 而不是 Dictionary：`JsonUtility` 不支持 Dictionary。
+        public string[] 迷雾记忆 = new string[0];
+
+        // 读永久迷雾（没有 / 键不匹配 / 存档损坏 → 空集；**不抛异常**：坏档不该让游戏进不去）
+        public HashSet<int> 读迷雾(string 键, int 列数, int 行数)
+        {
+            if (string.IsNullOrEmpty(键) || 迷雾记忆 == null) return new HashSet<int>();
+            string 前缀 = 键 + "|";
+            foreach (var 条 in 迷雾记忆)
+            {
+                if (条 == null || !条.StartsWith(前缀, StringComparison.Ordinal)) continue;
+                return 迷雾位图.解包(条.Substring(前缀.Length), 列数, 行数);
+            }
+            return new HashSet<int>();
+        }
+
+        // 写永久迷雾（同键覆盖；不同键追加）
+        public void 写迷雾(string 键, int 列数, int 行数, IEnumerable<int> 已探索格码)
+        {
+            if (string.IsNullOrEmpty(键)) return;
+            string 条 = 键 + "|" + 迷雾位图.打包(已探索格码, 列数, 行数);
+            if (迷雾记忆 == null || 迷雾记忆.Length == 0) { 迷雾记忆 = new string[] { 条 }; return; }
+            string 前缀 = 键 + "|";
+            for (int i = 0; i < 迷雾记忆.Length; i++)
+            {
+                if (迷雾记忆[i] == null || !迷雾记忆[i].StartsWith(前缀, StringComparison.Ordinal)) continue;
+                迷雾记忆[i] = 条;
+                return;
+            }
+            var 新 = new string[迷雾记忆.Length + 1];
+            Array.Copy(迷雾记忆, 新, 迷雾记忆.Length);
+            新[迷雾记忆.Length] = 条;
+            迷雾记忆 = 新;
+        }
+
+        // 清空全部永久迷雾（**新游戏**用：世界种子换了，旧记忆本来也会失配，顺手清干净别留垃圾）
+        public void 清空迷雾() => 迷雾记忆 = new string[0];
         public List<物品堆叠> 家具 = new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载：标识 = 家具标识[含等级后缀]、数量恒 1、列/行/旋转 = 房间网格位置）
         public int 预知天气 = -1;   // 收音机 预知的 明日天气（-1 = 无预知，跨天随机）
 
