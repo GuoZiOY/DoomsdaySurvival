@@ -81,7 +81,8 @@ using UnityEngine;
             var 对话 = new DialogueService(事件, 数据, 玩家);
             ServiceRegistry.Register(对话);
 
-            ServiceRegistry.Register(new InventoryService(事件, 玩家));
+            // 注：原有一行 `ServiceRegistry.Register(new InventoryService(事件, 玩家));` —— v51 刀7c 删：
+            // InventoryService 是**唯一确证的死服务**（注册了但全仓库 0 调用；物品增删查都走 玩家档案/持有管理器）。
             ServiceRegistry.Register(new QuestService(事件, 数据, 玩家));
             var 战斗服务 = new BattleService(事件, 数据, 玩家);
             ServiceRegistry.Register(战斗服务);

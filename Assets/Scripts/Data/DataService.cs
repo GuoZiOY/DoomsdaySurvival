@@ -23,7 +23,8 @@ using UnityEngine;
         public Dictionary<string, 词缀定义> 词缀 { get; private set; } = new Dictionary<string, 词缀定义>();
         public Dictionary<string, 职业数据> 职业 { get; private set; } = new Dictionary<string, 职业数据>();
         public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
-        public Dictionary<string, 天气数据> 天气 { get; private set; } = new Dictionary<string, 天气数据>();
+        // 注：原有 `Dictionary<string, 天气数据> 天气` + `加载("天气", …)` —— v51 刀7c 删：
+        // 天气.json 不存在，且 数据.天气 全仓库无人读（天气是 世界时间管理器 按枚举随机取的）。
         public Dictionary<string, 家具数据> 家具 { get; private set; } = new Dictionary<string, 家具数据>();
         public 视野数据 视野 { get; private set; } = new 视野数据();   // 视野规则（角色 + 时段）
         public List<情报条目> 情报 { get; private set; } = new List<情报条目>();   // 收音机 情报池（无标识，列表承载）
@@ -64,7 +65,6 @@ using UnityEngine;
             加载("affixes", 词缀, (词缀根 根) => 根.词缀);   // 允许缺失（词缀系统）
             加载("职业", 职业, (职业根 根) => 根.职业);       // 允许缺失（职业系统）
             加载("天赋", 天赋, (天赋根 根) => 根.天赋);       // 允许缺失（天赋系统）
-            加载("天气", 天气, (天气根 根) => 根.天气);       // 允许缺失（天气系统）
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）
             加载("搜索_地图类型", 搜索地图类型, (搜索地图类型根 根) => 根.地图类型);   // 允许缺失（搜索容器系统）
             加载("战斗棋盘", 战斗棋盘, (战斗棋盘根 根) => 根.棋盘);   // 允许缺失（战斗沙盒）
