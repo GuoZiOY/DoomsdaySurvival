@@ -64,4 +64,16 @@ public static class 网格面板配色
     public static readonly Color 建筑窗色 = new Color(0.38f, 0.42f, 0.40f, 1f);             // 窗（暗玻璃）
     public static readonly Color 障碍体色 = new Color(0.30f, 0.285f, 0.27f, 1f);            // 街道障碍（废车 / 砖堆）
     public static readonly Color 障碍深色 = new Color(0.19f, 0.18f, 0.17f, 1f);             // 障碍暗部（轮子 / 阴影）
+
+    // ===== 大世界层（大世界网格面板 + 大世界图层）：城市地面 / 区域块 / 营地 用色 =====
+    // 与区域层刻意拉开：大世界是"从高处看一座城"——地面更冷更空，区域块是一整块砖色（占多格），
+    // 门口那一格单独给金色（走上去就进副本）；锁着的用红金，一眼看出"这片现在进不去"。
+    public static readonly Color 世界地面色 = new Color(0.082f, 0.088f, 0.10f, 1f);         // 城市地面底色
+    public static readonly Color 世界地面斑色 = new Color(0.125f, 0.132f, 0.152f, 1f);      // 地面斑块 / 废墟碎屑
+    public static readonly Color 区域块色 = new Color(0.285f, 0.245f, 0.215f, 1f);          // 区域副本占地（一片街区）
+    public static readonly Color 区域块缝色 = new Color(0.215f, 0.185f, 0.165f, 1f);        // 区域块格缝（砖缝感）
+    public static readonly Color 区域门色 = new Color(0.88f, 0.74f, 0.34f, 1f);             // 区域门口那一格（进得去）
+    public static readonly Color 区域锁色 = new Color(0.62f, 0.26f, 0.24f, 1f);             // 区域门口那一格（锁着）
+    public static readonly Color 营地体色 = new Color(0.20f, 0.46f, 0.40f, 1f);             // 安全屋（营地）占地
+    public static readonly Color 营地缝色 = new Color(0.15f, 0.36f, 0.32f, 1f);
 }
