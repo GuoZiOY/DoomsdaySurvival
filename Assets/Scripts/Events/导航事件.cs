@@ -48,18 +48,16 @@ public readonly struct 打开功能面板事件
 
 // —— 地图导航事件 ——
 
-// 地图模式：末日只有两种——在大世界节点图上，或在某个荒野（区域网格）里
+// 地图模式：末日只有两种——在大世界（格子网格）上，或在某个区域副本（区域网格）里
 public enum 地图模式 { 大地图, 野外 }
 
-// 打开大地图面板（节点图）
-public readonly struct 打开大地图事件 { }
-
-// 打开野外面板：区域标识 + 返回节点（回大地图用）
-public readonly struct 打开野外面板事件
+// 打开大地图：大世界探索服务 生成完那张 100×100 的格子世界后发布 → 面板管理器 路由到 大世界面板。
+// v51 起带数据（原来是空结构体，且**一个订阅者都没有** → 主菜单"新游戏/继续"静默无反应；这次一并修掉）。
+public readonly struct 打开大地图事件
 {
-    public readonly string 区域标识;
-    public readonly string 返回节点;
-    public 打开野外面板事件(string 区域标识, string 返回节点) { this.区域标识 = 区域标识; this.返回节点 = 返回节点; }
+    public readonly string 世界标识;
+    public readonly int 种子;
+    public 打开大地图事件(string 世界标识, int 种子) { this.世界标识 = 世界标识; this.种子 = 种子; }
 }
 
 // 地图位置变化：HUD 地点栏更新用

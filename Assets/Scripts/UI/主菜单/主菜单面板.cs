@@ -42,7 +42,7 @@ public sealed class 主菜单面板 : 面板基类
             玩家.待选天赋.Clear();
             玩家.待选天赋.Add("战术本能");
             玩家.新游戏();
-            ServiceRegistry.Get<地图服务>().打开大地图("营地");
+            ServiceRegistry.Get<大世界探索服务>()?.打开默认世界();
         }
     }
 
@@ -57,7 +57,8 @@ public sealed class 主菜单面板 : 面板基类
             return;
         }
         玩家.读档();
-        ServiceRegistry.Get<地图服务>().打开大地图(string.IsNullOrEmpty(玩家.档案.当前大节点) ? "营地" : 玩家.档案.当前大节点);
+        // 读档后世界种子从档案里恢复 → 打开的还是**同一座废城**（不用再传"当前大节点"）
+        ServiceRegistry.Get<大世界探索服务>()?.打开默认世界();
     }
 
     // 设置：打开全局设置面板

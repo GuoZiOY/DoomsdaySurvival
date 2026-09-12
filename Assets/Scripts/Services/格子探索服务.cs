@@ -16,7 +16,10 @@ using UnityEngine;
 public abstract class 格子探索服务
 {
     // —— 走一格的游戏时间（所有探索层一致）——
-    public const int 移动游戏分钟 = 1;
+    // —— 走一格的**游戏时间**（派生类可覆写：大世界是赶路，5 游戏分钟/格；楼里/区域里是 1）——
+    // 注：原来是 const，为了让大世界能单独定速改成 virtual 属性。全仓库只有 推进一步() 用它，
+    //     改 virtual 不影响任何编译期用法（`每格现实秒` 是表现层节奏，仍是 const，不动）。
+    public virtual int 移动游戏分钟 => 1;
     // —— 走一格的现实节奏（表现层：令牌速度 = 1 格 / 每格现实秒）——
     public const float 每格现实秒 = 0.30f;
 

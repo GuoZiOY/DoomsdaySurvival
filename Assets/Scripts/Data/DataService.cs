@@ -14,7 +14,6 @@ using UnityEngine;
         public Dictionary<string, 物品数据> 物品 { get; private set; } = new Dictionary<string, 物品数据>();
         public Dictionary<string, 技能数据> 技能 { get; private set; } = new Dictionary<string, 技能数据>();
         public Dictionary<string, 任务数据> 任务 { get; private set; } = new Dictionary<string, 任务数据>();
-        public Dictionary<string, 地图地点> 地图 { get; private set; } = new Dictionary<string, 地图地点>();
         public Dictionary<string, 设施定义> 设施 { get; private set; } = new Dictionary<string, 设施定义>();
         public Dictionary<string, 训练项目> 训练项目 { get; private set; } = new Dictionary<string, 训练项目>();
         public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
@@ -55,7 +54,6 @@ using UnityEngine;
             加载物品();   // items.json 已按类型拆分多文件（便于查看修改），全部合并进 物品 字典
             加载("skills", 技能, (技能根 根) => 根.技能);
             加载("quests", 任务, (任务根 根) => 根.任务);
-            加载("map", 地图, (地图根 根) => 根.地点);
             加载("facilities", 设施, (设施根 根) => 根.设施);   // 允许缺失（M4 才有）
             加载("training", 训练项目, (训练项目根 根) => 根.训练项目);
             加载("buffs", Buffs, (Buff根 根) => 根.Buffs);
@@ -212,8 +210,9 @@ using UnityEngine;
             foreach (var 路由 in 区域剧情)
             {
                 string 路由名 = $"区域剧情[{路由.区域}/{路由.阶段}]";
-                if (!地图.ContainsKey(路由.区域))
-                    校验错误.Add($"{路由名} → 地点[{路由.区域}] 不存在");
+                // 区域剧情 的「区域」原本是**大地图地点标识**；节点网图退役后改指**区域模板**（副本）
+                if (!区域模板.ContainsKey(路由.区域))
+                    校验错误.Add($"{路由名} → 区域模板[{路由.区域}] 不存在");
                 if (!string.IsNullOrEmpty(路由.节点) && !剧情.ContainsKey(路由.节点))
                     校验错误.Add($"{路由名} → 节点[{路由.节点}] 不存在");
                 if (!string.IsNullOrEmpty(路由.需要物品) && !物品.ContainsKey(路由.需要物品))
@@ -231,14 +230,9 @@ using UnityEngine;
                         校验错误.Add($"助战组[{标识}] → 伙伴[{项.标识}] 不存在");
             }
 
-            // —— 地图：连接（节点图是邻接表，"连接"指到的节点必须存在）——
-            //   原「地点.目标 = 剧情节点」那条校验随 城镇小地图/节点内部 一起删：末日版由 区域剧情路由 管。
-            foreach (var (标识, 地点) in 地图)
-            {
-                if (地点.连接 != null)
-                    foreach (var 相邻 in 地点.连接)
-                        if (!地图.ContainsKey(相邻)) 校验错误.Add($"地图[{标识}] → 连接[{相邻}] 不存在");
-            }
+            // —— 地图：v51 起**节点网图整体退役**（大世界改成 100×100 格子网格，见 Data/世界.json）——
+            //   原来那段「地点.连接 邻接表校验」随 地图地点/map.json/地图服务 一起删掉了。
+            //   大世界的数据级校验在下面「大世界（世界.json）」那一段；"摆出来连不连通"由 Tools/大世界验证 离线断言。
 
             // —— 物品：装备类必须有 槽位 ——
             foreach (var (标识, 物品) in 物品)
@@ -530,15 +524,26 @@ using UnityEngine;
                             if (条 == null) continue;
                             if (条.条件 != "情报" && 条.条件 != "物品" && 条.条件 != "天数" && 条.条件 != "前置区域")
                             { 校验错误.Add($"{子} → 解锁条件[{条.条件}] 非法（只能是 情报/物品/天数/前置区域）"); continue; }
+                            // ★ 不许出现"永远打不开的门"（v49 钥匙投放那条纪律的延伸）：
+                            //   · 「情报」目前**根本没有实现** —— 情报系统只到"收音机播报池"为止，
+                            //     全仓库没有任何"已获得某条情报"的记录。写了它就是一道打不开的门 → 直接判错误。
+                            //   · 「前置区域」的机制在（大世界探索服务 查 玩家档案.已清空），但**目前没有任何东西会去标记
+                            //     "某片区域已通关"**（标记清空 全仓库 0 调用）→ 先给警告，等副本那刀接通再转正。
+                            if (条.条件 == "情报")
+                                校验错误.Add($"{子} → 解锁条件「情报」暂不可用：情报系统还没有\"已获得\"的记录，"
+                                          + "写了会变成一道永远打不开的门。请先用 物品 / 天数 / 前置区域。");
                             if (条.条件 == "天数" && 条.数值 <= 0)
                                 校验错误.Add($"{子} → 解锁条件 天数 没写正的 数值");
-                            if (条.条件 == "前置区域" && !区域模板.ContainsKey(条.标识))
-                                校验错误.Add($"{子} → 解锁条件 前置区域[{条.标识}] 不存在");
+                            if (条.条件 == "前置区域")
+                            {
+                                if (!区域模板.ContainsKey(条.标识))
+                                    校验错误.Add($"{子} → 解锁条件 前置区域[{条.标识}] 不存在");
+                                else
+                                    校验警告.Add($"{子} → 解锁条件「前置区域 {条.标识}」：目前没有任何东西会标记区域已通关，"
+                                              + "这道门在副本进度那刀接通之前打不开。");
+                            }
                             if (条.条件 == "物品" && !物品.ContainsKey(条.标识))
                                 校验错误.Add($"{子} → 解锁条件 物品[{条.标识}] 不存在");
-                            // 情报 是**无标识列表**（DataService.情报 是 List<情报条目>），只能按非空 + 提示存在性检查
-                            if (条.条件 == "情报" && string.IsNullOrEmpty(条.标识))
-                                校验错误.Add($"{子} → 解锁条件 情报 没写 标识");
                         }
                     }
 

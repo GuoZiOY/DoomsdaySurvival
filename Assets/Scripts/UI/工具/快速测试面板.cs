@@ -150,6 +150,12 @@ public sealed class 快速测试面板 : MonoBehaviour
         var 右列 = 创建列(内容物体.transform);
         (string, (string, UnityAction)[])[] 左分区 =
         {
+            ("大世界（100×100 网格）", new (string, UnityAction)[]
+            {
+                ("进入 废城", 进入大世界),
+                ("显示区域解锁状态", 打印区域解锁状态),
+                ("打印大世界结构（控制台）", 打印大世界结构),
+            }),
             ("建筑（第 3 层）", new (string, UnityAction)[]
             {
                 ("进入 便利店（西街店）", () => 进入建筑("西街便利店")),
@@ -564,6 +570,108 @@ public sealed class 快速测试面板 : MonoBehaviour
         int 种子 = Random.Range(1, int.MaxValue);
         if (!服务.进入建筑(建筑标识, 种子)) { 日志($"[测试] 进入 {建筑标识} 失败（看 Console）。", true); return; }
         日志($"[测试] 进入建筑：{建筑标识}（种子 {种子}）——走到楼梯格（外墙上凸出来的那一格）右键 上楼/下楼。");
+    }
+
+    // ================= 大世界（100×100 格子网格） =================
+    // 说明：大世界面板（UI）是下一刀（刀4）。在那之前**用这里**验证大世界逻辑：
+    //   服务（大世界探索服务）与数据（世界.json / 大世界生成器）都已就位，缺的只是那一层画面 + 图层虚拟化。
+
+    // 进入大世界：种子取自 玩家档案.世界种子 → 同一存档每次进来都是**同一座废城**
+    private void 进入大世界()
+    {
+        var 服务 = ServiceRegistry.Get<大世界探索服务>();
+        if (服务 == null) { 日志("[测试] 大世界探索服务未装配。", true); return; }
+        if (!服务.打开默认世界()) { 日志("[测试] 进入大世界失败（看 Console：Data/世界.json 没读到？）。", true); return; }
+        日志($"[测试] 已进入大世界「{服务.当前世界标识}」（种子 {服务.当前种子}）"
+           + "——走到区域门口那一格进副本、走到安全屋门口那一格回营地；走一格 5 游戏分钟。");
+    }
+
+    // 各区域的解锁状态（一眼看出"哪片进得去、为什么进不去"）
+    private void 打印区域解锁状态()
+    {
+        var 服务 = ServiceRegistry.Get<大世界探索服务>();
+        var 世 = 服务?.当前大世界;
+        if (世 == null) { 日志("[测试] 当前不在大世界里。", true); return; }
+        foreach (var 区 in 大世界生成器.区域列表(世))
+        {
+            var 门 = 大世界生成器.区域门口格(区);
+            string 缘由 = 服务.未解锁缘由(区);
+            日志($"[测试] {区.名称} {区.宽}×{区.高}@({区.列},{区.行}) 门口({门.列},{门.行}) → "
+               + (string.IsNullOrEmpty(缘由) ? "可进" : $"锁着：{缘由}"));
+        }
+    }
+
+    // 打印大世界结构：100×100 太大 → 按 4 格降采样（与 Tools/大世界验证 同一套符号，方便对照）
+    private void 打印大世界结构()
+    {
+        var 服务 = ServiceRegistry.Get<大世界探索服务>();
+        var 世 = 服务?.当前大世界;
+        if (世 == null) { 日志("[测试] 当前不在大世界里。", true); return; }
+
+        const int 步 = 4;
+        var 缓冲 = new System.Text.StringBuilder();
+        缓冲.AppendLine($"[大世界] {服务.信息条()}");
+        缓冲.AppendLine($"[视野] 时段 {视野规则.时段名(服务.当前时段)} · 视野边长 {世.视野边长} · "
+                      + $"玩家({服务.玩家列},{服务.玩家行}) · 每格 {服务.移动游戏分钟} 游戏分钟");
+
+        var 区们 = 大世界生成器.区域列表(世);
+        var 门集 = new System.Collections.Generic.HashSet<int>();
+        foreach (var 区 in 区们) { var m = 大世界生成器.区域门口格(区); 门集.Add(网格数据.编码(m.列, m.行)); }
+        var 营 = 大世界生成器.营地实体(世);
+        int 营门码 = 营 != null ? 营.门口格 : -1;
+        var 你 = 世.玩家();
+
+        缓冲.AppendLine($"  降采样 1/{步}（每格 = 世界上 {步}×{步} 格）：# 边界　C 营地　B 区域　+ 区域门　o 障碍　@ 你　· 空地");
+        for (int br = 0; br < 世.行; br += 步)
+        {
+            var 行 = new System.Text.StringBuilder("  ");
+            for (int bc = 0; bc < 世.列; bc += 步)
+            {
+                char 符 = '·';
+                for (int r = br; r < System.Math.Min(br + 步, 世.行); r++)
+                    for (int c = bc; c < System.Math.Min(bc + 步, 世.列); c++)
+                    {
+                        int 码 = 网格数据.编码(c, r);
+                        var e = 世.格上实体(c, r);
+                        char 本 = '·';
+                        if (e != null)
+                            本 = e.是玩家 ? '@'
+                                : e.类型 == 网格实体类型.墙 ? '#'
+                                : e.类型 == 网格实体类型.区域 ? 'B'
+                                : e.类型 == 网格实体类型.障碍 ? 'o'
+                                : e.类型 == 网格实体类型.建筑 ? 'C' : '·';
+                        if (码 == 营门码) 本 = 'C';
+                        if (门集.Contains(码)) 本 = '+';
+                        if (大世界符号优先级(本) > 大世界符号优先级(符)) 符 = 本;
+                    }
+                if (你 != null && bc <= 你.列 && 你.列 < bc + 步 && br <= 你.行 && 你.行 < br + 步) 符 = '@';
+                行.Append(符);
+            }
+            缓冲.AppendLine(行.ToString());
+        }
+        foreach (var 区 in 区们)
+        {
+            var m = 大世界生成器.区域门口格(区);
+            string 缘由 = 服务.未解锁缘由(区);
+            缓冲.AppendLine($"[区域] {区.名称} {区.宽}×{区.高}@({区.列},{区.行}) → 门口({m.列},{m.行})　"
+                          + (string.IsNullOrEmpty(缘由) ? "可进" : $"锁着：{缘由}"));
+        }
+        Debug.Log(缓冲.ToString());
+        日志("[测试] 大世界结构已打印到 Console。");
+    }
+
+    private static int 大世界符号优先级(char 符)
+    {
+        switch (符)
+        {
+            case '@': return 6;
+            case '+': return 5;
+            case 'C': return 4;
+            case 'B': return 3;
+            case 'o': return 2;
+            case '#': return 1;
+            default: return 0;
+        }
     }
 
     // 区域（第 1 刀）：进一片区域（种子随机 → 每次进去楼的位置/种类不同）；走到楼门口的格子上就进楼

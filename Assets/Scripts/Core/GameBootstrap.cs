@@ -92,12 +92,12 @@ using UnityEngine;
             ServiceRegistry.Register(new 天赋服务(事件, 玩家));   // 机制型天赋（致命伤害/制作完成 事件响应）
             var 词缀 = new 词缀服务(数据);   // 装备随机词条生成（掉落/装备实例）
             ServiceRegistry.Register(词缀);
-            ServiceRegistry.Register(new 地图服务(事件, 数据, 玩家, 对话));
+            ServiceRegistry.Register(new 大世界探索服务(事件, 数据, 玩家));   // 大世界层：100×100 格子网格（区域副本坐在它上面）
 
             // 自动存档器：订阅跨天/主线/战斗结束/返回主菜单 自动保存（须在业务服务之后注册）
             ServiceRegistry.Register(new 自动存档器(事件, ServiceRegistry.Get<SaveService>(), 玩家));
 
-            Debug.Log($"[GameBootstrap] 核心服务装配完成：剧情 {数据.剧情.Count} / 敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 地点 {数据.地图.Count}");
+            Debug.Log($"[GameBootstrap] 核心服务装配完成：剧情 {数据.剧情.Count} / 敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 大世界 {数据.世界.Count}");
             // UI 由场景「UI管理器」组件装配与驱动（主菜单/剧情/设施面板均由它切换显示）
         }
     }

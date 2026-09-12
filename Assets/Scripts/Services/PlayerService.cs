@@ -33,6 +33,7 @@ using UnityEngine;
             档案 = new 玩家档案();
             接线解析器(档案);
             档案.户型种子 = UnityEngine.Random.Range(1, int.MaxValue);   // 新游戏：随机 户型 种子（读档 恢复 不 覆盖）
+            档案.世界种子 = UnityEngine.Random.Range(1, int.MaxValue);   // 新游戏：随机 大世界 布局种子（读档 恢复 不 覆盖）
             档案.生命 = 档案.最大生命;
             档案.行动点 = 档案.最大行动点;
             发布初始状态();
@@ -186,6 +187,9 @@ using UnityEngine;
             if (档案.敏捷 < 0) 档案.敏捷 = 0;
             if (档案.意志 < 0) 档案.意志 = 0;
             if (档案.自由属性点 < 0) 档案.自由属性点 = 0;
+            // 旧档没有 世界种子（v51 新增）：补一个随机的，别让 0 当种子用（0 会让派生结果退化）
+            if (档案.世界种子 <= 0) 档案.世界种子 = UnityEngine.Random.Range(1, int.MaxValue);
+            if (档案.户型种子 <= 0) 档案.户型种子 = UnityEngine.Random.Range(1, int.MaxValue);
             if (档案.游戏分钟数 < 0) 档案.游戏分钟数 = 0;
             档案.饱食度 = Mathf.Clamp(档案.饱食度, 0f, 100f);
             档案.水分度 = Mathf.Clamp(档案.水分度, 0f, 100f);
