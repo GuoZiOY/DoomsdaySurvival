@@ -263,7 +263,7 @@ public static class Program
         {
             var 门 = 大世界生成器.区域门口格(区);
             string 解 = (区.解锁 == null || 区.解锁.Length == 0) ? "无条件" : $"{区.解锁.Length} 条";
-            string 内 = 区表.TryGetValue(区.定义标识 ?? "", out var t) ? $"{t.列}×{t.行}·重置{t.重置小时}h·稀有{t.稀有度}" : "（区域模板缺）";
+            string 内 = 区表.TryGetValue(区.定义标识 ?? "", out var t) ? $"{t.列}×{t.行}·危险{t.危险度}" : "（区域模板缺）";
             Console.WriteLine($"  {区.标识}「{区.名称}」{区.宽}×{区.高}@({区.列},{区.行}) → 门口格({门.列},{门.行})　解锁 {解}　副本内部 {内}");
         }
     }
