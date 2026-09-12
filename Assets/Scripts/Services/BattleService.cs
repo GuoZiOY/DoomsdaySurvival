@@ -37,6 +37,8 @@ public sealed class BattleService
     public string 当前消息 { get; private set; }
 
     private const string 危险色 = "#c7473d";
+    // 上一次"发过 时间变化事件"的游戏分钟整数值（v51 刀15：把每帧事件降成每分钟一次；-1 = 还没发过）
+    private int 上次发事件的分 = -1;
 
     public BattleService(EventBus 事件, DataService 数据, PlayerService 玩家服务)
     { this.事件 = 事件; this.数据 = 数据; this.玩家服务 = 玩家服务; }
@@ -160,7 +162,17 @@ public sealed class BattleService
         {
             档案实例.游戏分钟数 += 游戏分钟;
             ServiceRegistry.Get<世界时间管理器>()?.同步整点基准();
-            事件.发布(new 时间变化事件(档案实例.游戏分钟数));
+            // ★ v51 刀15：时间事件**按游戏分钟粒度发**，不再每帧发。
+            //   原来 60fps 下一场 60 秒战斗要发 3600 次，而订阅者干的是重活
+            //   （格子探索服务.时间变化响应 里无条件 刷新视野() → 每帧 new 一个可见集 HashSet；
+            //     HUD 每帧格式化时间串 + TMP 富文本重赋值；自动存档器 每帧判跨天）。
+            //   跨天 / 白天夜晚切换 都只需要分钟粒度，所以这里按 (int)游戏分钟数 去重。
+            int 整分 = (int)档案实例.游戏分钟数;
+            if (整分 != 上次发事件的分)
+            {
+                上次发事件的分 = 整分;
+                事件.发布(new 时间变化事件(档案实例.游戏分钟数));
+            }
         }
         // 行动条累积：每轮 先 锁 意图（读条 = 意图，颜色 由 意图 决定），按 意图 间隔（现实 秒）匀速 推进——满 100 = 一次 行动
         foreach (var 单位 in 全部单位())
