@@ -45,12 +45,15 @@ public sealed class 区域网格面板 : 探索网格面板
     }
 
     // ================= 实体框（区域外观） =================
+    // 骨架已上提到 探索网格面板.创建实体框（v51 刀21）—— 这里只剩"街上的东西怎么画"。
 
-    protected override 物品框 创建实体框(物品堆叠 堆叠)
+    protected override bool 需要实体描边(网格实体 实体)
+        // 楼与障碍给方块黑描边（体量感）；墙靠转角描边、令牌用圆盘
+        => 实体 != null && (实体.类型 == 网格实体类型.建筑 || 实体.类型 == 网格实体类型.障碍);
+
+    protected override void 建实体外观(GameObject 物体, 物品框 框, 网格实体 实体, 物品堆叠 堆叠, int 宽, int 高)
     {
-        if (堆叠 == null) return null;
-        var 实体 = 找实体(堆叠.标识);
-        var (宽, 高) = 格数(堆叠);
+        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
         bool 是墙 = 实体 != null && 实体.类型 == 网格实体类型.墙;
         bool 是楼 = 实体 != null && 实体.类型 == 网格实体类型.建筑;
         bool 是障碍 = 实体 != null && 实体.类型 == 网格实体类型.障碍;
@@ -58,24 +61,6 @@ public sealed class 区域网格面板 : 探索网格面板
         bool 是门 = 实体 != null && 实体.类型 == 网格实体类型.门;   // 街口（区域唯一的出口，走上去就出门）
         bool 是玩家 = 实体 != null && 实体.是玩家;
 
-        var 物体 = new GameObject($"实体_{堆叠.标识}", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(物品层, false);
-        var 框 = new 物品框();
-        框.根 = 物体.GetComponent<RectTransform>();
-        物体.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // 框根透明（只留贴图与描边）
-        // 玩家令牌不吃点击（和房间层同一条：令牌常和脚下那一格的实体重叠 → 一接点击就把它盖住）
-        if (是玩家) 物体.GetComponent<Image>().raycastTarget = false;
-        框.组 = 物体.AddComponent<CanvasGroup>();   // 缓存进 物品框（更新实体框 每次刷新都要用，见那里注释）
-        if (是楼 || 是障碍)   // 楼与障碍给方块黑描边（体量感）；墙靠转角描边、令牌用圆盘
-        {
-            var 描边 = 物体.AddComponent<Outline>();
-            描边.effectColor = 网格面板配色.网格实体描边;
-            描边.effectDistance = 物品描边距离;
-        }
-        定位(框.根, 堆叠.列, 堆叠.行, 宽, 高);
-        框.高光层 = 创建高光层(物体.transform);
-
-        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
         if (是楼)
         {
             // 楼体：**按掩码逐格铺**（L / 凸 / 凹 都能画对）+ 只在"邻居不是本栋楼"的边描暗边。
@@ -152,9 +137,6 @@ public sealed class 区域网格面板 : 探索网格面板
             框.内容层 = 图.rectTransform;
             框.名称 = 建名称(物体.transform, 实体?.名称 ?? 堆叠.标识, new Vector2(0.5f, 0.5f), new Vector2(整宽, 整高), 14f);
         }
-
-        挂接交互(框, 堆叠, 框.内容层);
-        return 框;
     }
 
     protected override void 更新实体框(物品框 框, 物品堆叠 堆叠)

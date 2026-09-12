@@ -44,12 +44,20 @@ public sealed class 房间网格面板 : 探索网格面板
     }
 
     // ================= 实体框（房间外观） =================
+    // 骨架（物体/框根/高光层/定位/挂交互）已上提到 探索网格面板.创建实体框（v51 刀21）——
+    // 这里只剩"房间里的东西怎么画"。
 
-    protected override 物品框 创建实体框(物品堆叠 堆叠)
+    protected override bool 需要实体描边(网格实体 实体)
     {
-        if (堆叠 == null) return null;
-        var 实体 = 找实体(堆叠.标识);
-        var (宽, 高) = 格数(堆叠);
+        // 墙靠相邻描边、令牌靠圆盘、门/楼梯靠自己的贴图，都不要方块黑框
+        if (实体 == null) return true;
+        return 实体.类型 != 网格实体类型.墙 && !实体.是玩家
+            && 实体.类型 != 网格实体类型.敌人 && 实体.类型 != 网格实体类型.门 && 实体.类型 != 网格实体类型.楼梯;
+    }
+
+    protected override void 建实体外观(GameObject 物体, 物品框 框, 网格实体 实体, 物品堆叠 堆叠, int 宽, int 高)
+    {
+        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
         bool 是墙 = 实体 != null && 实体.类型 == 网格实体类型.墙;
         bool 是玩家 = 实体 != null && 实体.是玩家;
         bool 是敌人 = 实体 != null && 实体.类型 == 网格实体类型.敌人;
@@ -58,26 +66,6 @@ public sealed class 房间网格面板 : 探索网格面板
         bool 是楼梯 = 实体 != null && 实体.类型 == 网格实体类型.楼梯;
         bool 是界外 = 实体 != null && 实体.类型 == 网格实体类型.界外;   // 挡通行但**不画**（楼梯间那一侧的空档）
 
-        var 物体 = new GameObject($"实体_{堆叠.标识}", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(物品层, false);
-        var 框 = new 物品框();
-        框.根 = 物体.GetComponent<RectTransform>();
-        物体.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // 框根透明（只留贴图与描边）
-        // 玩家令牌**不吃点击**：令牌经常和"脚下那一格的实体"重叠（最典型 = 站在楼梯上），
-        // 令牌若接点击，右键就永远轮不到楼梯 → 站在楼梯上点不动、上下不了楼（"点了没反应"）。
-        // 令牌本身没有任何可点交互（点自己脚下 = 原地），让出去零损失。
-        if (是玩家) 物体.GetComponent<Image>().raycastTarget = false;
-        框.组 = 物体.AddComponent<CanvasGroup>();                        // 已搜灰化 用（缓存进 物品框：更新实体框 每次刷新都要用，见那里注释）
-        if (!是墙 && !是玩家 && !是敌人 && !是门 && !是楼梯)   // 墙靠相邻描边、令牌靠圆盘、门/楼梯靠自己的贴图，都不要方块黑框
-        {
-            var 描边 = 物体.AddComponent<Outline>();
-            描边.effectColor = 网格面板配色.网格实体描边;
-            描边.effectDistance = 物品描边距离;
-        }
-        定位(框.根, 堆叠.列, 堆叠.行, 宽, 高);
-        框.高光层 = 创建高光层(物体.transform);
-
-        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
         if (是墙)
         {
             var 墙图 = 摆满(物体.transform, "墙", 房间贴图.墙顶(), Color.white, 整宽, 整高);
@@ -132,8 +120,6 @@ public sealed class 房间网格面板 : 探索网格面板
 
         if (!是墙 && !是玩家 && !是敌人 && !是门 && !是楼梯) 建边界线(物体.transform);   // 容器/尸体 画自己的边界线（墙连成一片、令牌用圆盘、门/楼梯是贴图，都不画）
         if (是界外) 物体.SetActive(false);   // 界外格整块隐藏（它不画，只挡路）
-        挂接交互(框, 堆叠, 框.内容层);
-        return 框;
     }
 
     protected override void 更新实体框(物品框 框, 物品堆叠 堆叠)

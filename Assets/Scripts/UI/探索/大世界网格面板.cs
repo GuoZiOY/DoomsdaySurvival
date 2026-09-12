@@ -56,36 +56,22 @@ public sealed class 大世界网格面板 : 探索网格面板
 
     // ================= 实体框（大世界外观） =================
 
-    protected override 物品框 创建实体框(物品堆叠 堆叠)
+    // ================= 实体框（大世界外观） =================
+    // 骨架已上提到 探索网格面板.创建实体框（v51 刀21）—— 这里只剩"从高处看这座城怎么画"。
+
+    protected override bool 需要实体描边(网格实体 实体)
+        // 障碍给方块黑描边（体量感）；区域块/营地靠自己的轮廓线、墙靠转角描边
+        => 实体 != null && 实体.类型 == 网格实体类型.障碍;
+
+    protected override void 建实体外观(GameObject 物体, 物品框 框, 网格实体 实体, 物品堆叠 堆叠, int 宽, int 高)
     {
-        if (堆叠 == null) return null;
-        var 实体 = 找实体(堆叠.标识);
-        var (宽, 高) = 格数(堆叠);
+        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
         bool 是墙 = 实体 != null && 实体.类型 == 网格实体类型.墙;
         bool 是区域 = 实体 != null && 实体.类型 == 网格实体类型.区域;
         bool 是障碍 = 实体 != null && 实体.类型 == 网格实体类型.障碍;
         bool 是营地 = 实体 != null && 实体.类型 == 网格实体类型.建筑 && 实体.定义标识 == "安全屋";
         bool 是临时 = 实体 != null && 实体.类型 == 网格实体类型.临时建筑;
         bool 是玩家 = 实体 != null && 实体.是玩家;
-
-        var 物体 = new GameObject($"实体_{堆叠.标识}", typeof(RectTransform), typeof(Image));
-        物体.transform.SetParent(物品层, false);
-        var 框 = new 物品框();
-        框.根 = 物体.GetComponent<RectTransform>();
-        物体.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // 框根透明（只留贴图与描边）
-        // 玩家令牌不吃点击（令牌常和脚下那一格的实体重叠 → 一接点击就把它盖住）
-        if (是玩家) 物体.GetComponent<Image>().raycastTarget = false;
-        框.组 = 物体.AddComponent<CanvasGroup>();   // 缓存进 物品框（更新实体框 每次刷新都要用，见那里注释）
-        if (是障碍)   // 障碍给方块黑描边（体量感）；区域块/营地靠自己的轮廓线、墙靠转角描边
-        {
-            var 描边 = 物体.AddComponent<Outline>();
-            描边.effectColor = 网格面板配色.网格实体描边;
-            描边.effectDistance = 物品描边距离;
-        }
-        定位(框.根, 堆叠.列, 堆叠.行, 宽, 高);
-        框.高光层 = 创建高光层(物体.transform);
-
-        float 整宽 = 宽 * 格尺寸, 整高 = 高 * 格尺寸;
 
         if (是区域) 建区域块(物体, 框, 实体, 整宽, 整高);
         else if (是营地) 建方块(物体, 框, 实体, 整宽, 整高, 大世界贴图.营地(), "安全屋", 网格面板配色.区域门色);
@@ -122,9 +108,6 @@ public sealed class 大世界网格面板 : 探索网格面板
             框.内容层 = 图.rectTransform;
             框.名称 = 建名称(物体.transform, 实体?.名称 ?? 堆叠.标识, new Vector2(0.5f, 0.5f), new Vector2(整宽, 整高), 14f);
         }
-
-        挂接交互(框, 堆叠, 框.内容层);
-        return 框;
     }
 
     // 区域副本：按掩码**逐格铺砖纹** + 只描朝外的轮廓 + 块名 + 门口那一格（按解锁状态上色）
