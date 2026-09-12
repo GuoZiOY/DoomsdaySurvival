@@ -47,12 +47,9 @@ public abstract class 设施逻辑
     }
 }
 
-// 设施打开上下文：路由器把 逻辑 + 来源节点 + 返回节点 一起传给功能面板
+// 设施打开上下文：路由器把 逻辑 传给功能面板（原「来源节点 + 返回节点」随 节点内部图 一起删掉了）
 public readonly struct 设施打开上下文
 {
     public readonly 设施逻辑 逻辑;
-    public readonly 地图节点 节点;    // 来源节点（返回内部用）
-    public readonly string 返回节点;
-    public 设施打开上下文(设施逻辑 逻辑, 地图节点 节点, string 返回节点)
-    { this.逻辑 = 逻辑; this.节点 = 节点; this.返回节点 = 返回节点; }
+    public 设施打开上下文(设施逻辑 逻辑) { this.逻辑 = 逻辑; }
 }

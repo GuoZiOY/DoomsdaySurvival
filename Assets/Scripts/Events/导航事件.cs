@@ -30,49 +30,29 @@ public readonly struct 打开营地事件 { }
 // 打开任务面板（全局）——侧边栏「任务」按钮调出 系统任务面板（主线/支线/日常）
 public readonly struct 打开任务面板事件 { }
 
-// 打开节点内部图：任意节点（有 内部 数组）进入内部，携带节点 + 返回节点（回小地图用）
-public readonly struct 打开节点内部事件
-{
-    public readonly 地图节点 节点;
-    public readonly string 返回节点;
-    public 打开节点内部事件(地图节点 节点, string 返回节点) { this.节点 = 节点; this.返回节点 = 返回节点; }
-}
-
-// 打开对话：进入剧情节点（内部 NPC 交谈用），携带来源节点与返回节点
+// 打开对话：进入剧情节点（NPC 交谈用）
 public readonly struct 打开对话事件
 {
     public readonly string 剧情节点;
-    public readonly 地图节点 节点;    // 来源节点（返回内部用）
-    public readonly string 返回节点;
-    public 打开对话事件(string 剧情节点, 地图节点 节点, string 返回节点) { this.剧情节点 = 剧情节点; this.节点 = 节点; this.返回节点 = 返回节点; }
+    public 打开对话事件(string 剧情节点) { this.剧情节点 = 剧情节点; }
 }
 
-// 打开功能面板：内部功能物节点触发，设施逻辑 + 功能标识 + 来源节点 + 返回节点
+// 打开功能面板：设施逻辑 + 功能标识（原「内部功能物节点触发」那一层随 城镇小地图/节点内部 一起拆掉）
 public readonly struct 打开功能面板事件
 {
     public readonly 设施逻辑 逻辑;
     public readonly string 功能标识;
-    public readonly 地图节点 节点;    // 来源节点（返回内部用）
-    public readonly string 返回节点;
-    public 打开功能面板事件(设施逻辑 逻辑, string 功能标识, 地图节点 节点, string 返回节点)
-    { this.逻辑 = 逻辑; this.功能标识 = 功能标识; this.节点 = 节点; this.返回节点 = 返回节点; }
+    public 打开功能面板事件(设施逻辑 逻辑, string 功能标识)
+    { this.逻辑 = 逻辑; this.功能标识 = 功能标识; }
 }
 
 // —— 地图导航事件 ——
 
-// 地图模式
-public enum 地图模式 { 大地图, 城镇, 野外 }
+// 地图模式：末日只有两种——在大世界节点图上，或在某个荒野（区域网格）里
+public enum 地图模式 { 大地图, 野外 }
 
-// 打开大地图面板
+// 打开大地图面板（节点图）
 public readonly struct 打开大地图事件 { }
-
-// 打开小地图面板：城镇标识 + 入口节点
-public readonly struct 打开小地图事件
-{
-    public readonly string 城镇标识;
-    public readonly string 入口节点;
-    public 打开小地图事件(string 城镇标识, string 入口节点) { this.城镇标识 = 城镇标识; this.入口节点 = 入口节点; }
-}
 
 // 打开野外面板：区域标识 + 返回节点（回大地图用）
 public readonly struct 打开野外面板事件
@@ -87,8 +67,7 @@ public readonly struct 地图位置事件
 {
     public readonly 地图模式 所在模式;
     public readonly string 大节点;
-    public readonly string 小节点;
-    public 地图位置事件(地图模式 所在模式, string 大节点, string 小节点) { this.所在模式 = 所在模式; this.大节点 = 大节点; this.小节点 = 小节点; }
+    public 地图位置事件(地图模式 所在模式, string 大节点) { this.所在模式 = 所在模式; this.大节点 = 大节点; }
 }
 
 // 面板切换：面板管理器 显示面板后发布（侧边栏等常驻 UI 据此刷新按钮显隐/状态）

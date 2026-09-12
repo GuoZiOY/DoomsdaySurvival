@@ -14,8 +14,7 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
     [SerializeField] private float 打字间隔 = 0.03f;  // 每字间隔（秒）
     [SerializeField] private float 自动间隔 = 0.8f;   // 剧情链自动进入下一节点的停顿（秒）
 
-    private 地图节点 返回节点数据;   // 空=主剧情；非空=从某节点内部进来（NPC 交谈）
-    private string 返回节点;         // 上级返回节点（回小地图用）
+    private bool 来自NPC交谈;        // true = 从 NPC 交谈进来的（取消 = 回上一个面板）
     private bool 显示结局;           // 结局模式：取消 = 回主菜单
     private 显示剧情事件? 打字节点;   // 正在打字的剧情节点（完成后生成选项；struct 用可空标记"无"）
     private Coroutine 打字协程;
@@ -29,9 +28,8 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
     {
         if (上下文 is 打开对话事件 对话)
         {
-            // NPC 交谈：记住来源节点，进入剧情节点（触发 显示剧情事件 再次渲染）
-            返回节点数据 = 对话.节点;
-            返回节点 = 对话.返回节点;
+            // NPC 交谈：进入剧情节点（触发 显示剧情事件 再次渲染）；取消时回上一个面板
+            来自NPC交谈 = true;
             ServiceRegistry.Get<DialogueService>().进入节点(对话.剧情节点);
             return;
         }
@@ -114,16 +112,17 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
         停打字();
         设文本(正文, "灰烬镇的余烬还在燃烧。龙在山的深处沉睡。\n\n你的故事，才刚刚开始。");
         清空(选项区);
-        创建行(选项区, "踏入灰烬镇（开放大地图）", () => ServiceRegistry.Get<地图服务>().打开大地图("灰烬镇"), true, true);
+        创建行(选项区, "离开这里（开放大地图）", () => ServiceRegistry.Get<地图服务>().打开大地图("营地"), true, true);
     }
 
-    // 全局取消：结局→回主菜单；NPC 交谈→返回设施内部；主剧情不响应（线性强制，不可取消）
+    // 全局取消：结局→回主菜单；NPC 交谈→回上一个面板；主剧情不响应（线性强制，不可取消）
     public override bool 回退()
     {
         if (显示结局) { 面板管理器.实例?.回主菜单(); return true; }
         if (打字协程 != null) { 停打字(); if (正文 != null) 正文.maxVisibleCharacters = 正文.textInfo.characterCount; 生成选项(); return true; }   // 打字中 = 取消 = 立即完成
-        if (返回节点数据 == null) return false;
-        返回设施内部();
+        if (!来自NPC交谈) return false;
+        来自NPC交谈 = false;
+        面板管理器.实例?.返回上一面板();
         return true;
     }
 
@@ -133,17 +132,8 @@ public sealed class 对话面板 : 面板基类, IPointerClickHandler
         {
             if (显示结局) return "结束";
             if (打字协程 != null) return "跳过";
-            if (返回节点数据 != null) return "返回";
+            if (来自NPC交谈) return "返回";
             return "取消";
         }
-    }
-
-    // 返回节点内部（NPC 交谈进来时）
-    private void 返回设施内部()
-    {
-        if (返回节点数据 == null) return;
-        var 节点 = 返回节点数据;
-        返回节点数据 = null;
-        ServiceRegistry.Get<EventBus>().发布(new 打开节点内部事件(节点, 返回节点));
     }
 }

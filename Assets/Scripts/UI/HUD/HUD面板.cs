@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 
 // HUD 面板：常驻顶栏，显示并实时更新 6 项——生命 / 行动点（精力）/ 饱食度 / 水分度 / 世界时间 / 世界地点。
@@ -98,15 +98,6 @@ public sealed class HUD面板 : 面板基类
     {
         var 数据 = ServiceRegistry.Get<DataService>();
         string 大名 = 数据.地图.TryGetValue(e.大节点, out var 大) ? 大.名称 : e.大节点;
-        switch (e.所在模式)
-        {
-            case 地图模式.城镇:
-                string 小名 = e.小节点;
-                if (数据.地图.TryGetValue(e.大节点, out var 镇) && 镇.小地图 != null)
-                    foreach (var 节点 in 镇.小地图) if (节点.标识 == e.小节点) { 小名 = 节点.名称; break; }
-                return $"{大名}·{小名}";
-            case 地图模式.野外: return $"{大名}（野外）";
-            default: return 大名;
-        }
+        return e.所在模式 == 地图模式.野外 ? $"{大名}（野外）" : 大名;
     }
 }

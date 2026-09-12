@@ -427,39 +427,23 @@ using System;
 
     // ================= 地图 =================
 
-    // 地图节点：小地图内的节点（入口/设施/空）。任何节点都可选挂「内部」（NPC+功能物图）。
-    [Serializable]
-    public class 地图节点
-    {
-        public string 标识;
-        public string 名称;
-        public string 类型;       // "入口"（双击离开城镇）/ "设施"（挂设施标识）/ "空"（普通点，靠内部交互）
-        public string 设施;       // 类型=设施 时的设施标识（内部功能物靠它提供功能逻辑）
-        public string 目标;       // 保留字段（旧剧情入口），暂不读取
-        public float x;           // 0~100 归一化坐标
-        public float y;
-        public string[] 连接;     // 相邻节点标识
-        public 设施内部节点[] 内部; // 可选：该节点的内部图（NPC + 功能物 节点）
-    }
-
-    // 大地图地点（节点）：城镇/荒野
+    // 大地图地点（节点）：城镇 / 荒野 / 营地
+    // 注：原来的「城镇小地图 + 节点内部图」（地图节点 / 设施内部节点 / 小地图 / 入口节点）是奇幻 RPG 的遗留，
+    //     末日版三层结构（大世界 → 区域 → 建筑 → 房间）里没有这一层，已连同 地图设计器 / 地图面板 一起删除。
     [Serializable]
     public class 地图地点
     {
         public string 标识;
         public string 名称;
         public string 描述;
-        public float x;           // 0~100 归一化坐标
+        public float x;           // 0~100 归一化坐标（节点图摆位用）
         public float y;
-        public string 类型;       // "城镇" / "荒野"
-        public string 区域;       // 类型=荒野 时关联的区域标识（探索用）
-        public string 入口节点;   // 类型=城镇 时进入小地图的起始节点
-        public string 目标;       // 剧情节点标识；或 "探索:区域标识"
+        public string 类型;       // "城镇" / "荒野" / "营地"
+        public string 区域;       // 类型=荒野 时关联的区域标识（进 区域网格 用）
         public string 解锁物品;   // 需要持有才能前往
         public string 解锁阶段;   // 需要主线阶段达到才能前往（空=无限制）
         public string 解锁提示;   // 可选：未解锁时的提示文本
-        public string[] 连接;     // 相邻大地图节点标识
-        public 地图节点[] 小地图; // 类型=城镇 时的内部节点图（设施网络）
+        public string[] 连接;     // 相邻大地图节点标识（节点图是"点一下走一步"的邻接表）
     }
 
     [Serializable]
@@ -470,21 +454,9 @@ using System;
 
     // ================= 设施 =================
 
-    // 节点内部节点：内部图节点（NPC 或 功能物）。NPC 就是 类型=NPC 的节点，无单独数组。
-    [Serializable]
-    public class 设施内部节点
-    {
-        public string 标识;
-        public string 名称;
-        public string 类型;       // "NPC" / "功能物"
-        public string 功能;       // 类型=功能物 时：教学/买卖/训练/任务/恢复/睡觉
-        public string 剧情节点;   // 类型=NPC 时：交谈进入的剧情节点
-        public float x;           // 0-100 归一化坐标
-        public float y;
-        public string[] 连接;     // 相邻节点标识
-    }
-
-    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）。内部已归地图节点所有。
+    // 设施定义：逻辑类型为 C# 类名（设施工厂反射实例化）。
+    // 注：末日版设施（交易站 / 诊所 / 家 / 训练场…）目前的入口还没接上（营地设施走 安全屋面板），
+    //     原来的"挂在城镇小地图节点内部"那条路已随 城镇小地图 一起删除。
     [Serializable]
     public class 设施定义
     {

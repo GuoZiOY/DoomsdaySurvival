@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 面板管理器 = 导航路由器：订阅导航事件，决定"哪个事件 → 显示哪个面板"。
-// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 房间(网格) / 城市地图 / 营地 / 背包 / 交易 / 任务。
+// 末日《最后87天》清单：主菜单 / 角色创建 / 对话(短事件) / 战斗 / 房间(网格) / 区域(网格) / 营地 / 背包 / 交易 / 任务。
 // 设施功能 → 面板 由 功能面板注册表 路由（替代原硬编码 switch）。
+// 注：奇幻版的「城市地图（大地图/城镇小地图/节点内部 三级节点图）」面板 + 地图设计器 已删除；
+//     大世界（节点网图）现在只有 地图服务 在跑，面板等"大世界表现法"定了再做。
 public sealed class 面板管理器 : MonoBehaviour
 {
     public static 面板管理器 实例 { get; private set; }
@@ -19,14 +21,12 @@ public sealed class 面板管理器 : MonoBehaviour
     [SerializeField] private 角色面板 角色;        // 属性/装备（改造中）
 
     // 末日新建面板（阶段 B 逐个补，先声明引用位）
-    [SerializeField] private 面板基类 城市地图;    // 城市三级地图（待建）
     [SerializeField] private 面板基类 营地;        // 营地面板（待建）
     [SerializeField] private 持有面板 背包;    // 持有面板（装备区 + 装具区 + 右区 子节点；F1 打开/返回）
     [SerializeField] private 面板基类 交易;        // 交易面板（待建）
     [SerializeField] private 面板基类 任务;        // 委托面板（待建）
 
     [SerializeField] private GameObject 按钮预制体;     // 动态按钮共享（列表行）
-    [SerializeField] private GameObject 地图节点预制体; // 地图节点按钮（节点图专用）
     [SerializeField] private GameObject[] 常驻UI;       // 常驻 UI（日志/侧边栏/时钟/设置）：开始流程后常驻，主菜单时收起
     [SerializeField] private GameObject HUD;             // HUD 顶栏（独立 挂 Canvas 顶层）：安全屋/持有 面板 显示；主菜单/角色创建 隐藏
 
@@ -100,7 +100,6 @@ public sealed class 面板管理器 : MonoBehaviour
     {
         实例 = this;
         面板基类.按钮预制体 = 按钮预制体;
-        地图渲染.节点预制体 = 地图节点预制体;
 
         GameBootstrap.装配();
 
@@ -111,7 +110,7 @@ public sealed class 面板管理器 : MonoBehaviour
     private void 收集可切换面板()
     {
         可切换面板.Clear();
-        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 房间, 区域, 角色, 城市地图, 营地, 背包, 交易, 任务 };
+        var 全部 = new 面板基类[] { 主菜单, 角色创建, 对话, 战斗, 房间, 区域, 角色, 营地, 背包, 交易, 任务 };
         foreach (var 面板 in 全部)
             if (面板 != null) 可切换面板.Add(面板);
     }
@@ -132,12 +131,13 @@ public sealed class 面板管理器 : MonoBehaviour
         事件.订阅<打开角色面板事件>(_ => 显示(角色));
         事件.订阅<打开任务面板事件>(_ => 显示(任务));
         事件.订阅<打开营地事件>(_ => 显示(营地));   // 安全屋面板（返回营地/进入营地）
-        事件.订阅<打开大地图事件>(_ => 显示(城市地图));
+        // 「打开大地图事件」暂时没有订阅者：城市地图/节点图面板还没做（原 面板基类 城市地图 引用位已删）。
+        // 大世界表现法定了之后在这里接面板；在那之前 主菜单"继续/新游戏"会静默什么都不发生。
         // 功能面板事件 → 注册表路由（未注册则日志提示）
         事件.订阅<打开功能面板事件>(e =>
         {
             if (功能面板注册表.TryGetValue(e.功能标识, out var 路由))
-                显示(路由(new 设施打开上下文(e.逻辑, e.节点, e.返回节点)));
+                显示(路由(new 设施打开上下文(e.逻辑)));
             else
                 Debug.LogWarning($"[面板管理器] 未注册功能面板: {e.功能标识}");
         });

@@ -42,10 +42,10 @@
   <Project Path="Unity.2D.Common.Runtime.csproj" />
   <Project Path="MCPForUnity.Runtime.csproj" />
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="地图设计器.Tests.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.VisualScripting.DocCodeExamples.csproj" />
