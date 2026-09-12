@@ -20,5 +20,6 @@
     <Compile Include="..\..\Assets\Scripts\Domain\区域\建筑外形.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\区域\区域生成器.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\大世界\大世界生成器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\大世界\搜索规则.cs" />
   </ItemGroup>
 </Project>

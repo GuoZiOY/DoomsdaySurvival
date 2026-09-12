@@ -191,6 +191,73 @@ if ($世界) {
             }
         }
         if ($w.战斗棋盘 -and -not $棋盘.Contains([string]$w.战斗棋盘)) { 报错 ("世界[{0}] 战斗棋盘[{1}] 不存在" -f $w.标识, $w.战斗棋盘) }
+
+        # ---------- 搜参的三条防刷约束（v52，设计见 docs/大世界搜索约束设计.md）----------
+        # 为什么必须在这边也查一遍：这三条都是"结构合法但语义失效"那类错（名字写错、白名单漏了禁区），
+        # 只有交叉核对才看得出来。DataService 里有一份同样的校验（运行时挡玩家）；这份是不开 Unity 也能看见。
+        $s = $w.搜索
+        if ($s) {
+            if ($null -ne $s.枯竭半径 -and ([int]$s.枯竭半径 -lt 0 -or [int]$s.枯竭半径 -gt 30)) { 报错 ("世界[{0}] 搜索枯竭半径 {1} 不在 0~30" -f $w.标识, $s.枯竭半径) }
+            if ($null -ne $s.枯竭概率 -and ([int]$s.枯竭概率 -lt 0 -or [int]$s.枯竭概率 -gt 100)) { 报错 ("世界[{0}] 搜索枯竭概率 {1} 不在 0~100" -f $w.标识, $s.枯竭概率) }
+            if ($null -ne $s.枯竭半径 -and [int]$s.枯竭半径 -gt 0 -and $null -ne $s.出现概率 -and [int]$s.枯竭概率 -ge [int]$s.出现概率) {
+                报错 ("世界[{0}] 搜索枯竭概率 {1} ≥ 出现概率 {2}：局部枯竭失效" -f $w.标识, $s.枯竭概率, $s.出现概率)
+            }
+            if ($null -ne $s.每多一次多花行动点 -and [int]$s.每多一次多花行动点 -lt 0) { 报错 ("世界[{0}] 搜索 每多一次多花行动点 不能是负数" -f $w.标识) }
+            if (($null -eq $s.枯竭半径 -or [int]$s.枯竭半径 -le 0) -and ($null -eq $s.每多一次多花行动点 -or [int]$s.每多一次多花行动点 -le 0)) {
+                Write-Output ("  ⚠ 世界[{0}] 搜索的两条防刷约束**都关着**：玩家可以站在安全屋门口一直搜" -f $w.标识)
+            }
+
+            # 禁区清单：楼型必须存在
+            $禁 = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($z in $s.禁区楼型) { if ($z) { [void]$禁.Add([string]$z) } }
+            foreach ($z in $禁) { if (-not $建筑标识.Contains($z)) { 报错 ("世界[{0}] 搜索禁区楼型[{1}] 不存在（建筑模板里没有）" -f $w.标识, $z) } }
+
+            # 允许地图类型：类型必须存在
+            $允许 = New-Object System.Collections.Generic.HashSet[string]
+            foreach ($t in $s.允许地图类型) { if ($t) { [void]$允许.Add([string]$t) } }
+            foreach ($t in $允许) {
+                $在 = $false
+                foreach ($k in $类型房) { if ($k.StartsWith($t + "/")) { $在 = $true; break } }
+                if (-not $在) { 报错 ("世界[{0}] 搜索允许地图类型[{1}] 不存在（搜索_地图类型.json 里没有）" -f $w.标识, $t) }
+            }
+
+            # 白名单：楼型存在 / **不许在禁区里**（这条是白名单存在的全部理由）/ 权重为正
+            $白 = New-Object System.Collections.Generic.HashSet[string]
+            if ($s.临时建筑 -and $s.临时建筑.Count -gt 0) {
+                foreach ($it in $s.临时建筑) {
+                    if (-not $it.建筑模板) { 报错 ("世界[{0}] 搜索白名单有项缺 建筑模板" -f $w.标识); continue }
+                    [void]$白.Add([string]$it.建筑模板)
+                    if (-not $建筑标识.Contains([string]$it.建筑模板)) { 报错 ("世界[{0}] 搜索白名单楼型[{1}] 不存在" -f $w.标识, $it.建筑模板) }
+                    if ($禁.Contains([string]$it.建筑模板)) {
+                        报错 ("世界[{0}] 搜索白名单楼型[{1}] 在禁区清单里：临时建筑不许出区专属楼型（会把区域解锁门架空）" -f $w.标识, $it.建筑模板)
+                    }
+                    if ([int]$it.权重 -le 0) { 报错 ("世界[{0}] 搜索白名单楼型[{1}] 权重不是正数" -f $w.标识, $it.建筑模板) }
+                }
+                if ($允许.Count -eq 0) { 报错 ("世界[{0}] 搜索写了白名单却没写 允许地图类型（没法核对容器池）" -f $w.标识) }
+
+                # 白名单楼型的房间容器池：只许引用 允许地图类型（挡住"把医院房间塞进便利店"这种偷偷拉专属战利品）
+                foreach ($bid in $白) {
+                    $b = $建筑模板.建筑 | Where-Object { $_.标识 -eq $bid } | Select-Object -First 1
+                    if (-not $b -or -not $b.楼层) { continue }
+                    foreach ($fl in $b.楼层) {
+                        foreach ($rid in $fl.房间) {
+                            $rt = $房间模板.房间 | Where-Object { $_.标识 -eq $rid } | Select-Object -First 1
+                            if (-not $rt -or -not $rt.容器池) { continue }
+                            foreach ($p in $rt.容器池) {
+                                if (-not $p.地图类型) { continue }
+                                if (-not $允许.Contains([string]$p.地图类型)) {
+                                    报错 ("世界[{0}] 搜索白名单楼型[{1}] 的房间[{2}] 容器池引用了 地图类型[{3}]，但它不在 允许地图类型 里（临时建筑不许拉区专属战利品）" -f $w.标识, $bid, $rid, $p.地图类型)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                Write-Output ("  ⚠ 世界[{0}] 搜索没写 临时建筑 白名单：会走兜底（全部楼型里滤掉禁区楼型）" -f $w.标识)
+            }
+            Write-Output ("世界[{0}] 搜索：白名单 {1} 个 / 禁区 {2} 个 / 允许地图类型 {3} 个 / 枯竭半径 {4}" -f `
+                $w.标识, $白.Count, $禁.Count, $允许.Count, $(if ($null -ne $s.枯竭半径) { $s.枯竭半径 } else { 0 }))
+        }
     }
 }
 Write-Output ("世界 {0} 个" -f $(if ($世界) { $世界.世界.Count } else { 0 }))
