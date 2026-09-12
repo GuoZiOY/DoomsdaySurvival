@@ -1,4 +1,4 @@
-# Offline check of the world-layer cell-pool range math (ASCII only, so PS 5.1 arg encoding can't mangle it).
+﻿# Offline check of the world-layer cell-pool range math (ASCII only, so PS 5.1 arg encoding can't mangle it).
 # Mirrors 探索图层.在窗口内() and 探索图层.窗口格区间() literally.
 # Property under test: every cell for which 在窗口内() is true must fall inside the pool range,
 # and the range must always fit the pool capacity.
