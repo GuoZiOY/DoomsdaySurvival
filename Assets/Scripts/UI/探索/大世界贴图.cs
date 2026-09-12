@@ -85,6 +85,30 @@ public static class 大世界贴图
         return 营地缓存 = 成图(纹理);
     }
 
+    // ================= 临时建筑（搜索翻出来的窝点，单格） =================
+
+    private static Sprite 临时缓存;
+
+    public static Sprite 临时建筑()
+    {
+        if (临时缓存 != null) return 临时缓存;
+        const int 边长 = 32;
+        var 纹理 = 新纹理(边长, 边长);
+        var 体 = 网格面板配色.临时建筑体色;
+        var 缝 = 网格面板配色.临时建筑缝色;
+        var 随机 = new System.Random(20260915);
+        for (int y = 0; y < 边长; y++)
+            for (int x = 0; x < 边长; x++)
+            {
+                var 色 = 体;
+                if (x == 0 || y == 0) 色 = 缝;
+                else if (随机.NextDouble() < 0.10) 色 = 乘(体, 0.86f);   // 铁皮/木板斑驳（比区域块更杂，显"临时"）
+                if (y >= 边长 - 3) 色 = 乘(体, 1.16f);
+                纹理.SetPixel(x, y, 色);
+            }
+        return 临时缓存 = 成图(纹理);
+    }
+
     // ================= 复用（区域层 / 房间层已有的通用图案） =================
 
     public static Sprite 门() => 区域贴图.入口();

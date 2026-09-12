@@ -77,11 +77,18 @@ public sealed class 安全屋面板 : 面板基类
     public override bool 回退()
     {
         if (摆放预览 != null) { 退出摆放(); 重建(); return true; }
-        if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
+        // 「出门」：安全屋的"返回"就是**离开安全屋进废城**。
+        // 为什么不再是 返回上一面板：v51 把 地图服务（原来的"进入营地/回大地图"那条路）退役之后，
+        // "上一个面板"可能是角色创建之类 —— 语义不对，而且玩家会卡在安全屋里出不去
+        // （进大世界的入口只剩 主菜单/角色创建/对话，从营地这边根本没有路）。出门才是玩家要的。
+        var 世界 = ServiceRegistry.Get<大世界探索服务>();
+        if (世界 != null && 世界.打开默认世界()) return true;
+        音效管理器.实例?.播放失败();
+        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "现在还出不去（Data/世界.json 没读到？）。"));
         return true;
     }
 
-    public override string 取消文本 => "返回";
+    public override string 取消文本 => "出门";
 
     // ===== 重建（不 销毁 手动 子物体；房间网格 挂载/全量 重建） =====
     private void 重建()

@@ -76,4 +76,6 @@ public static class 网格面板配色
     public static readonly Color 区域锁色 = new Color(0.62f, 0.26f, 0.24f, 1f);             // 区域门口那一格（锁着）
     public static readonly Color 营地体色 = new Color(0.20f, 0.46f, 0.40f, 1f);             // 安全屋（营地）占地
     public static readonly Color 营地缝色 = new Color(0.15f, 0.36f, 0.32f, 1f);
+    public static readonly Color 临时建筑体色 = new Color(0.44f, 0.35f, 0.24f, 1f);         // 搜索翻出来的临时窝点（木/铁皮）
+    public static readonly Color 临时建筑缝色 = new Color(0.33f, 0.26f, 0.18f, 1f);
 }

@@ -59,12 +59,13 @@ function CheckWindow([double]$winW, [double]$winH) {
 }
 
 CheckWindow 1720 960
+CheckWindow 2250 1170   # 场景里 大世界面板 实际配的 视口（不是默认值 —— 真实配置必须被验到）
 CheckWindow 1280 720
 CheckWindow 2560 1440
 CheckWindow 900 600
 
 $cap1720 = [Math]::Min(([Math]::Ceiling(1720 / $script:cell) + 1 + 4) * ([Math]::Ceiling(960 / $script:cell) + 1 + 4), $script:cols * $script:rows)
-Write-Output ("combos           = {0}  (4 window sizes x 16 camera positions)" -f $script:combos)
+Write-Output ("combos           = {0}  (5 window sizes x 16 camera positions)" -f $script:combos)
 Write-Output ("cells checked    = {0}   (must be > 0 or the test is vacuous)" -f $script:checked)
 Write-Output ("worst-case cells = {0}" -f $script:maxCells)
 Write-Output ("pool capacity    = {0}  (1720x960)" -f $cap1720)
