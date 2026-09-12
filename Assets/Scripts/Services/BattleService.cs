@@ -1298,7 +1298,8 @@ public sealed class BattleService
         if (节点 == "__房间返回") { ServiceRegistry.Get<房间探索服务>()?.战斗逃跑(); return; }
         if (节点 == "__大世界胜利") { ServiceRegistry.Get<大世界探索服务>()?.战斗胜利(); return; }
         if (节点 == "__大世界返回") { ServiceRegistry.Get<大世界探索服务>()?.战斗逃跑(); return; }
-        // 注：区域层（街上）暂时还没有敌人 —— 等 区域模板.敌人 落数据时，照上面两行加 `__区域胜利/__区域返回`。
+        if (节点 == "__区域胜利") { ServiceRegistry.Get<区域探索服务>()?.战斗胜利(); return; }
+        if (节点 == "__区域返回") { ServiceRegistry.Get<区域探索服务>()?.战斗逃跑(); return; }
         ServiceRegistry.Get<DialogueService>().进入节点(节点);
     }
 

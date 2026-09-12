@@ -310,6 +310,20 @@ public abstract class 格子探索服务
 
     // ================= 信息 / 发布 =================
 
+    // 敌人显示名：生成器是 Domain 层（不认识 DataService），撒敌人时只把 定义标识 当名字塞进去；
+    // 这里统一从 enemies.json 换成真名（遭遇播报要用"敌对拾荒者扑了上来！"而不是"拾荒者 这个标识扑了上来"）。
+    // 三层共用（房间 / 区域 / 大世界 都有敌人），所以放在基类 —— 一处改三层都变。
+    protected void 补敌人显示名()
+    {
+        if (当前世界 == null || 数据 == null) return;
+        foreach (var 敌 in 当前世界.取类型(网格实体类型.敌人))
+        {
+            if (敌 == null) continue;
+            if (数据.敌人.TryGetValue(敌.定义标识 ?? "", out var 定义) && !string.IsNullOrEmpty(定义.名称))
+                敌.名称 = 定义.名称;
+        }
+    }
+
     public virtual string 信息条() => 地点文本();
 
     public static string 危险度文本(int 危险度)

@@ -22,6 +22,7 @@ public sealed class 区域面板 : 面板基类
 
     private bool 已订阅;
     private Action<区域显示事件> 显示回调;
+    private Action<离开区域事件> 出街口回调;
 
     private 区域探索服务 服务 => ServiceRegistry.Get<区域探索服务>();
 
@@ -57,6 +58,10 @@ public sealed class 区域面板 : 面板基类
         if (事件 == null) return;
         显示回调 = e => 刷新网格();
         事件.订阅(显示回调);
+        // 走到街口出去（服务发 离开区域事件）→ 和 Esc 同一条路：清区域态 + 回上一个面板
+        // （与房间层的"走大门出楼 → 离开房间事件 → 房间面板.回退"一一对位）
+        出街口回调 = _ => 回退();
+        事件.订阅(出街口回调);
         已订阅 = true;
     }
 
@@ -75,7 +80,9 @@ public sealed class 区域面板 : 面板基类
     {
         if (!已订阅) return;
         if (!ServiceRegistry.已注册<EventBus>()) return;
-        ServiceRegistry.Get<EventBus>().取消订阅(显示回调);
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        事件.取消订阅(显示回调);
+        if (出街口回调 != null) 事件.取消订阅(出街口回调);
         已订阅 = false;
     }
 
