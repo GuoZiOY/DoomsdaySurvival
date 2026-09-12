@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -37,6 +37,15 @@ public abstract partial class 网格面板基类 : MonoBehaviour
     protected RectTransform 底座层, 线层, 物品层;   // 网格分层（底座 / 分隔线 / 物品）
 
     protected 网格服务 服务 => 数据源 ?? 档案.网格服务;
+
+    // ===== 大网格（大世界 100×100）的两个开关 =====
+    // 底格（底座层，每格 1 张）与格线（线层，(列+1)×行 + (行+1)×列 条）在**探索层**是纯浪费：
+    // 探索图层 的"地表层"本来就逐格盖满了，这两样根本看不见。100×100 时它们是 10,000 + 20,200 张 Image，
+    // 占总图数的一半。派生类（大世界网格面板）覆写成 false。
+    // **默认 true → 房间层 / 区域层 / 背包 / 仓库 / 容器 行为一字不变。**
+    protected virtual bool 建底格 => true;
+    protected virtual bool 建格线 => true;
+
     [NonSerialized] public 网格服务 数据源;   // 注入 外部视图（容器/仓库/穿戴容器/家具网格）
     [NonSerialized] public 物品堆叠 所属容器;  // 非空 = 本面板显示的容器实例（跨面板转移用；容器面板注入）
     [NonSerialized] public string 所属槽位;   // 非空 = 本面板显示的穿戴容器槽位（弹挂/腰封/背包；装具区注入）

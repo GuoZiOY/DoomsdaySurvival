@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -56,10 +56,12 @@ public abstract partial class 网格面板基类
         if (数据源 == null && 底盘 != null)
             底盘.sizeDelta = new Vector2(网格宽 + 网格面板配色.底盘外扩 * 2f, 网格高 + 网格面板配色.底盘外扩 * 2f);
         清空层(底座层); 清空层(线层); 清空层(物品层);
-        for (int 行 = 0; 行 < 当前行; 行++)
-            for (int 列 = 0; 列 < 当前列; 列++)
-                创建底格(列, 行);
-        画分隔线();
+        // 大网格开关（默认全开）：探索层覆写成 false 可以省下"看不见的"底格与格线（见 网格面板基类.建底格 注释）
+        if (建底格)
+            for (int 行 = 0; 行 < 当前行; 行++)
+                for (int 列 = 0; 列 < 当前列; 列++)
+                    创建底格(列, 行);
+        if (建格线) 画分隔线();
 
         清空物品框表();
     }

@@ -39,6 +39,18 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     private readonly List<Image> 地表格 = new List<Image>();
     private readonly List<Image> 迷雾格 = new List<Image>();
     private readonly List<Image> 交互格 = new List<Image>();   // 交互层每格那张透明图（取格框给右键菜单定位用）
+
+    // ===== 格子池（大网格专用，见 格子池化）=====
+    // 池里的图与"格坐标"**解耦**：池槽只有下标，它此刻显示哪一格记在 池格列/池格行 里，
+    // 相机滚过一格就重排一次（把窗口覆盖的格重新铺进池槽）。非池化时这些全是空表。
+    private bool 池启用;
+    private int 池容量;
+    private int[] 池格列, 池格行;                     // 池槽 → 当前显示的格（-1 = 空槽）
+    private readonly List<Image> 池地表 = new List<Image>();
+    private readonly List<Image> 池迷雾 = new List<Image>();
+    private readonly List<Image> 池交互 = new List<Image>();
+    private readonly List<探索格点击> 池点击 = new List<探索格点击>();
+    private int 池上次指纹 = int.MinValue;
     private readonly List<Image> 路径池 = new List<Image>();
     private readonly List<Image> 点线池 = new List<Image>();
     private Image 终点标, 悬停标, 闪红标, 落点标;
@@ -66,7 +78,19 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     protected virtual Sprite 点线贴图() => 房间贴图.圆点();
     protected virtual Sprite 落点贴图() => 房间贴图.圆环();
     // 派生可给某一格加"地面装饰"（区域层：楼的入口格上画一扇门）——在重建时逐格调用
+    // ⚠ 全仓库**目前没有任何子类覆写它**（区域层的门是画在实体框上的）。池化模式会反复重排格子，
+    //   谁要用装饰就得自己管回收（否则装饰会随重排越堆越多）—— 建议改走"实体框"那条路。
     protected virtual void 建格装饰(RectTransform 地表, int 列, int 行) { }
+
+    // ===== 格子池化（大世界 100×100 专用）=====
+    // true  = 地表 / 迷雾 / 交互 三层**只实例化相机窗口覆盖的那些格**，相机滚动时把池槽重定位重画。
+    // false = 逐格全建（**默认**）。
+    // 为什么默认关：房间层 16×10 / 区域层 32×22 现在这套跑得好好的，不该被牵连 ——
+    //   而 100×100 若逐格全建是 3×10000 = 30,000 张 Image + 10,000 个 探索格点击组件，
+    //   加上底格/格线（大世界已用 网格面板基类.建底格/建格线 关掉，省 30,200 张）会直接把 Canvas 拖死。
+    // 开关语义：就算覆写成 true，**网格装得下窗口时仍走全格**（池化只在网格比窗口大时才有意义）。
+    protected virtual bool 格子池化 => false;
+    private const int 池边距 = 2;   // 窗口外多铺几格：不让边缘因为相机平滑跟随而露出空档
 
     private void Awake() => 面板 = GetComponent<探索网格面板>();
 
@@ -94,6 +118,7 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         推进移动();
         跟随玩家();
         跟随相机();
+        更新池();          // 池化：相机滚过一格就把池槽重排（非池化时是空操作）
         跟随悬停();
         推进闪红();
         推进落点();
@@ -105,6 +130,8 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     {
         销毁层(地表层); 销毁层(迷雾层); 销毁层(路径层); 销毁层(效果层); 销毁层(交互层);
         地表格.Clear(); 迷雾格.Clear(); 交互格.Clear(); 路径池.Clear(); 点线池.Clear();
+        池地表.Clear(); 池迷雾.Clear(); 池交互.Clear(); 池点击.Clear();
+        池启用 = false; 池容量 = 0; 池格列 = null; 池格行 = null; 池上次指纹 = int.MinValue;
         终点标 = null; 悬停标 = null; 闪红标 = null; 落点标 = null;
 
         地表层 = 建层("地表层");
@@ -113,6 +140,71 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         效果层 = 建层("效果层");
         交互层 = 建层("交互层");
 
+        排列层();
+        确保视口();     // 相机：视口（裁切窗口）没了就补一层 —— **必须在建格子之前**：池化要看窗口多大
+        建格子();       // 全格 or 格子池（由 格子池化 + 网格是否比窗口大 决定）
+
+        for (int i = 0; i < 路径池上限; i++)
+        {
+            路径池.Add(建格图(路径层, $"路{i}", null, 网格面板配色.路径格色));
+            点线池.Add(建格图(路径层, $"点线{i}", 点线贴图(), 网格面板配色.路径线色));
+        }
+        终点标 = 建格图(路径层, "终点", null, 网格面板配色.路径终色);
+        悬停标 = 建格图(效果层, "悬停", null, 网格面板配色.悬停格色);
+        闪红标 = 建格图(效果层, "不可达", null, 网格面板配色.不可达色);
+        落点标 = 建格图(效果层, "落点", 落点贴图(), 网格面板配色.路径终色);
+        落点标.enabled = false;
+        隐藏全部路径();
+
+        上次物品层索引 = 面板.物品层引用 != null ? 面板.物品层引用.GetSiblingIndex() : -1;
+        // 诊断：重建后自报一次（格子数 / 交互层格数 / 有没有拿到玩家框）——"点了没反应"时先看这条
+        Debug.Log($"[探索] 图层重建 {列}×{行}：交互层 {交互层.childCount} 格，物品层 {(面板?.物品层引用 != null ? 面板.物品层引用.childCount : 0)} 个实体框，"
+                + $"玩家框[{(面板 != null ? (面板.实体框矩形(服务?.当前世界?.玩家()?.标识) != null ? "有" : "没有") : "无面板")}]，迷雾[{(有迷雾 ? "开" : "关")}]"
+                + $"，格子池[{(池启用 ? $"开（{池容量} 槽，窗口外全不建）" : "关（逐格全建）")}]");
+    }
+
+    // ================= 建格子（全格 / 格子池） =================
+
+    private void 建格子()
+    {
+        float 格 = 网格面板基类.格尺寸;
+        float 窗宽 = 视口 != null ? 视口.sizeDelta.x : 列 * 格;
+        float 窗高 = 视口 != null ? 视口.sizeDelta.y : 行 * 格;
+
+        // 网格装得下窗口（多出不到一格也算装得下）→ 池化没有意义，直接走全格那条路（房间层走的就是这条）
+        池启用 = 格子池化 && (列 * 格 > 窗宽 + 格 || 行 * 格 > 窗高 + 格);
+        if (!池启用) { 建全格(); return; }
+
+        // 池容量 = 窗口最多能同时盖住的格数（+1 是"跨边界那两格" + 两侧 池边距）
+        int 可列 = Mathf.CeilToInt(窗宽 / 格) + 1 + 池边距 * 2;
+        int 可行 = Mathf.CeilToInt(窗高 / 格) + 1 + 池边距 * 2;
+        池容量 = Mathf.Min(可列 * 可行, 列 * 行);
+        池格列 = new int[池容量];
+        池格行 = new int[池容量];
+
+        for (int i = 0; i < 池容量; i++)
+        {
+            池地表.Add(建格图(地表层, $"地_{i}", 地表贴图(), Color.white));
+            if (迷雾层 != null)
+            {
+                var 雾 = 建格图(迷雾层, $"雾_{i}", null, Color.white);
+                雾.raycastTarget = false;
+                池迷雾.Add(雾);
+            }
+            var 点 = 建格图(交互层, $"点_{i}", null, new Color(0f, 0f, 0f, 0f));
+            点.raycastTarget = true;
+            var 点击 = 点.gameObject.AddComponent<探索格点击>();
+            点击.面板 = 面板;
+            池交互.Add(点);
+            池点击.Add(点击);
+            池格列[i] = -1; 池格行[i] = -1;
+        }
+        自检池覆盖();   // 两套判据（点击的 在窗口内 / 建池的 窗口格区间）当场对一遍
+        更新池(true);
+    }
+
+    private void 建全格()
+    {
         var 世界 = 服务?.当前世界;
         for (int r = 0; r < 行; r++)
             for (int c = 0; c < 列; c++)
@@ -146,25 +238,112 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
                 点击.行 = r;
                 交互格.Add(点);
             }
+    }
 
-        for (int i = 0; i < 路径池上限; i++)
+    // 相机窗口覆盖的格区间（闭区间，已夹进网格）—— 池化建格与自检共用这一份。
+    // 推导：由 在窗口内() 的两条不等式解出列/行范围
+    //   x = c*格 + 相机位置.x ∈ (-格, 窗宽)   → c ∈ ((-相机位置.x - 格)/格, (窗宽 - 相机位置.x)/格)
+    //   y = -(r*格) + 相机位置.y ∈ (-窗高, 格) → r ∈ ((相机位置.y - 格)/格, (相机位置.y + 窗高)/格)
+    private (int 首列, int 首行, int 末列, int 末行) 窗口格区间(int 外扩)
+    {
+        float 格 = Mathf.Max(1f, 网格面板基类.格尺寸);
+        float 窗宽 = 视口 != null ? 视口.sizeDelta.x : 列 * 格;
+        float 窗高 = 视口 != null ? 视口.sizeDelta.y : 行 * 格;
+        int 首列 = Mathf.FloorToInt(-相机位置.x / 格) - 外扩;
+        int 末列 = Mathf.FloorToInt((窗宽 - 相机位置.x) / 格) + 外扩;
+        int 首行 = Mathf.FloorToInt(相机位置.y / 格) - 外扩;
+        int 末行 = Mathf.FloorToInt((相机位置.y + 窗高) / 格) + 外扩;
+        return (Mathf.Max(0, 首列), Mathf.Max(0, 首行), Mathf.Min(列 - 1, 末列), Mathf.Min(行 - 1, 末行));
+    }
+
+    // 一次性自检（只在重建时跑）：**在窗口内() 为真的格必须全部落在池区间里**。
+    // 为什么值得写：点击判据（在窗口内）与建池判据（窗口格区间）是分开写的两段算术，
+    // 一旦不一致，表现就是"看得见却点不到"或"点了错一格"——这类 bug 光看代码很难发现。
+    // 10,000 次纯算术，只跑一次，代价可以忽略。
+    private void 自检池覆盖()
+    {
+        var (首列, 首行, 末列, 末行) = 窗口格区间(池边距);
+        int 漏 = 0;
+        for (int r = 0; r < 行; r++)
+            for (int c = 0; c < 列; c++)
+            {
+                if (!在窗口内(c, r)) continue;
+                if (c < 首列 || c > 末列 || r < 首行 || r > 末行)
+                {
+                    if (漏 < 5)
+                        Debug.LogWarning($"[探索] 池覆盖自检：格({c},{r}) 在窗口内但不在池区间 "
+                                       + $"({首列}~{末列}, {首行}~{末行}) —— 这一格会看不见/点不到。");
+                    漏++;
+                }
+            }
+        if (漏 > 0)
+            Debug.LogError($"[探索] 格子池覆盖自检**失败**：{漏} 格落在池区间之外（网格 {列}×{行}）。"
+                         + "说明 在窗口内() 与 窗口格区间() 两套判据已经不一致。");
+        else
+            Debug.Log($"[探索] 格子池覆盖自检通过：窗口内的格全部落在池区间内（网格 {列}×{行}，池 {池容量} 槽）。");
+    }
+
+    // 池化：把"相机窗口覆盖的那些格"重新铺进池槽。相机滚过一格才重排（按格量化做指纹，避免每帧重排）。
+    private void 更新池(bool 强制 = false)
+    {
+        if (!池启用 || 视口 == null || 池容量 <= 0) return;
+
+        float 格 = 网格面板基类.格尺寸;
+        int 指纹 = Mathf.FloorToInt(相机位置.x / 格) * 1000003 + Mathf.FloorToInt(相机位置.y / 格);
+        if (!强制 && 指纹 == 池上次指纹) return;
+        池上次指纹 = 指纹;
+
+        var (首列, 首行, 末列, 末行) = 窗口格区间(池边距);
+
+        int 用 = 0;
+        bool 溢出 = false;
+        for (int r = 首行; r <= 末行; r++)
         {
-            路径池.Add(建格图(路径层, $"路{i}", null, 网格面板配色.路径格色));
-            点线池.Add(建格图(路径层, $"点线{i}", 点线贴图(), 网格面板配色.路径线色));
+            for (int c = 首列; c <= 末列; c++)
+            {
+                if (用 >= 池容量) { 溢出 = true; break; }
+                摆池槽(用++, c, r);
+            }
+            if (溢出) break;
         }
-        终点标 = 建格图(路径层, "终点", null, 网格面板配色.路径终色);
-        悬停标 = 建格图(效果层, "悬停", null, 网格面板配色.悬停格色);
-        闪红标 = 建格图(效果层, "不可达", null, 网格面板配色.不可达色);
-        落点标 = 建格图(效果层, "落点", 落点贴图(), 网格面板配色.路径终色);
-        落点标.enabled = false;
-        隐藏全部路径();
+        if (溢出)
+            Debug.LogWarning($"[探索] 格子池不够用：池 {池容量} 槽，这一屏需要更多 —— 边上会缺格。"
+                           + $"（列 {首列}~{末列} / 行 {首行}~{末行}）请调大 建格子() 里的 +1 / 池边距。");
+        for (; 用 < 池容量; 用++) 空池槽(用);
 
-        排列层();
-        确保视口();                      // 相机：视口（裁切窗口）没了就补一层
-        上次物品层索引 = 面板.物品层引用 != null ? 面板.物品层引用.GetSiblingIndex() : -1;
-        // 诊断：重建后自报一次（格子数 / 交互层格数 / 有没有拿到玩家框）——"点了没反应"时先看这条
-        Debug.Log($"[探索] 图层重建 {列}×{行}：交互层 {交互层.childCount} 格，物品层 {(面板?.物品层引用 != null ? 面板.物品层引用.childCount : 0)} 个实体框，"
-                + $"玩家框[{(面板 != null ? (面板.实体框矩形(服务?.当前世界?.玩家()?.标识) != null ? "有" : "没有") : "无面板")}]，迷雾[{(有迷雾 ? "开" : "关")}]");
+        刷迷雾();   // 池重排后，雾要按新位置重画
+    }
+
+    private void 摆池槽(int i, int c, int r)
+    {
+        var 世界 = 服务?.当前世界;
+        var 格上 = 世界?.格上实体(c, r);
+        bool 是界外 = 格上 != null && 格上.类型 == 网格实体类型.界外;
+
+        var 地板 = 池地表[i];
+        if (是界外) { if (地板.enabled) 地板.enabled = false; }
+        else
+        {
+            地板.sprite = 地表贴图();
+            地板.color = 格明度(c, r);   // 每格轻微明度扰动（打破"一片死板同色"）
+            摆格(地板, c, r);            // 摆格 内含 enabled = true
+        }
+        if (i < 池迷雾.Count) 摆格(池迷雾[i], c, r);
+        if (i < 池交互.Count)
+        {
+            摆格(池交互[i], c, r);
+            池点击[i].列 = c;            // 交互层的命中格必须跟着池槽走，否则点到的是"上一个占这个槽的格"
+            池点击[i].行 = r;
+        }
+        池格列[i] = c; 池格行[i] = r;
+    }
+
+    private void 空池槽(int i)
+    {
+        if (i < 池地表.Count && 池地表[i].enabled) 池地表[i].enabled = false;
+        if (i < 池迷雾.Count && 池迷雾[i].enabled) 池迷雾[i].enabled = false;
+        if (i < 池交互.Count && 池交互[i].enabled) 池交互[i].enabled = false;   // 关掉 = 这一槽不再接点击
+        池格列[i] = -1; 池格行[i] = -1;
     }
 
     private RectTransform 建层(string 名字)
@@ -306,8 +485,15 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     public RectTransform 格位框(int 列2, int 行2)
     {
         if (列2 < 0 || 行2 < 0 || 列2 >= 列 || 行2 >= 行) return null;
-        int i = 行2 * 列 + 列2;
-        return i >= 0 && i < 交互格.Count ? 交互格[i].rectTransform : null;
+        if (池启用)
+        {
+            // 池化：格与槽是解耦的，得反查"哪个槽此刻显示这一格"
+            for (int i = 0; i < 池容量; i++)
+                if (池格列[i] == 列2 && 池格行[i] == 行2) return 池交互[i].rectTransform;
+            return null;   // 该格不在池里（窗口之外）→ 没有框可贴，调用方自己兜底
+        }
+        int i2 = 行2 * 列 + 列2;
+        return i2 >= 0 && i2 < 交互格.Count ? 交互格[i2].rectTransform : null;
     }
 
     // 这一格现在在窗口里吗？—— RectMask2D 只裁画面、**不裁点击**，所以裁掉的那些格得自己拒绝响应
@@ -387,23 +573,39 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     private void 刷迷雾()
     {
         var 服 = 服务;
-        if (!有迷雾 || 服 == null || 迷雾格.Count == 0) return;
+        if (!有迷雾 || 服 == null) return;
         float 压暗 = Mathf.Clamp01(服.阴影压暗);
         var 黑 = 网格面板配色.迷雾未探索色;
+
+        // 池化：只刷池槽里的那些格（池槽 → 格 的映射由 更新池 维护）
+        if (池启用)
+        {
+            for (int i = 0; i < 池迷雾.Count; i++)
+            {
+                int c = 池格列[i], r = 池格行[i];
+                if (c < 0 || r < 0) continue;
+                画一格雾(池迷雾[i], 服.档(c, r), 压暗, 黑);
+            }
+            return;
+        }
+
+        if (迷雾格.Count == 0) return;
         for (int r = 0; r < 行; r++)
             for (int c = 0; c < 列; c++)
-            {
-                var 图2 = 迷雾格[r * 列 + c];
-                var 档 = 服.档(c, r);
-                if (档 == 视野档.亮)
-                {
-                    if (图2.enabled) 图2.enabled = false;
-                    continue;
-                }
-                if (!图2.enabled) 图2.enabled = true;
-                黑.a = 档 == 视野档.全黑 ? 1f : 压暗;
-                if (图2.color != 黑) 图2.color = 黑;   // 值没变就不写：少脏一个 Graphic，就少一次画布重建
-            }
+                画一格雾(迷雾格[r * 列 + c], 服.档(c, r), 压暗, 黑);
+    }
+
+    // 一格的雾：亮 → 关掉；否则开 + 上色（值没变就不写：少脏一个 Graphic，就少一次画布重建）
+    private static void 画一格雾(Image 图, 视野档 档, float 压暗, Color 黑)
+    {
+        if (档 == 视野档.亮)
+        {
+            if (图.enabled) 图.enabled = false;
+            return;
+        }
+        if (!图.enabled) 图.enabled = true;
+        黑.a = 档 == 视野档.全黑 ? 1f : 压暗;
+        if (图.color != 黑) 图.color = 黑;
     }
 
     // 路径：格子高亮 + 中点"点线" + 终点准星（走过的格随 当前路径 缩短而消失）
