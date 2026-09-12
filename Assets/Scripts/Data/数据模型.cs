@@ -857,6 +857,7 @@ using System;
         public int 列 = 100, 行 = 100;    // 大世界网格尺寸
         public 世界坐标 营地;             // 安全屋 / 起点：玩家落点（营地门口格）
         public 世界区域项[] 区域;         // 坐落在这张网格上的区域副本
+        public 世界敌人项[] 敌人;         // 街道上的敌人（撒在自由格上；走到它相邻那一格就触发遭遇）
         public int 障碍数 = 0;           // 街道障碍（废墟 / 车障）：撒完必须仍然连通，否则当场撤回
         public string 战斗棋盘 = "街头";   // 大世界（街上）遭遇用哪个棋盘
         public 世界搜索参数 搜索;         // 「搜索」按钮的参数（生成一次性临时建筑）
@@ -864,6 +865,10 @@ using System;
 
     [Serializable]
     public class 世界坐标 { public int 列; public int 行; }
+
+    // 世界上的街道敌人：一个 敌人定义标识 + 要撒几只（定义与显示名在 enemies.json，Domain 不认识数据服务）
+    [Serializable]
+    public class 世界敌人项 { public string 定义标识; public int 数量 = 1; }
 
     // 大世界上的一个区域副本：占地形状（复用 建筑外形 配方）+ 左上角坐标 + 解锁条件
     [Serializable]

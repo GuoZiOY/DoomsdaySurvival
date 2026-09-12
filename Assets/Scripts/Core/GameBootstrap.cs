@@ -86,7 +86,7 @@ using UnityEngine;
             ServiceRegistry.Register(new QuestService(事件, 数据, 玩家));
             var 战斗服务 = new BattleService(事件, 数据, 玩家);
             ServiceRegistry.Register(战斗服务);
-            ServiceRegistry.Register(new 房间探索服务(事件, 数据, 玩家, 战斗服务, ServiceRegistry.Get<搜索服务>()));
+            ServiceRegistry.Register(new 房间探索服务(事件, 数据, 玩家, ServiceRegistry.Get<搜索服务>()));
             ServiceRegistry.Register(new 区域探索服务(事件, 数据, 玩家));   // 区域层：一屏网格 + 若干建筑（点楼门进楼）
             ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
             ServiceRegistry.Register(new 书籍服务(事件, 数据));   // 书籍 阅读（技能书/配方书；依赖 技能服务——运行时 取）

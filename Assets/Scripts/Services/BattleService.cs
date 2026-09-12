@@ -1292,8 +1292,13 @@ public sealed class BattleService
         string 节点 = 结果节点;
         if (string.IsNullOrEmpty(节点)) return;
         结果节点 = "";
+        // **格子层战斗的收尾节点**：分派给对应探索服务（它们都继承 格子探索服务，各自实现"回到哪一层"）。
+        // v51 刀8 把"遭遇与战斗收尾"上移到 格子探索服务 之后，这里要认三层的节点名。
         if (节点 == "__房间胜利") { ServiceRegistry.Get<房间探索服务>()?.战斗胜利(); return; }
         if (节点 == "__房间返回") { ServiceRegistry.Get<房间探索服务>()?.战斗逃跑(); return; }
+        if (节点 == "__大世界胜利") { ServiceRegistry.Get<大世界探索服务>()?.战斗胜利(); return; }
+        if (节点 == "__大世界返回") { ServiceRegistry.Get<大世界探索服务>()?.战斗逃跑(); return; }
+        // 注：区域层（街上）暂时还没有敌人 —— 等 区域模板.敌人 落数据时，照上面两行加 `__区域胜利/__区域返回`。
         ServiceRegistry.Get<DialogueService>().进入节点(节点);
     }
 

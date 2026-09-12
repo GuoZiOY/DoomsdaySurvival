@@ -45,6 +45,18 @@ public sealed class 大世界探索服务 : 格子探索服务
     protected override void 发布显示事件(string 信息条, int 列, int 行)
         => 事件?.发布(new 大世界显示事件(信息条, 列, 行));
 
+    // ================= 遭遇（街上撞上敌人；流程都在 格子探索服务） =================
+
+    // 走完一步先看有没有撞上街上的敌人 —— 与房间层共用基类那一套
+    // （一场遭遇 = 一个敌人、打赢必留可搜尸体、尸体留在他倒下的那一格由玩家走过去搜）
+    protected override bool 抵达后检查() => 检查遭遇();
+
+    protected override string 遭遇胜利节点 => "__大世界胜利";
+    protected override string 遭遇返回节点 => "__大世界返回";
+    protected override string 遭遇日志前缀 => "大世界";
+    // 结算完把面板切回大世界（否则战斗面板会留在最上面，回不到街上）
+    protected override void 战斗收尾之后() => 事件?.发布(new 回到大世界事件());
+
     // 踩到这一格上有什么：营地门口 → 回安全屋；区域门口 → 进副本（返回 true = 停下，不再沿路径走）
     protected override bool 抵达格()
     {
@@ -226,6 +238,7 @@ public sealed class 大世界探索服务 : 格子探索服务
 
         刷新视野();
         同步网格();
+        补敌人显示名();
         事件?.发布(new 打开大地图事件(世界标识, 种子));   // 面板管理器 → 大世界面板
         播报($"你站在{当前世界.名称}的街口。{危险度文本(当前世界.危险度)}");
         发布显示();
@@ -324,6 +337,19 @@ public sealed class 大世界探索服务 : 格子探索服务
     }
 
     // ================= 数据取用 =================
+
+    // 大世界生成器 是 Domain 层（不认识 DataService），撒敌人时只塞了 定义标识 当名字；
+    // 这里从 enemies.json 把真名补上（遭遇播报要用"感染者扑了上来！"而不是"感染者 这个标识扑了上来"）。
+    private void 补敌人显示名()
+    {
+        if (当前世界 == null || 数据 == null) return;
+        foreach (var 敌 in 当前世界.取类型(网格实体类型.敌人))
+        {
+            if (敌 == null) continue;
+            if (数据.敌人.TryGetValue(敌.定义标识 ?? "", out var 定义) && !string.IsNullOrEmpty(定义.名称))
+                敌.名称 = 定义.名称;
+        }
+    }
 
     // 区域标识 → 显示名（区域模板名；没有就退回标识）
     private string 取名(string 标识)
