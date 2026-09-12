@@ -1,12 +1,6 @@
 // UI 导航事件：逻辑层只发事件，UI 管理器订阅后切换/填充面板（保持逻辑不碰 UI）
-
-// 打开设施面板：标识 + 返回节点
-public readonly struct 打开设施事件
-{
-    public readonly string 设施标识;
-    public readonly string 返回节点;
-    public 打开设施事件(string 设施标识, string 返回节点) { this.设施标识 = 设施标识; this.返回节点 = 返回节点; }
-}
+// 注：原有的 `打开设施事件`（设施标识 + 返回节点）与 `打开功能面板事件`（设施逻辑 + 功能标识）
+//     随 v51 刀7e 的**设施子系统整体退役**一起删 —— 前者 0 订阅、后者从未被发布。
 
 // 打开战斗面板
 public readonly struct 打开战斗事件
@@ -35,15 +29,6 @@ public readonly struct 打开对话事件
 {
     public readonly string 剧情节点;
     public 打开对话事件(string 剧情节点) { this.剧情节点 = 剧情节点; }
-}
-
-// 打开功能面板：设施逻辑 + 功能标识（原「内部功能物节点触发」那一层随 城镇小地图/节点内部 一起拆掉）
-public readonly struct 打开功能面板事件
-{
-    public readonly 设施逻辑 逻辑;
-    public readonly string 功能标识;
-    public 打开功能面板事件(设施逻辑 逻辑, string 功能标识)
-    { this.逻辑 = 逻辑; this.功能标识 = 功能标识; }
 }
 
 // —— 地图导航事件 ——

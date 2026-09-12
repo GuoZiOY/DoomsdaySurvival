@@ -90,16 +90,9 @@ public sealed class 面板管理器 : MonoBehaviour
         return 面板;
     }
 
-    // 功能面板注册表：功能标识 -> 面板（末日营地/交易/制作等入口；替代硬编码 switch）
-    private readonly Dictionary<string, Func<object, 面板基类>> 功能面板注册表 = new Dictionary<string, Func<object, 面板基类>>();
-
-    // 注册功能路由（装配时由各系统调用；返回 true = 已处理）
-    public void 注册功能面板(string 功能标识, Func<object, 面板基类> 路由)
-    {
-        功能面板注册表[功能标识] = 路由;
-    }
-
-    public bool 已注册功能(string 功能标识) => 功能面板注册表.ContainsKey(功能标识);
+    // 注：原有一个「功能面板注册表」（功能标识 → 面板，配 注册功能面板/已注册功能 两个 API）——
+    // v51 刀7e 随**设施子系统整体退役**删掉：它唯一的输入源是 `打开功能面板事件`，而那个事件**从未被发布**，
+    // 注册 API 也**从未被任何系统调用**（设施功能面板基类 更是 0 子类）。
 
     private readonly List<面板基类> 可切换面板 = new List<面板基类>();
 
@@ -145,14 +138,6 @@ public sealed class 面板管理器 : MonoBehaviour
         // 大世界探索服务 生成完世界后发 打开大地图事件 → 这里切到大世界面板。
         // 引用位没接也能跑：取大世界面板() 有零接线兜底（运行时自建 + 打一条警告）。
         事件.订阅<打开大地图事件>(e => 显示(取大世界面板(), e));
-        // 功能面板事件 → 注册表路由（未注册则日志提示）
-        事件.订阅<打开功能面板事件>(e =>
-        {
-            if (功能面板注册表.TryGetValue(e.功能标识, out var 路由))
-                显示(路由(new 设施打开上下文(e.逻辑)));
-            else
-                Debug.LogWarning($"[面板管理器] 未注册功能面板: {e.功能标识}");
-        });
 
         // 初始只显示主菜单；常驻 UI 收起
         foreach (var 面板 in 可切换面板)

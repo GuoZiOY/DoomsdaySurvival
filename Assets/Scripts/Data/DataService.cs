@@ -14,8 +14,9 @@ using UnityEngine;
         public Dictionary<string, 物品数据> 物品 { get; private set; } = new Dictionary<string, 物品数据>();
         public Dictionary<string, 技能数据> 技能 { get; private set; } = new Dictionary<string, 技能数据>();
         public Dictionary<string, 任务数据> 任务 { get; private set; } = new Dictionary<string, 任务数据>();
-        public Dictionary<string, 设施定义> 设施 { get; private set; } = new Dictionary<string, 设施定义>();
-        public Dictionary<string, 训练项目> 训练项目 { get; private set; } = new Dictionary<string, 训练项目>();
+        // 注：原有 `设施`（设施定义）与 `训练项目` 两个字典 —— v51 刀7e 随 **设施子系统整体退役** 一起删：
+        // 设施（交易站/诊所/家/训练场）的入口三层全断（设施工厂.创建 0 调用 / 打开功能面板事件 从未发布 /
+        // 设施功能面板基类 0 子类），用户拍板"不接"；训练项目 的唯一消费者是设施里的 训练逻辑，跟着一起走。
         public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
         public Dictionary<string, 敌人组数据> 敌人组 { get; private set; } = new Dictionary<string, 敌人组数据>();
         public Dictionary<string, 助战组数据> 助战组 { get; private set; } = new Dictionary<string, 助战组数据>();
@@ -54,8 +55,6 @@ using UnityEngine;
             加载物品();   // items.json 已按类型拆分多文件（便于查看修改），全部合并进 物品 字典
             加载("skills", 技能, (技能根 根) => 根.技能);
             加载("quests", 任务, (任务根 根) => 根.任务);
-            加载("facilities", 设施, (设施根 根) => 根.设施);   // 允许缺失（M4 才有）
-            加载("training", 训练项目, (训练项目根 根) => 根.训练项目);
             加载("buffs", Buffs, (Buff根 根) => 根.Buffs);
             加载("encounters", 敌人组, (敌人组根 根) => 根.敌人组);
             // 配方 按 制作 家具 一 家具 一 文件（recipes_<家具>.json——工作台/灶台/医疗站）
@@ -167,11 +166,11 @@ using UnityEngine;
                     foreach (var 选项 in 节点.选项)
                     {
                         if (string.IsNullOrEmpty(选项.目标)) continue;
-                        // 特殊目标（设施/战斗/探索/区域/任务/购买/学习/以 __ 开头的指令）跳过——
-                        // 设施由 UI管理器 的 switch 硬编码处理，其余为剧情引擎指令，普通节点目标必须存在。
-                        else if (!选项.目标.StartsWith("设施:") && !选项.目标.StartsWith("战斗:") && !选项.目标.StartsWith("探索:") &&
-                                 !选项.目标.StartsWith("区域:") && !选项.目标.StartsWith("任务:") &&
-                                 !选项.目标.StartsWith("购买:") && !选项.目标.StartsWith("学习:") && !选项.目标.StartsWith("地图:") &&
+                        // 特殊目标跳过：**只列 DialogueService.处理选项 真正认的那几个前缀**（战斗: / 地图: / __）。
+                        // v51 刀7e 收紧了这份名单：原来还含 设施: / 探索: / 区域: / 任务: / 购买: / 学习: ——
+                        // 那些系统的服务/指令**都已经删了**，现在还写它们只会落到 进入节点() 然后报"节点不存在"。
+                        // 与其静默跳过（让作者以为它有用），不如让校验把它报成"目标不存在"。
+                        else if (!选项.目标.StartsWith("战斗:") && !选项.目标.StartsWith("地图:") &&
                                  !选项.目标.StartsWith("__") &&
                                  !剧情.ContainsKey(选项.目标))
                         {
