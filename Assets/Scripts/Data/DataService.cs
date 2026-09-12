@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
     // 数据服务：加载 Resources/Data/*.json 并缓存为字典；启动全量跨引用校验。
@@ -39,6 +40,9 @@ using UnityEngine;
         public List<string> 校验错误 { get; } = new List<string>();
         // 校验警告：不致命（游戏照进），但多半是数据写歪了——例如"门通向那间房，可那边没门通回来"
         public List<string> 校验警告 { get; } = new List<string>();
+        // 加载期的异常（"某项没有 标识 被丢掉"）：在 加载全部() 阶段记下，由 重新校验() 汇总报出
+        // （加载发生在 重新校验 之前，直接写 校验警告 会被 Clear 掉）
+        private readonly List<string> 加载异常 = new List<string>();
 
         public DataService(EventBus 事件)
         {
@@ -139,17 +143,34 @@ using UnityEngine;
             if (资产 == null) { Debug.LogWarning($"[数据] 缺失 Data/{文件}.json——请检查 Resources/Data 下文件与文件名"); return; }
             var 根 = JsonUtility.FromJson<TRoot>(资产.text);
             if (根 == null) return;
+            int 丢掉 = 0;
             foreach (var 项 in 提取(根))
             {
                 var 标识 = 获取标识(项);
-                if (!string.IsNullOrEmpty(标识)) 目标[标识] = 项;
+                if (string.IsNullOrEmpty(标识)) { 丢掉++; continue; }
+                目标[标识] = 项;
             }
+            // ★ 静默失败防线（v51 刀15）：`获取标识` 取不到就**整项丢掉**，而这里原来一声不响 ——
+            //   24 个 `*根` DTO 全依赖"恰好有一个叫 标识 的 string 字段"这个约定，
+            //   任何一个 DTO 漏写/改名，那张表就会**静默缺条目**（甚至整表空），而 校验错误 依旧是空的。
+            //   记到 加载异常，由 重新校验() 统一报出来（见那里的注释：为什么先报警告而不是错误）。
+            if (丢掉 > 0)
+                加载异常.Add($"{文件}：{丢掉} 项没有可用的 标识 字段被丢掉（DTO 类型 {typeof(T).Name}）——"
+                          + "这些条目在游戏里等于不存在。请检查该 DTO 是否漏写或改名了 标识");
         }
 
-        // 反射取各模型的「标识」字段
+        // 反射取各模型的「标识」字段。
+        // v51 刀15：加 FieldInfo 缓存 —— 原来每个条目都 `typeof(T).GetField("标识")` 反射一次
+        //   （24 张表 × 条目数，装配期白花；物品一类就有 269 条）。null 也缓存，同一类型只反射一次。
+        private static readonly Dictionary<Type, FieldInfo> 标识字段缓存 = new Dictionary<Type, FieldInfo>();
         private static string 获取标识<T>(T 项)
         {
-            var 字段 = typeof(T).GetField("标识");
+            var 类型 = typeof(T);
+            if (!标识字段缓存.TryGetValue(类型, out var 字段))
+            {
+                字段 = 类型.GetField("标识");
+                标识字段缓存[类型] = 字段;
+            }
             return 字段?.GetValue(项) as string;
         }
 
@@ -158,6 +179,12 @@ using UnityEngine;
         {
             校验错误.Clear();
             校验警告.Clear();
+            // 加载期发现的"整项被丢掉"（见 加载<T,TRoot> 里的注释）—— 这里统一报出来。
+            // ⚠ 先报**警告**而不是错误：它若判成错误，`GameBootstrap` 会中止装配 → 整个游戏进不去。
+            //   现在能确认"所有当前被加载的 DTO 都有 标识"（装配日志里 敌人 9 / 物品 269 / 技能 21 都非空
+            //   就是证据），但这个守卫是给**将来新增 DTO** 用的 —— 那时它会响亮，而不是静默缺条目。
+            //   等哪天真在 Unity 里验过一遍"没有任何 加载异常"，再考虑升级成 校验错误。
+            if (加载异常.Count > 0) 校验警告.AddRange(加载异常);
 
             // —— 剧情：选项目标 / 强制战斗敌人 / 下一节点 ——
             foreach (var (标识, 节点) in 剧情)

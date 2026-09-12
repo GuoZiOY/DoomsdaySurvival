@@ -23,6 +23,13 @@ public sealed class 玩家输入系统 : MonoBehaviour
 
     void Update()
     {
+        // ★ v51 刀15：战斗期间**禁止切面板**。
+        //   战斗引擎的唯一时钟是 `战斗沙盒面板.Update`（它每帧调 BattleService.推进战斗），
+        //   而 `面板管理器.显示()` 会把当前面板 `SetActive(false)` → 战斗**永久冻结**，
+        //   且 `战斗中`/`遭遇中` 仍为 true → 没有任何 UI 路径能回到战斗面板（软锁，只能读档）。
+        //   这里是最便宜的第一道闸；根治是把战斗时钟挪出 UI（见
+        //   docs/探索与战斗系统评估与优化方案.md §四 档1 第 2 条）。
+        if (ServiceRegistry.Get<BattleService>()?.战斗中 == true) return;
         if (检测按下(KeyCode.F1)) 打开背包面板();
         // 左键 = 确认：由各 UI 按钮的 onClick 原生处理，这里不拦截
         // 右键 = 物品操作菜单：由 物品网格面板 的物品点击组件处理（此处不再做全局回退）

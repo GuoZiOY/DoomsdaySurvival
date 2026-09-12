@@ -289,7 +289,13 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         if (!池启用 || 视口 == null || 池容量 <= 0) return;
 
         float 格 = 网格面板基类.格尺寸;
-        int 指纹 = Mathf.FloorToInt(相机位置.x / 格) * 1000003 + Mathf.FloorToInt(相机位置.y / 格);
+        // ★ 指纹必须同时含**相机格位**与**视口尺寸**（v51 刀15 修）：
+        //   `窗口格区间()` 与 `在窗口内()` 都读 `视口.sizeDelta`，而原来的指纹只看相机位置 ——
+        //   视口变了而相机没动时**池不重排** → 会出现"看得见却点不到 / 看不到却能点到"。
+        //   而两道防线（运行时 `自检池覆盖` + 离线 `Tools/格子池区间核对.ps1`）当时都只覆盖"相机位置"这一维。
+        int 相机指纹 = Mathf.FloorToInt(相机位置.x / 格) * 1000003 + Mathf.FloorToInt(相机位置.y / 格);
+        int 视口指纹 = Mathf.RoundToInt(视口.sizeDelta.x) * 100003 + Mathf.RoundToInt(视口.sizeDelta.y);
+        int 指纹 = 相机指纹 * 31 + 视口指纹 * 17;
         if (!强制 && 指纹 == 池上次指纹) return;
         池上次指纹 = 指纹;
 

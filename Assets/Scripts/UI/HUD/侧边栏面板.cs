@@ -86,7 +86,11 @@ public sealed class 侧边栏面板 : MonoBehaviour
         if (暂停图 != null) 暂停图.sprite = 暂停中 ? 暂停图标 : 继续图标;
     }
 
-    // 主菜单隐藏 取消/暂停/角色；战斗中隐藏 角色（禁止战斗中打开角色面板）；暂停中切回主菜单则解除暂停并复位图标
+    // 主菜单隐藏 取消/暂停/角色/任务/存档；战斗中隐藏 角色/任务/存档。
+    //   · 战斗中禁"角色"：避免在角色面板里使用道具破坏战斗平衡（原有约定）
+    //   · ★ v51 刀15 战斗中**禁"存档"**：档案里不含战斗状态，战斗期又已经推进了游戏分钟，
+    //     于是"在必败的战斗里存档 → 读档"= 免费逃跑，且读档后时间与状态不一致。
+    //     （根治是给战斗做存档快照或强制战前存档，见 评估 §二 B4；禁掉是当前最便宜的正确做法。）
     private void 刷新显隐()
     {
         bool 主菜单 = 面板管理器.实例?.当前显示面板 is 主菜单面板;
@@ -95,6 +99,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
         if (暂停按钮 != null) 暂停按钮.gameObject.SetActive(!主菜单);
         if (角色按钮 != null) 角色按钮.gameObject.SetActive(!主菜单 && !战斗中);
         if (任务按钮 != null) 任务按钮.gameObject.SetActive(!主菜单 && !战斗中);
+        if (存档按钮 != null) 存档按钮.gameObject.SetActive(!主菜单 && !战斗中);
         if (主菜单 && Time.timeScale == 0f)
         {
             Time.timeScale = 1f;

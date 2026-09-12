@@ -202,7 +202,9 @@ public static class Program
                 int 期望敌 = 0;
                 if (模板.敌人 != null)
                     foreach (var 项 in 模板.敌人)
-                        if (项 != null && !string.IsNullOrEmpty(项.定义标识)) 期望敌 += Math.Max(1, 项.数量);
+                        // ⚠ 口径必须与 大世界生成器.撒敌人 一致：v51 刀15 起两边都是 Math.Max(0, …)
+                        //   （原来生成器是 Max(1)、这里也是 Max(1)：数据写 0 会被强行撒 1 只且断言看不出来）
+                        if (项 != null && !string.IsNullOrEmpty(项.定义标识)) 期望敌 += Math.Max(0, 项.数量);
                 var 敌人们 = 世界.取类型(网格实体类型.敌人);
                 if (敌人们.Count != 期望敌)
                 { 失败++; Console.WriteLine($"✗ 世界[{模板.标识}] 种子{种子}：敌人 {敌人们.Count} ≠ 期望 {期望敌}（撤掉 {世界.撤掉的敌人}）"); }
