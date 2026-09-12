@@ -67,7 +67,7 @@ public sealed class 房间网格面板 : 探索网格面板
         // 令牌若接点击，右键就永远轮不到楼梯 → 站在楼梯上点不动、上下不了楼（"点了没反应"）。
         // 令牌本身没有任何可点交互（点自己脚下 = 原地），让出去零损失。
         if (是玩家) 物体.GetComponent<Image>().raycastTarget = false;
-        物体.AddComponent<CanvasGroup>();                                // 已搜灰化 / 迷雾压暗 用
+        框.组 = 物体.AddComponent<CanvasGroup>();                        // 已搜灰化 用（缓存进 物品框：更新实体框 每次刷新都要用，见那里注释）
         if (!是墙 && !是玩家 && !是敌人 && !是门 && !是楼梯)   // 墙靠相邻描边、令牌靠圆盘、门/楼梯靠自己的贴图，都不要方块黑框
         {
             var 描边 = 物体.AddComponent<Outline>();
@@ -160,7 +160,9 @@ public sealed class 房间网格面板 : 探索网格面板
         if (框.根.gameObject.activeSelf != 显示) 框.根.gameObject.SetActive(显示);
         if (!显示) return;
 
-        var 组 = 框.根.GetComponent<CanvasGroup>();
+        // ★ v51 刀18：CanvasGroup 从 物品框 缓存取（原来是每帧每实体一次 GetComponent）。
+        //   刷新物品() 是"全实体遍历"，区域层一次就是 700+ 个实体 —— 每个都查一次组件表纯属浪费。
+        var 组 = 框.组;
         if (组 != null)
         {
             // 只留"已翻过"这一档灰化；**暗处的压暗不在这里做** —— 那是 迷雾层 的事（雾在物品层之上，

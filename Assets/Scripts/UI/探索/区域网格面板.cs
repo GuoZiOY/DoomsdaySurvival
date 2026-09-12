@@ -65,7 +65,7 @@ public sealed class 区域网格面板 : 探索网格面板
         物体.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // 框根透明（只留贴图与描边）
         // 玩家令牌不吃点击（和房间层同一条：令牌常和脚下那一格的实体重叠 → 一接点击就把它盖住）
         if (是玩家) 物体.GetComponent<Image>().raycastTarget = false;
-        物体.AddComponent<CanvasGroup>();
+        框.组 = 物体.AddComponent<CanvasGroup>();   // 缓存进 物品框（更新实体框 每次刷新都要用，见那里注释）
         if (是楼 || 是障碍)   // 楼与障碍给方块黑描边（体量感）；墙靠转角描边、令牌用圆盘
         {
             var 描边 = 物体.AddComponent<Outline>();
@@ -178,7 +178,9 @@ public sealed class 区域网格面板 : 探索网格面板
         if (框.根.gameObject.activeSelf != 显示) 框.根.gameObject.SetActive(显示);
         if (!显示) return;
         // 暗处的压暗**不在这里做**：迷雾层在物品层之上，地板/楼/障碍一起压同一个 阴影压暗 值
-        var 组 = 框.根.GetComponent<CanvasGroup>();
+        // ★ v51 刀18：CanvasGroup 从 物品框 缓存取（原来是每次刷新每实体一次 GetComponent）——
+        //   区域层一次全实体遍历就是 700+ 次组件表查找。
+        var 组 = 框.组;
         if (组 != null && Mathf.Abs(组.alpha - 1f) > 0.01f) 组.alpha = 1f;
         if (框.框图 != null && 实体 != null)
         {

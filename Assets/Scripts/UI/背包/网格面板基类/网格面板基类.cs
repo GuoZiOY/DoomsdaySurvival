@@ -64,6 +64,7 @@ public abstract partial class 网格面板基类 : MonoBehaviour
         public int 上次数量;           // 数量/等级 文本去重
         public string 上次耐久;        // 耐久文本去重
         public string 创建标识;        // 创建时 堆叠.标识（变质 替换 标识 变化 → 重建 框：图标/名称 刷新）
+        public CanvasGroup 组;         // 实体根的 CanvasGroup（探索层：已搜灰化；v51 刀18 缓存，见 更新实体框）
     }
     protected readonly Dictionary<物品堆叠, 物品框> 物品框表 = new Dictionary<物品堆叠, 物品框>();
 
