@@ -68,24 +68,17 @@ using System;
         public 剧情效果 效果;
         public string 战斗;       // 非空则进入即开战：战斗:敌人标识:胜利节点标识
         public string 面板;       // 非空则进入构建结构化面板（M4 起废弃，改用设施）
-        public string 主线阶段;   // 非空则进入该节点时更新玩家主线阶段（剧情推进标记）
+        // 原有一个 `主线阶段` 字段（进入该节点时更新玩家主线阶段）—— 那套奇幻章节已随 v51 刀7b 整条拆掉
         public string 下一节点;   // 选项为空时自动进入的节点（剧情链连续播放）
         public 剧情选项[] 选项;
     }
 
     [Serializable]
-    public class 剧情根 { public 剧情节点[] 节点; public 区域剧情路由[] 区域剧情; }
+    public class 剧情根 { public 剧情节点[] 节点; }
 
-    // 区域剧情路由：进入某地点（城镇/荒野）时按当前主线阶段自动触发剧情（防重复靠阶段前进）
-    [Serializable]
-    public class 区域剧情路由
-    {
-        public string 区域;       // 区域模板标识（副本）——v51 起不再指"大地图地点"
-        public string 阶段;       // 命中所需的 玩家档案.主线阶段
-        public string 节点;       // 命中后进入的剧情节点
-        public string 需要物品;   // 可选：需持有该物品才命中
-        public string 需要任务;   // 可选：需该任务已完成才命中
-    }
+    // 原有一个 `区域剧情路由`（进入某地点时按当前主线阶段自动触发剧情）—— 已随 v51 刀7b 删：
+    // 它的**唯一消费者**是 地图服务.自动触发剧情，而 地图服务 在刀3 就退役了；
+    // 它挂在 `主线阶段` 上，而主线阶段本身已删。story.json 本来也不存在（见 §6.2）。
 
     // ================= 敌人 =================
 
@@ -389,11 +382,11 @@ using System;
         public string 标识;
         public string 名称;
         public string 描述;
-        public string 章节;       // 主线归属章节标题（如 "第一章 · 黑石山的阴影"）；空=非主线（支线/杂项，不按章分组）
-        public string 目标类型;   // "击败" / "获得物品" / "主线阶段"
+        public string 章节;       // 原"主线归属章节标题"（如 "第一章 · 黑石山的阴影"）—— 奇幻章节残留，无任何地方读，见 §15.2 的死代码清扫
+        public string 目标类型;   // "击败" / "获得物品"（原还有一个 "主线阶段"，v51 刀7b 随主线阶段删掉）
         public string 目标标识;
         public int 目标数量;
-        public int 奖励金币;
+        public int 奖励价值;      // 原字段名 `奖励金币`（奇幻货币残留）：语义本来就是"价值额度 → 折算成补给"（QuestService 按 价值/2+1 给面包），v51 刀7b 改名对齐
         public int 奖励经验;
         public string 奖励物品;   // 可空
     }

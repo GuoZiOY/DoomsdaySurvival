@@ -19,7 +19,6 @@ using UnityEngine;
         public Dictionary<string, Buff定义> Buffs { get; private set; } = new Dictionary<string, Buff定义>();
         public Dictionary<string, 敌人组数据> 敌人组 { get; private set; } = new Dictionary<string, 敌人组数据>();
         public Dictionary<string, 助战组数据> 助战组 { get; private set; } = new Dictionary<string, 助战组数据>();
-        public List<区域剧情路由> 区域剧情 { get; private set; } = new List<区域剧情路由>();
         public Dictionary<string, 配方数据> 配方 { get; private set; } = new Dictionary<string, 配方数据>();
         public Dictionary<string, 词缀定义> 词缀 { get; private set; } = new Dictionary<string, 词缀定义>();
         public Dictionary<string, 职业数据> 职业 { get; private set; } = new Dictionary<string, 职业数据>();
@@ -75,7 +74,7 @@ using UnityEngine;
             加载("世界", 世界, (世界根 根) => 根.世界);               // 允许缺失（大世界 · 100×100 格子网格）
             加载视野();
             加载情报();
-            加载助战组与区域剧情();
+            加载助战组();
         }
 
         // 物品数据按类型拆分（Data/物品/items_*.json）一 类型 一 文件，逐文件加载合并；同名标识后加载覆盖。
@@ -122,23 +121,17 @@ using UnityEngine;
             if (根?.情报 != null) 情报.AddRange(根.情报);
         }
 
-        // 附加表：encounters 助战组 + story 区域剧情（同一文件内的第二数组）
-        private void 加载助战组与区域剧情()
+        // 附加表：encounters 里的 助战组（同一文件内的第二数组）
+        // 注：原来这里还顺带从 story 里读 `区域剧情`，v51 刀7b 随 区域剧情路由 一起删了
+        //     （它的唯一消费者 地图服务 在刀3 就退役，且它挂在已删的 主线阶段 上；story.json 本来也不存在）。
+        private void 加载助战组()
         {
             var 敌人组资产 = Resources.Load<TextAsset>("Data/encounters");
-            if (敌人组资产 != null)
-            {
-                var 根 = JsonUtility.FromJson<敌人组根>(敌人组资产.text);
-                if (根?.助战组 != null)
-                    foreach (var 项 in 根.助战组)
-                        if (!string.IsNullOrEmpty(项.标识)) 助战组[项.标识] = 项;
-            }
-            var 剧情资产 = Resources.Load<TextAsset>("Data/story");
-            if (剧情资产 != null)
-            {
-                var 根 = JsonUtility.FromJson<剧情根>(剧情资产.text);
-                if (根?.区域剧情 != null) 区域剧情.AddRange(根.区域剧情);
-            }
+            if (敌人组资产 == null) return;
+            var 根 = JsonUtility.FromJson<敌人组根>(敌人组资产.text);
+            if (根?.助战组 == null) return;
+            foreach (var 项 in 根.助战组)
+                if (!string.IsNullOrEmpty(项.标识)) 助战组[项.标识] = 项;
         }
 
         private void 加载<T, TRoot>(string 文件, Dictionary<string, T> 目标, Func<TRoot, T[]> 提取) where T : class
@@ -206,20 +199,8 @@ using UnityEngine;
                     校验错误.Add($"剧情[{标识}] → 下一节点[{节点.下一节点}] 不存在");
             }
 
-            // —— 区域剧情路由：区域/节点/需要物品/需要任务 ——
-            foreach (var 路由 in 区域剧情)
-            {
-                string 路由名 = $"区域剧情[{路由.区域}/{路由.阶段}]";
-                // 区域剧情 的「区域」原本是**大地图地点标识**；节点网图退役后改指**区域模板**（副本）
-                if (!区域模板.ContainsKey(路由.区域))
-                    校验错误.Add($"{路由名} → 区域模板[{路由.区域}] 不存在");
-                if (!string.IsNullOrEmpty(路由.节点) && !剧情.ContainsKey(路由.节点))
-                    校验错误.Add($"{路由名} → 节点[{路由.节点}] 不存在");
-                if (!string.IsNullOrEmpty(路由.需要物品) && !物品.ContainsKey(路由.需要物品))
-                    校验错误.Add($"{路由名} → 需要物品[{路由.需要物品}] 不存在");
-                if (!string.IsNullOrEmpty(路由.需要任务) && !任务.ContainsKey(路由.需要任务))
-                    校验错误.Add($"{路由名} → 需要任务[{路由.需要任务}] 不存在");
-            }
+            // —— 注：原有一段「区域剧情路由」校验（区域模板/节点/需要物品/需要任务 是否存在）——
+            //    v51 刀7b 随 区域剧情路由 一起删（它挂在已删的 主线阶段 上，消费者 地图服务 也早已退役）。
 
             // —— 助战组：引用的伙伴单位存在 ——
             foreach (var (标识, 组) in 助战组)
