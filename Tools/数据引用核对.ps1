@@ -188,6 +188,42 @@ if ($世界) {
 }
 Write-Output ("世界 {0} 个" -f $(if ($世界) { $世界.世界.Count } else { 0 }))
 
+# ---------- 8. 职业 / 天赋：悬空引用（**只提示，不判失败**） ----------
+# 为什么只提示：用户拍板「职业/天赋暂时不补充，但保留」（docs/大世界网格与副本设计.md §6.3 + §16.1），
+#   所以"内容没补"是**已知状态**，判失败会让这个工具永远红着、以后真出错就看不出来了。
+# 为什么必须提示：这三条在运行时**全是静默失效**（`DataService.重新校验` 末尾那段有同样一份）：
+#   职业.初始技能 → PlayerService 查表不中就 continue → 这个职业开局学不到技能；
+#   职业.天赋     → PlayerService **不查表**直接塞进 档案.天赋 → 一条永远不生效的天赋；
+#   职业.初始装备 → 档案.添加物品 也不查表 → 一件 items 里没有的东西进了背包。
+$技能集 = New-Object System.Collections.Generic.HashSet[string]
+$sj = 读JSON "skills.json"
+if ($sj) { foreach ($s in $sj.技能) { if ($s.标识) { [void]$技能集.Add([string]$s.标识) } } }
+$天赋集 = New-Object System.Collections.Generic.HashSet[string]
+$tj = 读JSON "天赋.json"
+if ($tj) { foreach ($t in $tj.天赋) { if ($t.标识) { [void]$天赋集.Add([string]$t.标识) } } }
+$职业 = 读JSON "职业.json"
+$script:提示 = 0
+if ($职业) {
+    foreach ($z in $职业.职业) {
+        if (-not $z.标识) { 报错 "职业 缺少 标识"; continue }
+        if ($z.初始技能 -and -not $技能集.Contains([string]$z.初始技能)) {
+            Write-Output ("  ⚠ 职业[{0}] 初始技能[{1}] 不在 skills.json（这个职业开局学不到它）" -f $z.标识, $z.初始技能); $script:提示++
+        }
+        if ($z.天赋 -and -not $天赋集.Contains([string]$z.天赋)) {
+            Write-Output ("  ⚠ 职业[{0}] 天赋[{1}] 不在 天赋.json（会塞进 档案.天赋 但永不生效）" -f $z.标识, $z.天赋); $script:提示++
+        }
+        if ($z.初始装备) {
+            foreach ($e in $z.初始装备) {
+                if ($e.标识 -and -not $物品标识.Contains([string]$e.标识)) {
+                    Write-Output ("  ⚠ 职业[{0}] 初始装备[{1}] 不在 items（会进背包，但是件没有定义的东西）" -f $z.标识, $e.标识); $script:提示++
+                }
+            }
+        }
+    }
+}
+Write-Output ("职业 {0} 个 / 技能 {1} 个 / 天赋 {2} 个 / 悬空引用 {3} 处（⚠ 只提示，不判失败）" -f `
+    $(if ($职业) { $职业.职业.Count } else { 0 }), $技能集.Count, $天赋集.Count, $script:提示)
+
 Write-Output ""
 if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑 / 世界区域与敌人 全部存在）"; exit 0 }
 Write-Output ("❌ 数据引用核对失败：{0} 处" -f $script:失败); exit 1
