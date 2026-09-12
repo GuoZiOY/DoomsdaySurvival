@@ -398,8 +398,19 @@ public sealed class 世界时间管理器
     {
         private void Update()
         {
-            // 战斗中：时间由战斗沙盒 推进战斗() 统一推进（行动条 + 时间流逝，不结算生存），挂机驱动暂停，防双时钟
-            if (ServiceRegistry.Get<BattleService>()?.战斗中 == true) return;
+            // ★ v51 刀17：**战斗时钟从 UI 面板搬到这里**（原来在 `战斗沙盒面板.Update`）。
+            //   面板是可切换面板，隐藏 = SetActive(false) → Update 停 → 战斗内双方读条/冷却/眩晕全部冻结
+            //   （玩家能无限"看牌"、从容挑道具）。刀15 只堵住"战斗中按 F1"那一条路，
+            //   "引擎正确性挂在 UI 激活态上"的根还在。驱动是场景常驻物体，永远在跑 —— 面板只订阅渲染。
+            var 战斗 = ServiceRegistry.Get<BattleService>();
+            if (战斗 != null)
+            {
+                // 战斗中：时间由 BattleService.推进战斗 统一推进（行动条 + 战斗内时间流逝，不结算生存），
+                // 挂机驱动暂停，防双时钟。
+                if (战斗.战斗中) { 战斗.推进战斗(Time.deltaTime); return; }
+                // 战斗刚结束：把上一帧登记的"自动回派"落地（结算与切层拆开，见 BattleService.结束战斗）
+                战斗.处理自动回派();
+            }
             var 管理器 = ServiceRegistry.Get<世界时间管理器>();
             if (管理器 == null) return;
             管理器.推进(Time.deltaTime);

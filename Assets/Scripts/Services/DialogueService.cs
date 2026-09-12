@@ -21,12 +21,15 @@ using UnityEngine;
             this.玩家 = 玩家;
         }
 
-        public void 进入节点(string 节点标识)
+        // 返回"是否真的进入了节点"：false = 节点不存在（★ v51 刀17 由 void 改 bool，
+        // 让战斗回派方知道"剧情节点没落地"，从而**保留结果节点**而不是当成已经交出去 ——
+        // 原来是 LogError + return，而调用方（BattleService.返回）已经先把结果节点清空了，玩家便卡在战斗面板。
+        public bool 进入节点(string 节点标识)
         {
             if (!数据.剧情.TryGetValue(节点标识, out var 节点))
             {
                 Debug.LogError($"[DialogueService] 节点不存在: {节点标识}");
-                return;
+                return false;
             }
             当前节点 = 节点;
             玩家.档案.当前节点 = 节点标识;
@@ -58,6 +61,7 @@ using UnityEngine;
             // 缓存并发布显示事件，StoryController 订阅渲染；无选项时自动进入 下一节点（剧情链连续播放）
             当前显示 = new 显示剧情事件(节点.文本 ?? "", 选项列表.ToArray(), 选项列表.Count == 0 ? (节点.下一节点 ?? "") : "");
             事件.发布(当前显示);
+            return true;
         }
 
         // 处理选项目标：节点跳转 / __结束 / 战斗 / 地图（只发事件，UI 管理器订阅切换面板）

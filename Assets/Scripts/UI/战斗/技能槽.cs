@@ -18,8 +18,11 @@ public sealed class 技能槽 : MonoBehaviour
     public string 当前技能标识 { get; private set; }   // 本槽 绑定 的 技能标识；空槽 = null
     private float 当前冷却总秒;                       // 绑定 技能 的 总冷却秒（fillAmount 分母）
     private string 名字原文;                           // 绑定 技能名 原文（蓄力 标记 后缀 用）
+    private Color 底色 = Color.white;                 // 绑定 技能 的 类别色（不可用 时 在此基础上 压暗）
 
     private static readonly Color 空槽色 = new Color(0.2f, 0.2f, 0.22f, 1f);
+    private const float 不可用压暗 = 0.42f;            // "放不出来"的 图标 压暗 系数
+    private const float 不可用字透 = 0.55f;            // "放不出来"的 名称 透明度
 
     void Awake()
     {
@@ -37,7 +40,8 @@ public sealed class 技能槽 : MonoBehaviour
             return;
         }
         当前冷却总秒 = Mathf.Max(1, 技能.冷却);
-        if (图标 != null) 图标.color = 类别色(技能);
+        底色 = 类别色(技能);
+        if (图标 != null) 图标.color = 底色;
         if (名称 != null) { 名称.text = 技能.名称; 名字原文 = 技能.名称; }
         if (冷却遮罩 != null) { 冷却遮罩.gameObject.SetActive(false); 冷却遮罩.fillAmount = 0f; }
         if (冷却文本 != null) 冷却文本.text = "";
@@ -56,25 +60,29 @@ public sealed class 技能槽 : MonoBehaviour
         if (按钮 != null) 按钮.interactable = false;
     }
 
-    // 蓄力 标记：该 技能 正 在 蓄力（预约 中）→ 名称 加 后缀；否则 还原
-    public void 刷新蓄力(bool 蓄力中)
-    {
-        if (名称 == null || string.IsNullOrEmpty(名字原文)) return;
-        名称.text = 蓄力中 ? 名字原文 + "（蓄力中）" : 名字原文;
-    }
-
-    // 每帧 冷却 刷新（剩余秒）：> 0 → 遮罩（fillAmount = 剩余/总，Radial360 倒计时）+ 禁用 + 文本"N秒"；否则 清
-    public void 刷新冷却(float 剩余秒)
+    // 每帧 状态刷新（面板 轮询）：冷却 + 蓄力 + 可用性 —— **三样合并成一次调用**。
+    // ★ v51 刀17（档1 #9）：为什么必须合并 —— `interactable` 原来是 `刷新冷却` 的私有领地
+    //   （每帧无条件 `= !冷却中`），再让"可用性"另外写一次就是"谁后写谁赢"的隐性 bug
+    //   （本项目已经栽过这种跟订阅/写入顺序有关的坑）。合并后 interactable 全局只有这一个写入点。
+    // 不可用（精力不足/无弹药/缺消耗物/武器不对）时：图标压暗 + 名称变淡 + 按钮禁用 + 冷却文本位显示原因。
+    public void 刷新状态(float 冷却剩余秒, bool 蓄力中, bool 可用, string 不可用原因)
     {
         if (当前技能标识 == null) return;
-        bool 冷却中 = 剩余秒 > 0f;
+        bool 冷却中 = 冷却剩余秒 > 0f;
+        if (图标 != null) 图标.color = 冷却中 || 可用 ? 底色 : 底色 * 不可用压暗;
+        if (名称 != null)
+        {
+            名称.text = 蓄力中 ? 名字原文 + "（蓄力中）" : 名字原文;
+            名称.alpha = 可用 || 冷却中 ? 1f : 不可用字透;
+        }
         if (冷却遮罩 != null)
         {
             冷却遮罩.gameObject.SetActive(冷却中);
-            冷却遮罩.fillAmount = 冷却中 ? Mathf.Clamp01(剩余秒 / Mathf.Max(0.1f, 当前冷却总秒)) : 0f;
+            冷却遮罩.fillAmount = 冷却中 ? Mathf.Clamp01(冷却剩余秒 / Mathf.Max(0.1f, 当前冷却总秒)) : 0f;
         }
-        if (冷却文本 != null) 冷却文本.text = 冷却中 ? $"{Mathf.CeilToInt(剩余秒)}秒" : "";
-        if (按钮 != null) 按钮.interactable = !冷却中;
+        // 冷却中 优先 显示 倒计时；否则 显示"为什么 放不出"（短字，留在槽内，不再依赖 6 秒就消失的日志）
+        if (冷却文本 != null) 冷却文本.text = 冷却中 ? $"{Mathf.CeilToInt(冷却剩余秒)}秒" : (可用 ? "" : 不可用原因 ?? "");
+        if (按钮 != null) 按钮.interactable = 可用;
     }
 
     private static Color 类别色(技能数据 技能) => 技能.类别枚举 switch
