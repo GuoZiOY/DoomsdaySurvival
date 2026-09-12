@@ -10,16 +10,19 @@ public static class 物品工具
     public static 品质 有效品质(物品堆叠 堆叠, 物品数据 模板)
         => !string.IsNullOrEmpty(堆叠?.品质) ? 数据解析.枚举<品质>(堆叠.品质) : 模板.品质档;
 
-    // 详情区数值行：装备类合并 攻击/防御/生命/抗性 加成 + 实例词缀；恢复/技能书 特例
+    // 详情区数值行：装备类合并 攻击/防御/生命/抗性 加成 + 实例词缀；恢复/书籍(技能书) 特例
     public static string 数值文本(DataService 数据, 物品数据 物品, List<词缀条> 词缀 = null)
     {
         switch (物品.类型)
         {
             case "恢复": return $"恢复 {物品.恢复量} 点生命";
-            case "技能书":
-                if (!string.IsNullOrEmpty(物品.技能) && 数据.技能.TryGetValue(物品.技能, out var 技能))
+            // ⚠ v51 刀15 修：这里原来是 `case "技能书":` —— 而"技能书"是 **书籍种类** 的取值，
+            //   不是 `类型` 的取值（类型只有"书籍"）→ 这个 case 永不命中，技能书详情一直少一行。
+            case "书籍":
+                if (物品.书籍种类 == "技能书"
+                    && !string.IsNullOrEmpty(物品.技能) && 数据.技能.TryGetValue(物品.技能, out var 技能))
                     return $"可学习：{技能.名称}（消耗 {技能.消耗精力} 精力）";
-                return "";
+                return "";   // 配方书 / 蓝图：详情由各自面板表达，这里不给数值行
             default:   // 武器/防具/饰品：合并 攻击/防御/生命/抗性 加成 + 词缀（换行独立列出）
                 {
                     var 段 = new List<string>();
