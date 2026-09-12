@@ -5,7 +5,7 @@ using UnityEngine.UI;
 // ============================================================
 // 探索图层（基类）：**格子层自建的图层栈 + 逐格内容 + 令牌走路** —— 房间层 / 区域层共用。
 //   地表层（地表贴图）/ 迷雾层（三态，可关）/ 路径指示层（高亮 + 点线 + 终点）/ 效果层（悬停 / 不可达闪红 / 落点圈）
-//   / 交互层（每格点击区）
+//   / 交互层（**整层一张命中面**，v51 刀20 起——原来每格一张透明图 + 一个 探索格点击 组件）
 //
 // 为什么要自建（三条都是读基类源码得到的结论）：
 //   ① 网格面板基类 四层只画"格子与物品"，地表贴图与迷雾没有位置；
@@ -24,6 +24,7 @@ using UnityEngine.UI;
 //   **迷雾在物品层之上**：一层里"暗"这件事只由雾统一负责（地板/家具/墙/门一起压），实体不再各自压一遍
 //   （原来雾在物品层之下，于是"实体的暗"要靠每个实体自己 CanvasGroup.alpha —— 新加一种实体忘了写就会在暗处亮着）。
 //   交互层压在物品层之下：Unity 取最上层命中 → 点实体优先给实体框，没被覆盖的格子才落到交互层。
+//   **交互层整层只有一张命中面**（v51 刀20）：空格点击 = 把指针位置换算成格坐标，不需要每格一个 raycast 目标。
 //   ⚠ 真正决定"看得见看不见"的**不是层级**，而是 探索网格面板 子类的 更新实体框 里按"档"算的显示规则。
 //
 // 派生要填的（房间图层 / 区域图层）：
@@ -38,18 +39,18 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     protected RectTransform 地表层, 迷雾层, 路径层, 效果层, 交互层;
     private readonly List<Image> 地表格 = new List<Image>();
     private readonly List<Image> 迷雾格 = new List<Image>();
-    private readonly List<Image> 交互格 = new List<Image>();   // 交互层每格那张透明图（取格框给右键菜单定位用）
+    private 探索交互面 交互面;          // 交互层**唯一**的命中面（v51 刀20：替掉"每格一张透明图 + 一个组件"）
+    private RectTransform 格位标记;      // 右键菜单定位用的"这一格的矩形"（按需挪动，见 格位框）
 
     // ===== 格子池（大网格专用，见 格子池化）=====
     // 池里的图与"格坐标"**解耦**：池槽只有下标，它此刻显示哪一格记在 池格列/池格行 里，
     // 相机滚过一格就重排一次（把窗口覆盖的格重新铺进池槽）。非池化时这些全是空表。
+    // 注：v51 刀20 起**交互层不再池化**（整层一张命中面盖住全网格，格子池只管地表与迷雾）。
     private bool 池启用;
     private int 池容量;
     private int[] 池格列, 池格行;                     // 池槽 → 当前显示的格（-1 = 空槽）
     private readonly List<Image> 池地表 = new List<Image>();
     private readonly List<Image> 池迷雾 = new List<Image>();
-    private readonly List<Image> 池交互 = new List<Image>();
-    private readonly List<探索格点击> 池点击 = new List<探索格点击>();
     private int 池上次指纹 = int.MinValue;
     private readonly List<Image> 路径池 = new List<Image>();
     private readonly List<Image> 点线池 = new List<Image>();
@@ -87,11 +88,12 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     protected virtual void 建格装饰(RectTransform 地表, int 列, int 行) { }
 
     // ===== 格子池化（大世界 100×100 专用）=====
-    // true  = 地表 / 迷雾 / 交互 三层**只实例化相机窗口覆盖的那些格**，相机滚动时把池槽重定位重画。
+    // true  = 地表 / 迷雾 两层**只实例化相机窗口覆盖的那些格**，相机滚动时把池槽重定位重画。
     // false = 逐格全建（**默认**）。
     // 为什么默认关：房间层 16×10 / 区域层 32×22 现在这套跑得好好的，不该被牵连 ——
-    //   而 100×100 若逐格全建是 3×10000 = 30,000 张 Image + 10,000 个 探索格点击组件，
+    //   而 100×100 若逐格全建是 2×10000 = 20,000 张 Image（地表+迷雾），
     //   加上底格/格线（大世界已用 网格面板基类.建底格/建格线 关掉，省 30,200 张）会直接把 Canvas 拖死。
+    //   （v51 刀20 起交互层不再逐格建、也不参与池化：整层一张命中面，见 建交互面）
     // 开关语义：就算覆写成 true，**网格装得下窗口时仍走全格**（池化只在网格比窗口大时才有意义）。
     protected virtual bool 格子池化 => false;
     private const int 池边距 = 2;   // 窗口外多铺几格：不让边缘因为相机平滑跟随而露出空档
@@ -133,10 +135,11 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     private void 重建()
     {
         销毁层(地表层); 销毁层(迷雾层); 销毁层(路径层); 销毁层(效果层); 销毁层(交互层);
-        地表格.Clear(); 迷雾格.Clear(); 交互格.Clear(); 路径池.Clear(); 点线池.Clear();
-        池地表.Clear(); 池迷雾.Clear(); 池交互.Clear(); 池点击.Clear();
+        地表格.Clear(); 迷雾格.Clear(); 路径池.Clear(); 点线池.Clear();
+        池地表.Clear(); 池迷雾.Clear();
         池启用 = false; 池容量 = 0; 池格列 = null; 池格行 = null; 池上次指纹 = int.MinValue;
         终点标 = null; 悬停标 = null; 闪红标 = null; 落点标 = null;
+        交互面 = null; 格位标记 = null;
         // 去重键一并作废：图都重建了，必须重画一次（否则"雾/路径没变"会让我们跳过唯一的重画机会）
         上次迷雾版本 = int.MinValue; 上次迷雾压暗 = -1f; 上次路径签名 = int.MinValue;
 
@@ -149,6 +152,7 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         排列层();
         确保视口();     // 相机：视口（裁切窗口）没了就补一层 —— **必须在建格子之前**：池化要看窗口多大
         建格子();       // 全格 or 格子池（由 格子池化 + 网格是否比窗口大 决定）
+        建交互面();     // 交互层：整层一张命中面（与全格/池化无关，见 探索交互面）
 
         for (int i = 0; i < 路径池上限; i++)
         {
@@ -163,8 +167,8 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         隐藏全部路径();
 
         上次物品层索引 = 面板.物品层引用 != null ? 面板.物品层引用.GetSiblingIndex() : -1;
-        // 诊断：重建后自报一次（格子数 / 交互层格数 / 有没有拿到玩家框）——"点了没反应"时先看这条
-        Debug.Log($"[探索] 图层重建 {列}×{行}：交互层 {交互层.childCount} 格，物品层 {(面板?.物品层引用 != null ? 面板.物品层引用.childCount : 0)} 个实体框，"
+        // 诊断：重建后自报一次（格子数 / 命中面 / 有没有拿到玩家框）——"点了没反应"时先看这条
+        Debug.Log($"[探索] 图层重建 {列}×{行}：交互面 {(交互面 != null ? "1 张（整层单面）" : "缺！")}，物品层 {(面板?.物品层引用 != null ? 面板.物品层引用.childCount : 0)} 个实体框，"
                 + $"玩家框[{(面板 != null ? (面板.实体框矩形(服务?.当前世界?.玩家()?.标识) != null ? "有" : "没有") : "无面板")}]，迷雾[{(有迷雾 ? "开" : "关")}]"
                 + $"，格子池[{(池启用 ? $"开（{池容量} 槽，窗口外全不建）" : "关（逐格全建）")}]");
     }
@@ -197,16 +201,25 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
                 雾.raycastTarget = false;
                 池迷雾.Add(雾);
             }
-            var 点 = 建格图(交互层, $"点_{i}", null, new Color(0f, 0f, 0f, 0f));
-            点.raycastTarget = true;
-            var 点击 = 点.gameObject.AddComponent<探索格点击>();
-            点击.面板 = 面板;
-            池交互.Add(点);
-            池点击.Add(点击);
             池格列[i] = -1; 池格行[i] = -1;
         }
         自检池覆盖();   // 两套判据（点击的 在窗口内 / 建池的 窗口格区间）当场对一遍
         更新池(true);
+    }
+
+    // 交互层：**整层一张透明命中面**（v51 刀20）。像素零变化 —— 原来那 704 张图是全透明的，
+    // 它们只是"每格一个 raycast 目标"；换成一个面 + 坐标换算，命中的格完全一样（见 探索交互面）。
+    private void 建交互面()
+    {
+        if (交互层 == null) return;
+        var 图 = 建格图(交互层, "交互面", null, new Color(0f, 0f, 0f, 0f));
+        图.raycastTarget = true;   // 交互层唯一的命中目标（alpha=0 不吃画面，但吃 raycast）
+        float 格 = 网格面板基类.格尺寸;
+        UI工具.设锚(图.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero,
+            new Vector2(列 * 格, 行 * 格));
+        交互面 = 图.gameObject.AddComponent<探索交互面>();
+        交互面.面板 = 面板;
+        交互面.图层 = this;
     }
 
     private void 建全格()
@@ -233,16 +246,7 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
                     摆格(雾, c, r);
                     迷雾格.Add(雾);
                 }
-
-                // 交互层：每格一张透明图（raycastTarget = true）+ 探索格点击；位于 物品层 之下 → 点实体优先给实体
-                var 点 = 建格图(交互层, $"点_{c}_{r}", null, new Color(0f, 0f, 0f, 0f));
-                点.raycastTarget = true;
-                摆格(点, c, r);
-                var 点击 = 点.gameObject.AddComponent<探索格点击>();
-                点击.面板 = 面板;
-                点击.列 = c;
-                点击.行 = r;
-                交互格.Add(点);
+                // 交互层不在这里建：整层只有一张命中面（见 建交互面）—— 原来每格一张透明图 + 一个组件
             }
     }
 
@@ -346,12 +350,6 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
             摆格(地板, c, r);            // 摆格 内含 enabled = true
         }
         if (i < 池迷雾.Count) 摆格(池迷雾[i], c, r);
-        if (i < 池交互.Count)
-        {
-            摆格(池交互[i], c, r);
-            池点击[i].列 = c;            // 交互层的命中格必须跟着池槽走，否则点到的是"上一个占这个槽的格"
-            池点击[i].行 = r;
-        }
         池格列[i] = c; 池格行[i] = r;
     }
 
@@ -359,7 +357,6 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
     {
         if (i < 池地表.Count && 池地表[i].enabled) 池地表[i].enabled = false;
         if (i < 池迷雾.Count && 池迷雾[i].enabled) 池迷雾[i].enabled = false;
-        if (i < 池交互.Count && 池交互[i].enabled) 池交互[i].enabled = false;   // 关掉 = 这一槽不再接点击
         池格列[i] = -1; 池格行[i] = -1;
     }
 
@@ -498,19 +495,23 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
             视口.sizeDelta = new Vector2(用宽, 用高);
     }
 
-    // 这一格在"交互层"里那张透明图 —— 右键菜单用它定位（菜单贴着被点的那一格弹）
+    // 这一格的矩形 —— 右键菜单用它定位（菜单贴着被点的那一格弹）。
+    // v51 刀20：交互层整层只有一张命中面了，所以这里**不再反查"那一格的透明图"**，
+    // 而是维护**一个可复用的标记矩形**（按需挪到目标格；菜单只读它的 position/rect/pivot/lossyScale，
+    // 见 右键菜单.展示），语义与旧实现完全一致，但少掉了池化时"反查哪个槽显示这一格"的线性扫描。
     public RectTransform 格位框(int 列2, int 行2)
     {
         if (列2 < 0 || 行2 < 0 || 列2 >= 列 || 行2 >= 行) return null;
-        if (池启用)
+        if (格位标记 == null)
         {
-            // 池化：格与槽是解耦的，得反查"哪个槽此刻显示这一格"
-            for (int i = 0; i < 池容量; i++)
-                if (池格列[i] == 列2 && 池格行[i] == 行2) return 池交互[i].rectTransform;
-            return null;   // 该格不在池里（窗口之外）→ 没有框可贴，调用方自己兜底
+            格位标记 = UI工具.创建物体(交互层 != null ? 交互层 : transform, "格位框",
+                new Vector2(0f, 1f), new Vector2(0f, 1f));
+            // 只是个定位用的空矩形：没有 Graphic，既不画东西也不吃点击（也不需要 SetActive(false)）
         }
-        int i2 = 行2 * 列 + 列2;
-        return i2 >= 0 && i2 < 交互格.Count ? 交互格[i2].rectTransform : null;
+        float 格 = 网格面板基类.格尺寸;
+        UI工具.设锚(格位标记, new Vector2(0f, 1f), new Vector2(0f, 1f),
+            new Vector2(列2 * 格, -行2 * 格), new Vector2(格, 格));
+        return 格位标记;
     }
 
     // 这一格现在在窗口里吗？—— RectMask2D 只裁画面、**不裁点击**，所以裁掉的那些格得自己拒绝响应

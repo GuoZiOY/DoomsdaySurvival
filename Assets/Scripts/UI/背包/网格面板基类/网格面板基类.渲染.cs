@@ -183,8 +183,11 @@ public abstract partial class 网格面板基类
 
     // 分格线：**统一淡网格**（列+1 竖线 / 行+1 横线）——不再按"该格有没有物品"查表加粗：
     // 物品边界改由实体框自己的描边负责（见 物品描边色），因此这里与物品无关，物品移动也不需要重画。
+    // v51 刀20：探索层（房间/区域）改走 画平铺格线() —— 那边没有形状块、线又铺满整块，
+    //   逐段建图是 (列+1)×行 + (行+1)×列 张（区域层 33×22 + 23×32 = **1462 张**），纯浪费。
     private void 画分隔线()
     {
+        if (格线用平铺) { 画平铺格线(); return; }
         if (服务.形状块 != null && 服务.形状块.Count > 0)
         {
             画块网格线();
@@ -196,6 +199,54 @@ public abstract partial class 网格面板基类
         for (int j = 0; j <= 当前行; j++)
             for (int i = 0; i < 当前列; i++)
                 画横线段(i, j, false);
+    }
+
+    // ===== 平铺格线（v51 刀20）：整块网格只要**一张** Image =====
+    // 原理：运行时生成一张"一格大小"的贴图，四条边各留 1px 白线；`Image.type = Tiled` 把它平铺满整块网格。
+    //   相邻两格的边线拼起来正好是一条 2px 的线、落在格边界上 —— 与逐段建图的结果一致，
+    //   但对象数从 1462（区域层）降到 **1**（一张 Graphic 内部按格数分块，一次批处理）。
+    // 贴图运行时生成并静态缓存（与 战斗轨道.圆贴图 同一手法：内置 UI/Skin 里没有这种东西）。
+    // ⚠ 唯一与旧实现的差别（1px，故意留着不改）：旧实现的外框线是**以格线为中心**画的，
+    //   左侧/上侧那 1px 落在网格之外（画在底盘上）；平铺版本四条外框线都收在网格内 ——
+    //   即最外圈看起来细 1px。要"完全一致"就得再补 4 条外框线，不值这个复杂度（肉眼看不出来）。
+    private static Sprite 线格贴图;
+    private static Sprite 线格贴图取()
+    {
+        if (线格贴图 != null) return 线格贴图;
+        int n = Mathf.Max(2, Mathf.RoundToInt(格尺寸));
+        var 贴 = new Texture2D(n, n, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,          // 平铺要像素级对齐：不插值，避免线变糊
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        var 像素 = new Color32[n * n];              // 默认 (0,0,0,0) = 格内部全透明
+        var 线 = new Color32(255, 255, 255, 255);   // 白线，颜色由 Image.color（线条色）决定
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+                if (x == 0 || y == 0 || x == n - 1 || y == n - 1) 像素[y * n + x] = 线;
+        贴.SetPixels32(像素);
+        贴.Apply();
+        // FullRect：Tiled 要求整图网格（Tight 的紧包围盒会让平铺错位）；PPU = 100 = 画布默认参考像素/单位
+        //   → 一张贴图在 UI 里正好是 90×90 = 一格，平铺数量 = 网格尺寸 ÷ 格尺寸
+        线格贴图 = Sprite.Create(贴, new Rect(0, 0, n, n), new Vector2(0f, 1f), 100f, 0, SpriteMeshType.FullRect);
+        return 线格贴图;
+    }
+
+    private void 画平铺格线()
+    {
+        var 图 = UI工具.创建图(线层, "格线(平铺)", 线格贴图取(), 网格面板配色.线条色,
+            new Vector2(0f, 1f), new Vector2(0f, 1f));
+        图.type = Image.Type.Tiled;
+        图.raycastTarget = false;
+        // 平铺的格子尺寸 = 贴图边长 ÷ (sprite.pixelsPerUnit ÷ 画布.referencePixelsPerUnit × pixelsPerUnitMultiplier)
+        //   （见 uGUI Image.pixelsPerUnit 与 GenerateTiledSprite 的 tileWidth 算法）
+        //   → 贴图固定用 PPU=100 生成，这里按画布的参考像素/单位把乘数补回来，
+        //     保证"一张贴图 = 一格（90px）"，画布参考值改成别的也不会错位。
+        var 画布 = GetComponentInParent<Canvas>();
+        float 画布参考 = 画布 != null ? 画布.referencePixelsPerUnit : 100f;
+        if (画布参考 > 0f) 图.pixelsPerUnitMultiplier = 画布参考 / 100f;
+        UI工具.设锚(图.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero,
+            new Vector2(当前列 * 格尺寸, 当前行 * 格尺寸));
     }
 
     // 口袋（形状块）轮廓：每块四边独立闭合框；粗细统一，不再按"块内有没有物品"加粗

@@ -46,6 +46,11 @@ public abstract partial class 网格面板基类 : MonoBehaviour
     protected virtual bool 建底格 => true;
     protected virtual bool 建格线 => true;
 
+    // 格线画法（v51 刀20）：false = 逐段建图（默认；容器/口袋 的形状线靠它）；
+    //   true = **一张 Tiled Image 平铺满整块**（探索层用：那边没有形状块、线铺满整块，
+    //   逐段建图在区域层是 33×22 + 23×32 = **1462 张** → 1 张）。
+    protected virtual bool 格线用平铺 => false;
+
     // 底格 逐格 开关（v51 刀19）：**只有"地表不铺的格"才需要底格**。
     //   探索层的地表层是**不透明且逐格盖满**的（房间地板色 A=1 / 区域地面色 A=1），
     //   而 底格 与 地表 用的是**同一套锚点与 pivot**（锚点 (0,1)/(0,1) + 格尺寸，

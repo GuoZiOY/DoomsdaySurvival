@@ -166,9 +166,46 @@ else {
     if (-not (体内有 $挂接体 'AddComponent<物品拖拽>')) { 报错 "挂接交互 里连 物品拖拽 都不挂了 —— 背包/容器/家具的拖拽会整个失效" }
 }
 
+# ---------- 8. 交互层只能是"一整张命中面" ----------
+# 为什么钉：v51 刀20 把"每格一张透明图 + 一个 探索格点击 组件"换成了整层一张面 + 坐标换算。
+#   改回去不会报错、也不会画错，只是区域层又白建 704 个对象 —— 所以钉在这里。
+Write-Output "[8] 交互层必须是一整张命中面（不许退回逐格命中图）"
+if (-not (体内有 $图层 'private\s+void\s+建交互面\s*\(')) { 报错 "探索图层 里没有 建交互面()" }
+$重建体2 = 取函数体 $图层 (找行 $图层 'private\s+void\s+重建\s*\(')
+if ($null -eq $重建体2) { 报错 "取不到 重建() 的函数体" }
+elseif (-not (体内有 $重建体2 '建交互面\s*\(\s*\)')) { 报错 "重建() 没有调用 建交互面() —— 交互层会没有命中目标（点了没反应）" }
+$逐格回潮 = 0
+foreach ($f in (Get-ChildItem $探索UI -Filter *.cs)) {
+    $去 = 去注释 (读行 $f.FullName)
+    for ($i = 0; $i -lt $去.Count; $i++) {
+        if ($去[$i] -match 'AddComponent<\s*探索格点击\s*>') { 报错 ("{0}:{1} 又挂回了 探索格点击（逐格组件那条路）" -f $f.Name, ($i + 1)); $逐格回潮++ }
+        if ($去[$i] -match '池交互|交互格') { 报错 ("{0}:{1} 又出现了逐格交互图（池交互 / 交互格）" -f $f.Name, ($i + 1)); $逐格回潮++ }
+    }
+}
+if (Test-Path (Join-Path $探索UI "探索格点击.cs")) { 报错 "探索格点击.cs 又回来了（它已被 探索交互面 取代）" }
+if (-not (Test-Path (Join-Path $探索UI "探索交互面.cs"))) { 报错 "探索交互面.cs 不见了" }
+
+# ---------- 9. 平铺格线：开关接上 + Tiled + 按画布参考值校准 ----------
+# 为什么钉：`Image.type = Tiled` 的格子尺寸 = 贴图边长 ÷ (sprite.pixelsPerUnit ÷ 画布.referencePixelsPerUnit × 乘数)。
+#   少写 pixelsPerUnitMultiplier 那一行，画布参考值不是 100 时线会整体错位（不报错，只是"网格线对不上格"）。
+Write-Output "[9] 平铺格线（探索层开关 + Tiled + 画布参考值校准）"
+$探索面板2 = 读行 (Join-Path $探索UI "探索网格面板.cs")
+if ((找行 $探索面板2 'override\s+bool\s+格线用平铺') -lt 0) { 报错 "探索网格面板 没有覆写 格线用平铺 —— 区域层又会逐段建 1462 张线图" }
+if (-not (体内有 $渲染 '格线用平铺')) { 报错 "基类 画分隔线 没认 格线用平铺 这个开关" }
+$平铺体 = 取函数体 $渲染 (找行 $渲染 'private\s+void\s+画平铺格线\s*\(')
+if ($null -eq $平铺体) { 报错 "取不到 画平铺格线() 的函数体" }
+else {
+    if (-not (体内有 $平铺体 'Image\.Type\.Tiled')) { 报错 "画平铺格线 没把 Image.type 设成 Tiled" }
+    if (-not (体内有 $平铺体 'pixelsPerUnitMultiplier')) { 报错 "画平铺格线 没按画布参考值校准 pixelsPerUnitMultiplier —— 参考值不是 100 时线会错位" }
+    if (-not (体内有 $平铺体 'referencePixelsPerUnit')) { 报错 "画平铺格线 没读画布 referencePixelsPerUnit" }
+}
+$贴图体 = 取函数体 $渲染 (找行 $渲染 'private\s+static\s+Sprite\s+线格贴图取\s*\(')
+if ($null -eq $贴图体) { 报错 "取不到 线格贴图取() 的函数体" }
+elseif (-not (体内有 $贴图体 'SpriteMeshType\.FullRect')) { 报错 "线格贴图 没用 FullRect 建 —— Tiled 会因紧包围盒错位" }
+
 Write-Output ""
 if ($script:失败 -eq 0) {
-    Write-Output "✅ 探索接线核对通过（雾输入写入点 / 去重键重置 / 池重排强制刷雾 / 路径从尾分配 / CanvasGroup 缓存 / 底格与拖拽开关）"
+    Write-Output "✅ 探索接线核对通过（雾输入写入点 / 去重键重置 / 池重排强制刷雾 / 路径从尾分配 / CanvasGroup 缓存 / 底格与拖拽开关 / 单面交互层 / 平铺格线）"
     Write-Output "   ⚠ 只证明接线没被改回去；走路时「雾跟不跟手、路径会不会停在旧路线」仍要进 Unity 看一眼"
     exit 0
 }
