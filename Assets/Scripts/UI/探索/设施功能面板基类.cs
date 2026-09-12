@@ -13,12 +13,9 @@ public abstract class 设施功能面板基类 : 面板基类
 
     protected virtual void Awake()
     {
-        // 金币变化默认整面板刷新（买卖/训练等改金币后刷新）；子类可覆写 金币变化() 做轻量更新
-        ServiceRegistry.Get<EventBus>()?.订阅<金币变化事件>(_ => 金币变化());
+        // 注：原来这里订阅 `金币变化事件`（买卖/训练改金币后整面板刷新），钩子 金币变化() 供子类轻量更新。
+        // v51 刀7 一并删掉：本作以物易物**没有货币**，那个事件已被整个移除（且没有任何子类覆写过这个钩子）。
     }
-
-    // 金币变化钩子：子类覆写可只更新余额等，避免整面板重绘（保持列表滚动位置）
-    protected virtual void 金币变化() => 刷新(null);
 
     protected override void 刷新(object 上下文)
     {

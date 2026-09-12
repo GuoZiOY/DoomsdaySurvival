@@ -9,8 +9,7 @@ using System;
     public class 剧情效果
     {
         public int 生命;
-        public int 魔力;
-        public int 精力;       // 正=恢复 / 负=消耗（休息事件等）
+        public int 精力;       // 正=恢复 / 负=消耗（休息事件等）—— 就是"行动点"（原 魔力 字段已删：奇幻残留）
         public int 饱食;       // 正=进食（饱食上升）；负=饥饿（下降）
         public int 水分;       // 正=饮水（水分上升）；负=脱水（下降）
         public int 疲劳;       // 正=增加疲劳；负=恢复
@@ -19,7 +18,6 @@ using System;
         public int 流血;       // 正=流血加重；负=包扎
         public int 骨折;       // 正=骨折；负=固定恢复
         public int 发烧;       // 正=发烧；负=退烧
-        public int 金币;
         public int 经验;
         public string 获得物品;
         public int 获得数量;   // 获得物品的数量（缺省按 1；JsonUtility 缺失=0，结算时兜底 1）
@@ -171,8 +169,8 @@ using System;
                                      // 兼容：旧数据可用 容器形状字符串掩码（'1'=可用）表达，本字段优先。
         public string[] 容器形状掩码;  // 兼容旧定义：每行一个字符串，'1'=可用格、'0'=空洞；容器形状 非空时忽略本字段
         // —— 以物易物 ——
-        public int 价值 = 1;      // 1~100 价值点数
-        public int 价格 => 价值;  // 兼容旧引用（原"价格"字段语义）
+        public int 价值 = 1;      // 1~100 价值点数（末日版叫"价值"；原来这里还有个 `价格 => 价值` 的兼容属性，
+                                  //             它唯一的用户 装备背包子面板 已改读 价值，v51 刀7 删掉）
         // —— 品质与战斗内使用 ——
         public string 品质;       // "普通"/"优秀"/"稀有"...（JsonUtility 不认枚举名，字符串+转换）
         public 品质 品质档 => 数据解析.枚举<品质>(品质);

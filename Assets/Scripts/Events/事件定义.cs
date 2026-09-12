@@ -22,11 +22,8 @@
         public 精力变化事件(int 当前, int 最大, int 变化量) { this.当前 = 当前; this.最大 = 最大; this.变化量 = 变化量; }
     }
 
-    public readonly struct 金币变化事件
-    {
-        public readonly int 当前; public readonly int 变化量;
-        public 金币变化事件(int 当前, int 变化量) { this.当前 = 当前; this.变化量 = 变化量; }
-    }
+    // 注：原来这里还有一个 `金币变化事件`（当前/变化量）—— v51 刀7 删掉：
+    // 本作是以物易物、**没有货币**，它的唯一发布者(效果结算)与唯一订阅者(设施功能面板基类)一并拆了。
 
     // 时间变化：游戏内分钟数推进（世界时间管理器 整点结算/跳时 后发布，UI 据此刷新）
     public readonly struct 时间变化事件
@@ -48,9 +45,7 @@
         public readonly int 体质; public readonly int 力量; public readonly int 智慧; public readonly int 敏捷; public readonly int 意志; public readonly int 自由属性点;
         public 属性变化事件(int 体质, int 力量, int 智慧, int 敏捷, int 意志, int 自由属性点)
         { this.体质 = 体质; this.力量 = 力量; this.智慧 = 智慧; this.敏捷 = 敏捷; this.意志 = 意志; this.自由属性点 = 自由属性点; }
-        // 兼容旧签名（体力=体质，智力=智慧，意志缺省 5）
-        public 属性变化事件(int 体力, int 力量, int 智力, int 敏捷, int 自由属性点)
-            : this(体力, 力量, 智力, 敏捷, 5, 自由属性点) { }
+        // 原有一个 5 参"兼容旧签名"构造（体力/智力/意志缺省 5）—— 全仓库 0 调用，v51 刀7 删。
     }
 
     // 生存状态变化：饱食度/水分度（HUD 与状态栏刷新；float 精确 0.1）

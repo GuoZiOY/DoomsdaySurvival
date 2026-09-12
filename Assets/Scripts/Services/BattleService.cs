@@ -31,7 +31,7 @@ public sealed class BattleService
     private int 先手模式;   // 0=速度序 1=敌方先手 2=我方先手
     private string 当前棋盘标识 = "街头";   // 本次战斗使用的 战斗棋盘.标识（遭遇来源按所在场景给：房间=室内 / 街道=街头 / 工厂=工厂）
     private readonly List<string> 消耗道具 = new List<string>();
-    private int 累计金币, 累计经验;
+    private int 累计经验;   // 原为 `累计金币, 累计经验` —— 累计金币 全仓库只在这里赋值、从不读取（货币已废），v51 刀7 删
     private readonly List<物品堆叠> 尸体战利品 = new List<物品堆叠>();   // 胜利 战利品（进 尸体 供 搜索，不 直接 入包）
 
     public string 当前消息 { get; private set; }
@@ -63,7 +63,7 @@ public sealed class BattleService
         this.先手模式 = 先手;
         战斗中 = true; 回合数 = 1; 战斗分钟 = 0f;
         我方.Clear(); 敌方.Clear(); 消耗道具.Clear();
-        累计金币 = 0; 累计经验 = 0;
+        累计经验 = 0;
         尸体战利品.Clear();
         取消待行动作();   // 新 战斗 清 残留 蓄力
         var 玩家单位 = 战斗单位.从玩家投影(档案);
