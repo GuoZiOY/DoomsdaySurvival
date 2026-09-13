@@ -4,18 +4,22 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // 配方行：制作面板 的 配方行（场景 手动 搭 模板：物品图 + 名称 + 选中背景——极简；详细 内容 放 详情文本）。
-// 显示：物品图标（物品图标服务 加载；无 图 = 品质 混合 色块 兜底）+ 物品名（选中 时 ▸ 金色 前缀）。
+// 显示：物品图标（物品图标服务 加载；无 图 = 品质 混合 色块 兜底）+ 物品名（选中 时 整体 金色）。
 // 图标 完整 显示：contain 等比缩放（不变形、不裁剪、完整 看到 整件 物品）——目标 区域 = 物品图 rect（模板 摆）。
 //   cover（放大 铺满 + 裁剪）会 裁掉 横条 武器 两端 → 不用；要 更大：把 物品图 rect 调 大（横向 区域 适合 武器）。
-// 选中态：背景 高亮 + ▸ 标记。交互：点 行 → 选中（IPointerClickHandler，无需 Button 组件）。
+// 选中态：**金黄色背景高亮 + 名称金色**（v51 刀40）。交互：点 行 → 选中（IPointerClickHandler，无需 Button 组件）。
 public sealed class 配方行 : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] private Image 物品图;        // 物品 图标（物品图标服务 加载）
-    [SerializeField] private TMP_Text 名称;       // 物品名（选中 时 ▸ 金色 前缀）
-    [SerializeField] private Image 选中背景;      // 行 背景（选中 高亮；未选中 = 面板 底 色）
+    [SerializeField] private TMP_Text 名称;       // 物品名（选中 时 金色）
+    [SerializeField] private Image 选中背景;      // 行 背景（选中 = 金黄 高亮；未选中 = 面板 底 色）
 
     private static readonly Color 背景正常色 = 游戏主题.面板;
-    private static readonly Color 背景选中色 = new Color(0.42f, 0.66f, 0.82f, 0.1f);   // 钢蓝 半透明 高亮
+    // 选中 高亮 = **金黄色**（v51 刀40 用户要求）：
+    //   原来是 游戏主题.选中色（钢蓝 0.42/0.66/0.82，那是给"地图节点选中"定的），
+    //   放在制作面板里和"金色 = 当前/强调"这套视觉语言不一致 → 换成金色低透明底。
+    // RGB 直接从 游戏主题.金色 取（不写字面量）：主题调色时这里自动跟着变。
+    private static readonly Color 背景选中色 = new Color(游戏主题.金色.r, 游戏主题.金色.g, 游戏主题.金色.b, 0.18f);
 
     private UnityEngine.Events.UnityAction 点击回调;
 
@@ -60,7 +64,7 @@ public sealed class 配方行 : MonoBehaviour, IPointerClickHandler
             }
         }
         // 名称（选中 金色 高亮）
-        if (名称 != null) 名称.text = 选中 ? $"<color=#d9a441>{名称文本}</color>" : 名称文本;
+        if (名称 != null) 名称.text = 选中 ? $"<color={游戏主题.金色色值}>{名称文本}</color>" : 名称文本;
         // 选中 背景（高亮）
         if (选中背景 != null) 选中背景.color = 选中 ? 背景选中色 : 背景正常色;
     }
