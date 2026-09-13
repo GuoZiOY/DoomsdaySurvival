@@ -110,7 +110,13 @@ if (-not ($回派调用 | Where-Object { $_ -like "$驱动文件*" })) { 报错 
 
 # ---------- 3. 结算与回派拆开 + 幂等锁在分派之后 ----------
 Write-Output "[3] 结算与回派拆开（结束战斗 只登记；分派成功才清结果节点）"
-$战 = 读行 "Assets\Scripts\Services\战斗\BattleService.cs"
+# ★ v51 刀25：BattleService 已按分节拆成多个 partial 文件（同一个类），本守门人的判据跨这些文件
+#   → 拼接全部 BattleService*.cs 再查（拼接顺序对"函数体提取"没有影响）。
+$战目录 = "Assets\Scripts\Services\战斗"
+$战文件 = Get-ChildItem (Join-Path $根 $战目录) -Filter "BattleService*.cs" | Sort-Object Name
+$战 = @()
+foreach ($f in $战文件) { $战 += 读行 (Join-Path $战目录 $f.Name) }
+Write-Output ("  BattleService 分部文件 {0} 个：{1}" -f $战文件.Count, (($战文件 | ForEach-Object { $_.Name }) -join "、"))
 $结束行 = 找行 $战 'private\s+void\s+结束战斗\s*\('
 $结束体 = 取函数体 $战 $结束行
 if ($null -eq $结束体) { 报错 "取不到 结束战斗 的函数体（签名改名了？脚本要同步更新）" }
