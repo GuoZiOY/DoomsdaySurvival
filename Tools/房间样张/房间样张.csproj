@@ -11,7 +11,6 @@
   <ItemGroup>
     <!-- 直接链接 Assets 下的源文件：样张画的就是游戏里真正生成出来的那个房间 -->
     <Compile Include="Program.cs" />
-    <Compile Include="桩.cs" />
     <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
     <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\确定性随机.cs" />
