@@ -174,6 +174,14 @@ public sealed class 角色创建面板 : 面板基类
                 foreach (var 效果 in 天赋.效果)
                     if (效果 != null && 是五维(效果.目标))
                         值[属性索引(效果.目标)] += (int)效果.数值;
+        // 职业固有天赋（v51 刀52）也**真的会生效**：确认开始() 会把它塞进 待选天赋 → PlayerService.应用天赋 施加效果。
+        //   所以预览必须一起算 —— 否则"预览的五维"和"进游戏后的五维"对不上（这种对不上以前就存在，只是没人能看出来）。
+        if (数据.职业.TryGetValue(选中职业, out var 选中职业项) && !string.IsNullOrEmpty(选中职业项.天赋))
+            if (!已选天赋.Contains(选中职业项.天赋)
+                && 数据.天赋.TryGetValue(选中职业项.天赋, out var 职业天赋项) && 职业天赋项.效果 != null)
+                foreach (var 效果 in 职业天赋项.效果)
+                    if (效果 != null && 是五维(效果.目标))
+                        值[属性索引(效果.目标)] += (int)效果.数值;
         return 值;
     }
 
@@ -275,6 +283,9 @@ public sealed class 角色创建面板 : 面板基类
         清空(容器);
         foreach (var 天赋 in 数据.天赋.Values)
         {
+            // 职业固有天赋（v51 刀52）：由职业自带、不参与天赋预算，**不给玩家自选** —— 不进列表。
+            //   （它们的名字由 渲染预览() 显示在"职业天赋"那一份里；效果由 PlayerService.应用天赋 施加。）
+            if (天赋.职业专属) continue;
             bool 是正 = 天赋.点数 > 0;
             if (是正 != 正面) continue;
             string 标识 = 天赋.标识;
@@ -339,7 +350,10 @@ public sealed class 角色创建面板 : 面板基类
             剩余自由点--;
         }
         // 随机天赋：默认只随机几个（1~建议天赋数），预算内抽选（正面买不起则跳过，负面可选）
-        var 候选 = new List<string>(数据.天赋.Keys);
+        //   刀52：候选里**排除职业专属天赋**（那是职业自带的，不该被随机到"已选天赋"里占预算）
+        var 候选 = new List<string>();
+        foreach (var (标识, 天赋) in 数据.天赋)
+            if (!天赋.职业专属) 候选.Add(标识);
         int 目标数 = Random.Range(1, 建议天赋数 + 1);
         守卫 = 0;
         while (候选.Count > 0 && 已选天赋.Count < 目标数 && 守卫++ < 30)

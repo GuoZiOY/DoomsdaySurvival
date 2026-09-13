@@ -262,13 +262,12 @@ if ($世界) {
 }
 Write-Output ("世界 {0} 个" -f $(if ($世界) { $世界.世界.Count } else { 0 }))
 
-# ---------- 8. 职业 / 天赋：悬空引用（**只提示，不判失败**） ----------
-# 为什么只提示：用户拍板「职业/天赋暂时不补充，但保留」（docs/大世界网格与副本设计.md §6.3 + §16.1），
-#   所以"内容没补"是**已知状态**，判失败会让这个工具永远红着、以后真出错就看不出来了。
-# 为什么必须提示：这三条在运行时**全是静默失效**（`DataService.重新校验` 末尾那段有同样一份）：
-#   职业.初始技能 → PlayerService 查表不中就 continue → 这个职业开局学不到技能；
-#   职业.天赋     → PlayerService **不查表**直接塞进 档案.天赋 → 一条永远不生效的天赋；
-#   职业.初始装备 → 档案.添加物品 也不查表 → 一件 items 里没有的东西进了背包。
+# ---------- 8. 职业 / 天赋：悬空引用（**v51 刀52 起：判失败**） ----------
+# 历史：这里原来是"只提示、不判失败"（用户当时拍板「职业/天赋暂时不补充，但保留」，
+#   内容没补是已知状态，判失败会让工具永远红着）。**刀52 补齐后悬空引用 = 0 处**，
+#   于是按项目纪律翻成硬失败：这三条在运行时**全是静默失效**，必须有人挡着不让它再回来。
+#   （`DataService.重新校验` 末尾那份同样一份，仍保持"只警告不拦进游戏" —— 数据问题不该让玩家进不去。）
+#   对应修复：`职业.初始技能` 4 处 + `职业.天赋` 6 处（`docs/数据缺口清单.md` §二 B）。
 $技能集 = New-Object System.Collections.Generic.HashSet[string]
 $sj = 读JSON "skills.json"
 if ($sj) { foreach ($s in $sj.技能) { if ($s.标识) { [void]$技能集.Add([string]$s.标识) } } }
@@ -276,27 +275,60 @@ $天赋集 = New-Object System.Collections.Generic.HashSet[string]
 $tj = 读JSON "天赋.json"
 if ($tj) { foreach ($t in $tj.天赋) { if ($t.标识) { [void]$天赋集.Add([string]$t.标识) } } }
 $职业 = 读JSON "职业.json"
-$script:提示 = 0
+$script:悬空 = 0
 if ($职业) {
     foreach ($z in $职业.职业) {
         if (-not $z.标识) { 报错 "职业 缺少 标识"; continue }
         if ($z.初始技能 -and -not $技能集.Contains([string]$z.初始技能)) {
-            Write-Output ("  ⚠ 职业[{0}] 初始技能[{1}] 不在 skills.json（这个职业开局学不到它）" -f $z.标识, $z.初始技能); $script:提示++
+            报错 ("职业[{0}] 初始技能[{1}] 不在 skills.json（这个职业开局学不到它）" -f $z.标识, $z.初始技能); $script:悬空++
         }
         if ($z.天赋 -and -not $天赋集.Contains([string]$z.天赋)) {
-            Write-Output ("  ⚠ 职业[{0}] 天赋[{1}] 不在 天赋.json（会塞进 档案.天赋 但永不生效）" -f $z.标识, $z.天赋); $script:提示++
+            报错 ("职业[{0}] 天赋[{1}] 不在 天赋.json（会塞进 档案.天赋 但永不生效）" -f $z.标识, $z.天赋); $script:悬空++
         }
         if ($z.初始装备) {
             foreach ($e in $z.初始装备) {
                 if ($e.标识 -and -not $物品标识.Contains([string]$e.标识)) {
-                    Write-Output ("  ⚠ 职业[{0}] 初始装备[{1}] 不在 items（会进背包，但是件没有定义的东西）" -f $z.标识, $e.标识); $script:提示++
+                    报错 ("职业[{0}] 初始装备[{1}] 不在 items（会进背包，但是件没有定义的东西）" -f $z.标识, $e.标识); $script:悬空++
                 }
             }
         }
     }
 }
-Write-Output ("职业 {0} 个 / 技能 {1} 个 / 天赋 {2} 个 / 悬空引用 {3} 处（⚠ 只提示，不判失败）" -f `
-    $(if ($职业) { $职业.职业.Count } else { 0 }), $技能集.Count, $天赋集.Count, $script:提示)
+Write-Output ("职业 {0} 个 / 技能 {1} 个 / 天赋 {2} 个 / 悬空引用 {3} 处（刀52 起判失败）" -f `
+    $(if ($职业) { $职业.职业.Count } else { 0 }), $技能集.Count, $天赋集.Count, $script:悬空)
+
+# ---------- 8b. 技能 / Buff：挂载引用与属性口径（v51 刀52） ----------
+# 为什么要有：刀52 一次加了 8 个技能 + 11 条 buff，全是"写错就静默失效"的引用：
+#   · 技能.挂载Buff 写错 → 增益/减益技能放出去什么都没发生（战斗里只看到"用了技能"）；
+#   · 技能.消耗物品 写错 → 技能永远提示"缺少消耗物"，谁也不知道是哪件东西；
+#   · **buff.属性 只能写 攻击/防御/敏捷** —— 这是最容易踩的坑：速度走的是 `敏捷`
+#     （`战斗单位.当前速度 => 修正(基础速度, 属性修正("敏捷"))`），写"速度"就是一条永不生效的 buff。
+$buff集 = New-Object System.Collections.Generic.HashSet[string]
+$bj = 读JSON "buffs.json"
+if ($bj) { foreach ($b in $bj.Buffs) { if ($b.标识) { [void]$buff集.Add([string]$b.标识) } } }
+$script:技能坏 = 0
+if ($sj) {
+    foreach ($s in $sj.技能) {
+        if ($s.挂载Buff -and -not $buff集.Contains([string]$s.挂载Buff)) {
+            报错 ("技能[{0}] 挂载Buff[{1}] 不在 buffs.json（放出去什么都不会发生）" -f $s.标识, $s.挂载Buff); $script:技能坏++
+        }
+        if ($s.消耗物品 -and -not $物品标识.Contains([string]$s.消耗物品)) {
+            报错 ("技能[{0}] 消耗物品[{1}] 不在 items（技能永远提示缺消耗物）" -f $s.标识, $s.消耗物品); $script:技能坏++
+        }
+    }
+}
+if ($bj) {
+    foreach ($b in $bj.Buffs) {
+        if ($b.类型 -eq "增益" -or $b.类型 -eq "减益") {
+            if ($b.属性 -and @("攻击", "防御", "敏捷") -notcontains [string]$b.属性) {
+                报错 ("Buff[{0}] 属性[{1}] 非法（只能是 攻击/防御/敏捷 —— 速度走敏捷）" -f $b.标识, $b.属性); $script:技能坏++
+            }
+            if ([int]$b.数值 -eq 0) { 报错 ("Buff[{0}] 数值为 0（挂了等于没挂）" -f $b.标识); $script:技能坏++ }
+        }
+    }
+}
+Write-Output ("技能 {0} 个 / Buff {1} 条 / 引用与属性 违规 {2} 处" -f `
+    $(if ($sj) { $sj.技能.Count } else { 0 }), $buff集.Count, $script:技能坏)
 
 # ---------- 9. 敌人 AI 行动表：`行动` 必须是 "普攻" 或 skills.json 里真实存在的技能 ----------
 # 为什么要有：v51 之前 `enemies.json` **一处 行动表 都没有**（v46 宣称的"敌人读条大招、可被撞断"这条功能
