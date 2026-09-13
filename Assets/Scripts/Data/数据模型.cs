@@ -125,6 +125,29 @@ using System;
         public float 技能间隔秒;    // 技能 意图 一次 用时（秒）
     }
 
+    // ================= 敌人特性（"词缀"留给敌人的那一份，v51 刀45） =================
+    // 一条特性 = 名字 + 若干条**属性修正**（Tier 1，生成时一次性改数，零战斗钩子）。
+    // 例：迅捷 = 速度+30%、攻击间隔-20%；厚皮 = 防御+15、生命+50%。
+    // 用户拍板：**只要随机的**（战斗开始时逐只掷，走可播种随机源）；数据里不写死谁带什么。
+    [Serializable]
+    public class 敌人特性效果
+    {
+        public string 效果;   // "生命"/"攻击"/"防御"/"速度"/"暴击"/"闪避"/"攻击距离"/"攻击间隔"/"移动间隔"
+        public int 数值;      // 百分比 或 点数（按 效果 解释；可为负 = 取舍，如 巨体 的速度 -10）
+    }
+
+    [Serializable]
+    public class 敌人特性定义
+    {
+        public string 标识;
+        public string 名称;          // 显示名，同时用作名字前缀（"迅捷的感染者"）
+        public string 描述;
+        public 敌人特性效果[] 效果们;
+        public float 权重 = 1f;      // 抽取权重（越"凶"的越低）
+    }
+
+    [Serializable]
+    public class 敌人特性根 { public 敌人特性定义[] 特性; }
     [Serializable]
     public class 敌人根 { public 敌人数据[] 敌人; }
 

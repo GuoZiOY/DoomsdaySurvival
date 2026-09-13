@@ -12,6 +12,7 @@ using UnityEngine;
         // 各数据表（可读写，供校验/测试注入）
         public Dictionary<string, 剧情节点> 剧情 { get; private set; } = new Dictionary<string, 剧情节点>();
         public Dictionary<string, 敌人数据> 敌人 { get; private set; } = new Dictionary<string, 敌人数据>();
+        public Dictionary<string, 敌人特性定义> 敌人特性表 { get; private set; } = new Dictionary<string, 敌人特性定义>();   // 刀45：敌人词缀（只随机）
         public Dictionary<string, 物品数据> 物品 { get; private set; } = new Dictionary<string, 物品数据>();
         public Dictionary<string, 技能数据> 技能 { get; private set; } = new Dictionary<string, 技能数据>();
         public Dictionary<string, 任务数据> 任务 { get; private set; } = new Dictionary<string, 任务数据>();
@@ -65,6 +66,7 @@ using UnityEngine;
         {
             加载("story", 剧情, (剧情根 根) => 根.节点);
             加载("enemies", 敌人, (敌人根 根) => 根.敌人);
+            加载("敌人特性", 敌人特性表, (敌人特性根 根) => 根.特性);   // 刀45：敌人词缀表（允许缺失 → 敌人就没有词缀）
             加载物品();   // items.json 已按类型拆分多文件（便于查看修改），全部合并进 物品 字典
             加载("skills", 技能, (技能根 根) => 根.技能);
             加载("quests", 任务, (任务根 根) => 根.任务);
@@ -250,6 +252,21 @@ using UnityEngine;
             //   原来那段「地点.连接 邻接表校验」随 地图地点/map.json/地图服务 一起删掉了。
             //   大世界的数据级校验在下面「大世界（世界.json）」那一段；"摆出来连不连通"由 Tools/大世界验证 离线断言。
 
+            // —— 敌人特性（刀45）：效果名必须是 战斗单位 认得的；数值不能是 0（等于白挂一条）——
+            foreach (var (标识, 特) in 敌人特性表)
+            {
+                if (特 == null) continue;
+                if (特.效果们 == null || 特.效果们.Length == 0)
+                { 校验错误.Add($"敌人特性[{标识}] 没有任何效果"); continue; }
+                foreach (var 效 in 特.效果们)
+                {
+                    if (效 == null) continue;
+                    if (!敌人特性.认得出(效.效果))
+                        校验错误.Add($"敌人特性[{标识}] → 效果[{效.效果}] 认不出（只能是 {string.Join("/", 敌人特性.全部效果)}）");
+                    if (效.数值 == 0)
+                        校验错误.Add($"敌人特性[{标识}] → {效.效果} 数值为 0（挂了等于没挂）");
+                }
+            }
             // —— 物品：装备类必须有 槽位 ——
             foreach (var (标识, 物品) in 物品)
             {

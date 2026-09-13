@@ -32,6 +32,13 @@ public sealed partial class BattleService
     private int 战斗场次;      // 本次运行内的第几场（不存档，见上）
     private int 指定种子;      // >0 = 下一场强制用这个种子（复现/验证用，用一次就清回 0）
 
+    // —— 敌人词缀（v51 刀45，用户拍板"只要随机的"）——
+    // 战斗开始时**逐只**掷：中了就给 1 条（再中"双特性率"给 2 条），走本场的 随机源 → 同种子可复现。
+    // 数据里不写死谁带什么（用户选的），所以 Boss 也可能不带、杂兵也可能带 —— 这是接受的取舍。
+    private float 敌人词缀率 = 0.18f;      // 普通遭遇里每只敌人成为"变异体"的概率
+    private float 敌人双词缀率 = 0.25f;    // 已经是变异体时，再来一条的概率
+    private bool 强制敌人词缀;             // 调试/测试面板用：这一场每只敌人必带词缀
+
     // —— 战斗状态 ——
     public bool 战斗中 { get; private set; }
     public int 回合数 { get; private set; }
@@ -69,6 +76,26 @@ public sealed partial class BattleService
     public BattleService(EventBus 事件, DataService 数据, PlayerService 玩家服务)
     { this.事件 = 事件; this.数据 = 数据; this.玩家服务 = 玩家服务; 随机 = new 随机源(1); }
 
+    // ===== 敌人词缀（v51 刀45）=====
+    // 逐只掷：中了给 1 条（再中双特性率给 2 条）。走本场 随机源 → 同种子同结果（可复现）。
+    // 表缺失（没配 敌人特性.json）→ 直接返回，敌人就是普通怪（不报错：这张表是"允许缺失"的）。
+    private void 施加敌人词缀(战斗单位 单位)
+    {
+        if (单位 == null || 单位.是否我方) return;
+        if (数据.敌人特性表 == null || 数据.敌人特性表.Count == 0) return;
+        float 率 = 强制敌人词缀 ? 1f : 敌人词缀率;
+        var 特性们 = 敌人特性.抽取(数据.敌人特性表, 随机, 率, 强制敌人词缀 ? 0f : 敌人双词缀率);
+        if (特性们.Count == 0) { 单位.词缀名 = null; return; }
+        敌人特性.应用(单位, 特性们);
+        单位.名称 = 敌人特性.命名(单位.名称, 特性们);
+        单位.词缀名 = new List<string>();
+        foreach (var 特 in 特性们) if (特 != null) 单位.词缀名.Add(敌人特性.文本(特));
+        发消息($"<color={游戏主题.危险色值}>{单位.名称}</color> —— {string.Join("、", 单位.词缀名)}");
+    }
+
+    // 调试/测试面板：让**下一场**敌人必带词缀（用完清回；与 指定下一场种子 同一套用法）
+    public void 指定下一场必带词缀(bool 开 = true) => 强制敌人词缀 = 开;
+
     // 复现/验证入口：让**下一场**战斗用指定种子（用完即清）。日志里会打出实际种子，
     // 玩家报 bug 时抄那个数过来，就能把那一场逐掷重放（`docs/优化实施进度.md` §一之十九）。
     public void 指定下一场种子(int 种子) => 指定种子 = 种子;
@@ -97,6 +124,7 @@ public sealed partial class BattleService
         this.胜利节点 = 胜利后节点; this.返回节点 = 返回节点;
         this.先手模式 = 先手;
         战斗中 = true; 回合数 = 1; 战斗分钟 = 0f;
+        强制敌人词缀 = false;   // "下一场必带"是一次性的（与 指定种子 同一纪律）
         待推进秒 = 0f;   // 新的一局不许继承上一局剩下的步长余量（v51 刀27）
         // 本场随机种子（v51 刀33）：世界种子 + 场次 → 可复现；也可被 指定下一场种子 强制覆盖
         战斗场次++;
@@ -126,6 +154,7 @@ public sealed partial class BattleService
                 if (string.IsNullOrEmpty(定义标识) || !数据.敌人.TryGetValue(定义标识, out var 敌)) continue;
                 var 单位 = 战斗单位.从敌人生成(敌);
                 单位.实例标识 = string.IsNullOrEmpty(实例标识) ? $"{定义标识}#{++序}" : 实例标识;
+                施加敌人词缀(单位);   // 刀45：逐只掷词缀（走本场随机源 → 同种子可复现）
                 敌方.Add(单位);
             }
         }
@@ -139,6 +168,7 @@ public sealed partial class BattleService
                 {
                     var 单位 = 战斗单位.从敌人生成(敌);
                     单位.实例标识 = $"{项.敌人}#{++序}";   // 一个单位一个标识（同种多只也不重复）
+                    施加敌人词缀(单位);   // 刀45：逐只掷词缀（走本场随机源 → 同种子可复现）
                     敌方.Add(单位);
                 }
             }
