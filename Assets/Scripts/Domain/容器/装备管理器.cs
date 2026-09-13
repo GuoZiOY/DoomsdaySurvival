@@ -183,6 +183,43 @@ public sealed class 装备管理器
         return null;
     }
 
+    // ================= 配件装卸（v51 刀35：改装件的落点） =================
+    // 说明：这里只动**装备上的配件槽**，不碰背包 —— 背包那一侧（扣掉一件配件 / 装回一件）
+    //   由调用方（面板操作）用 持有管理器 做，职责分开：装备管槽，持有管背包。
+
+    // 装一个配件到"某个装备槽位上的装备"。槽位已占用则返回 false（调用方先卸或提示）。
+    // 合法性（配件槽是否属于这件装备）由调用方用 配件槽.允许(装备, 配件) 先判 ——
+    //   这里只管槽位占用与写入，保持 Domain 不做数据表查询。
+    public bool 装配件(string 装备槽位, 配件条 配件)
+    {
+        if (配件 == null || string.IsNullOrEmpty(配件.槽位) || string.IsNullOrEmpty(配件.标识)) return false;
+        var 记录 = 玩家.装备.Find(e => e.槽位 == 装备槽位);
+        if (记录 == null || string.IsNullOrEmpty(记录.标识)) return false;
+        if (记录.配件 == null) 记录.配件 = new List<配件条>();
+        if (记录.配件.Exists(c => c != null && c.槽位 == 配件.槽位)) return false;   // 槽已占
+        记录.配件.Add(配件);
+        return true;
+    }
+
+    // 卸下某个槽位上的配件（返回被卸下的那件；没有则 null）。调用方负责把它放回背包。
+    public 配件条 卸配件(string 装备槽位, string 配件槽)
+    {
+        var 记录 = 玩家.装备.Find(e => e.槽位 == 装备槽位);
+        if (记录?.配件 == null) return null;
+        int 序 = 记录.配件.FindIndex(c => c != null && c.槽位 == 配件槽);
+        if (序 < 0) return null;
+        var 件 = 记录.配件[序];
+        记录.配件.RemoveAt(序);
+        return 件;
+    }
+
+    // 这件装备上装的配件条（按槽位；没装的槽不列）—— UI 列槽位用
+    public List<配件条> 已装配件(string 装备槽位)
+    {
+        var 记录 = 玩家.装备.Find(e => e.槽位 == 装备槽位);
+        return 记录?.配件 ?? new List<配件条>();
+    }
+
     // 装备加成求和（生存/成长管理器 派生数值用）
     public int 装备总加成(Func<string, int> 加成) => 装备数值(加成);
 
