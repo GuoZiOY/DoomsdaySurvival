@@ -107,23 +107,9 @@ public static class 敌人特性
     private static int 百分比(int 值, int 百分) => Math.Max(1, (int)Math.Round(值 * (1f + 百分 / 100f)));
     private static float 百分比(float 值, int 百分) => Math.Max(0.1f, 值 * (1f + 百分 / 100f));
 
-    // 名字带前缀（"迅捷的感染者"）：精英要能一眼看出来。多条时用"、"连起来
-    public static string 命名(string 原名, IList<敌人特性定义> 特性们)
-    {
-        if (特性们 == null || 特性们.Count == 0) return 原名;
-        var 词 = new List<string>();
-        foreach (var 特 in 特性们) if (特 != null && !string.IsNullOrEmpty(特.名称)) 词.Add(特.名称);
-        return 词.Count == 0 ? 原名 : $"{string.Join("、", 词)}的{原名}";
-    }
-
-    // 特性标签文本（战斗提示/图鉴用）："迅捷（速度 +30%）" 这种，取第一条效果
-    public static string 文本(敌人特性定义 特)
-    {
-        if (特 == null) return "";
-        if (特.效果们 == null || 特.效果们.Length == 0 || 特.效果们[0] == null) return 特.名称 ?? "";
-        var 效 = 特.效果们[0];
-        string 号 = 效.数值 >= 0 ? "+" : "";
-        string 尾 = (效.效果 == 防御 || 效.效果 == 暴击 || 效.效果 == 闪避 || 效.效果 == 攻击距离) ? "" : "%";
-        return $"{特.名称}（{效.效果} {号}{效.数值}{尾}）";
-    }
+    // 词缀的**显示形式**（v51 刀48，用户 2026-09-13 拍板）：
+    //   ① 敌人**名字不变** —— 不加"迅捷的"前缀（战报/掉落/尸体搜寻里的名字始终干净）
+    //   ② 词缀**只显示 `[强壮]`** —— 不解释数值（数值是给设计看的，玩家看名字就够）
+    // 所以这里**没有** 命名()/文本() 两个格式化函数了：标签由调用方按 `特.名称` 现拼。
+    //   （原来那两个函数一个拼前缀、一个拼"（速度 +30%）"，正是这两条拍板要去掉的东西。）
 }

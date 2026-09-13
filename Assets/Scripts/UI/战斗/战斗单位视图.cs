@@ -151,7 +151,8 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
             string 匣 = ServiceRegistry.Get<BattleService>()?.弹匣文本();
             if (!string.IsNullOrEmpty(匣)) 片段.Add($"弹匣 {匣}");
         }
-        // 刀45：敌人的**词缀**（"迅捷（速度 +30%）"）—— 精英要能一眼看出来
+        // 刀45：敌人的**词缀**（v51 刀48 起只显示 `[强壮]`，不解释数值；敌人名字不变）
+        //   注：词缀名在这里是**普通片段**，下面统一套 `[]` —— 所以 词缀名 里存的就是名字本身。
         if (!单位.是否我方 && 单位.词缀名 != null)
             foreach (var 词 in 单位.词缀名) if (!string.IsNullOrEmpty(词)) 片段.Add(词);
         if (单位.眩晕剩余秒 > 0f) 片段.Add("眩晕");
