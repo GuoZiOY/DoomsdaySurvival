@@ -356,6 +356,33 @@ if ($建筑模板 -and $房间模板) {
     Write-Output ("楼梯那一列：{0} 处冲突（首间房的 大门/内门 不许开在 楼梯边 上）" -f $冲突)
 }
 
+# ---------- 配件（改装件）的数据规则（v51 刀43）----------
+# 为什么离线也要查一遍：这三条规则 DataService 里也有，但那是"进 Unity 才知道"；
+#   而配件的错误后果都是**静默**的 —— 槽位写错=永远装不上、没加成=装上没用、配了耐久=看起来会用坏。
+#   尤其是"配了耐久"这条：用户在游戏里看到"拆出来的配件是损坏的"就是这么来的（刀41）。
 Write-Output ""
-if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑与街上敌人 / 世界区域与敌人 全部存在）"; exit 0 }
+Write-Output "[配件] 槽位合法 / 至少一条加成 / 不许有耐久"
+$合法配件槽 = @('枪口', '瞄具', '弹匣', '枪托', '握把', '刃口', '插板')
+$加成分字段 = @('攻击加成', '防御加成', '生命加成', '负重加成', '抗性', '命中加成', '暴击加成', '闪避加成', '速度加成', '潜行加成')
+$配件数 = 0; $配件坏 = 0
+foreach ($f in (Get-ChildItem (Join-Path $数据 "物品") -Recurse -Filter *.json)) {
+    try { $j = ([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json) }
+    catch { continue }
+    foreach ($it in $j.物品) {
+        if (-not $it -or $it.类型 -ne '配件') { continue }
+        $配件数++
+        if ($合法配件槽 -notcontains [string]$it.槽位) { 报错 ("配件[{0}] → 槽位[{1}] 非法（只能是 {2}）" -f $it.标识, $it.槽位, ($合法配件槽 -join '/')); $配件坏++ }
+        $有加成 = $false
+        foreach ($fld in $加成分字段) { if ($it.PSObject.Properties.Name -contains $fld -and [int]$it.$fld -ne 0) { $有加成 = $true } }
+        if (-not $有加成) { 报错 ("配件[{0}] 没有任何加成（装上等于没用）" -f $it.标识); $配件坏++ }
+        if (($it.PSObject.Properties.Name -contains '最大耐久') -and [int]$it.最大耐久 -gt 0) {
+            报错 ("配件[{0}] 配了 最大耐久={1} —— 配件不是装备、没有耐久（用户 2026-09-13 定），请删掉" -f $it.标识, $it.最大耐久); $配件坏++
+        }
+    }
+}
+Write-Output ("  配件 {0} 件；违规 {1} 处" -f $配件数, $配件坏)
+if ($配件数 -eq 0) { 报错 "一件配件都没扫到 —— 判据失效了（路径/字段名变了？）" }
+
+Write-Output ""
+if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑与街上敌人 / 世界区域与敌人 / 配件规则 全部存在）"; exit 0 }
 Write-Output ("❌ 数据引用核对失败：{0} 处" -f $script:失败); exit 1
