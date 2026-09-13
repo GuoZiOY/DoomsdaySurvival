@@ -11,7 +11,7 @@ using System.Collections.Generic;
         public int 行 = -1;        // 网格行位置
         public bool 旋转;          // 是否旋转 90°
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
-        public List<配件条> 配件;   // 装备实例的随机配件（非装备=null/空，随档存档）
+        public List<配件条> 配件;   // 装在装备配件槽上的**改装件**（刀35 起取代"随机词缀"；非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
         public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
@@ -64,7 +64,7 @@ using System.Collections.Generic;
         public string 槽位;
         public string 标识;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
-        public List<配件条> 配件;   // 装备实例的随机配件（随档存档）
+        public List<配件条> 配件;   // 装在装备配件槽上的**改装件**（随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         public string 来源;          // 装备前所在网格（"主背包"/"仓库"；空=主背包，旧档兼容）。卸下/回滚 时"从哪来回哪去"
 
