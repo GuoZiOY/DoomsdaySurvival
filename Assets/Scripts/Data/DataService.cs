@@ -22,7 +22,6 @@ using UnityEngine;
         public Dictionary<string, 敌人组数据> 敌人组 { get; private set; } = new Dictionary<string, 敌人组数据>();
         public Dictionary<string, 助战组数据> 助战组 { get; private set; } = new Dictionary<string, 助战组数据>();
         public Dictionary<string, 配方数据> 配方 { get; private set; } = new Dictionary<string, 配方数据>();
-        public Dictionary<string, 词缀定义> 词缀 { get; private set; } = new Dictionary<string, 词缀定义>();
         public Dictionary<string, 职业数据> 职业 { get; private set; } = new Dictionary<string, 职业数据>();
         public Dictionary<string, 天赋数据> 天赋 { get; private set; } = new Dictionary<string, 天赋数据>();
         // 注：原有 `Dictionary<string, 天气数据> 天气` + `加载("天气", …)` —— v51 刀7c 删：
@@ -74,7 +73,6 @@ using UnityEngine;
             加载("recipes_工作台", 配方, (配方根 根) => 根.配方);
             加载("recipes_灶台", 配方, (配方根 根) => 根.配方);
             加载("recipes_医疗站", 配方, (配方根 根) => 根.配方);
-            加载("affixes", 词缀, (词缀根 根) => 根.词缀);   // 允许缺失（词缀系统）
             加载("职业", 职业, (职业根 根) => 根.职业);       // 允许缺失（职业系统）
             加载("天赋", 天赋, (天赋根 根) => 根.天赋);       // 允许缺失（天赋系统）
             加载("家具", 家具, (家具根 根) => 根.家具);       // 允许缺失（安全屋系统）

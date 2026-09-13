@@ -91,8 +91,6 @@ using UnityEngine;
             ServiceRegistry.Register(new 技能服务(事件, 数据, 玩家));
             ServiceRegistry.Register(new 书籍服务(事件, 数据));   // 书籍 阅读（技能书/配方书；依赖 技能服务——运行时 取）
             ServiceRegistry.Register(new 天赋服务(事件, 玩家));   // 机制型天赋（致命伤害/制作完成 事件响应）
-            var 词缀 = new 词缀服务(数据);   // 装备随机词条生成（掉落/装备实例）
-            ServiceRegistry.Register(词缀);
             ServiceRegistry.Register(new 大世界探索服务(事件, 数据, 玩家));   // 大世界层：100×100 格子网格（区域副本坐在它上面）
 
             // 自动存档器：订阅跨天/主线/战斗结束/返回主菜单 自动保存（须在业务服务之后注册）

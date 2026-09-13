@@ -10,8 +10,23 @@ public static class 物品工具
     public static 品质 有效品质(物品堆叠 堆叠, 物品数据 模板)
         => !string.IsNullOrEmpty(堆叠?.品质) ? 数据解析.枚举<品质>(堆叠.品质) : 模板.品质档;
 
-    // 详情区数值行：装备类合并 攻击/防御/生命/抗性 加成 + 实例词缀；恢复/书籍(技能书) 特例
-    public static string 数值文本(DataService 数据, 物品数据 物品, List<词缀条> 词缀 = null)
+    // 配件效果文本（"+攻击 3  -命中 5%" 这种；可正可负 = 取舍）
+    // v51 刀35：配件效果直接来自物品数据（`配件加成.取`），不再走"配件服务"那套模板表。
+    public static string 配件加成文本(物品数据 件)
+    {
+        if (件 == null) return "";
+        var 段 = new List<string>();
+        foreach (var (类, 值) in 配件加成.全部(件))
+        {
+            string 号 = 值 > 0 ? "+" : "−";
+            string 尾 = 配件加成.是百分比(类) ? "%" : "";
+            段.Add($"{号}{配件加成.名(类)} {System.Math.Abs(值)}{尾}");
+        }
+        return 段.Count > 0 ? "（" + string.Join("  ", 段) + "）" : "";
+    }
+
+    // 详情区数值行：装备类合并 攻击/防御/生命/抗性 加成 + 实例配件；恢复/书籍(技能书) 特例
+    public static string 数值文本(DataService 数据, 物品数据 物品, List<配件条> 配件 = null)
     {
         switch (物品.类型)
         {
@@ -23,7 +38,7 @@ public static class 物品工具
                     && !string.IsNullOrEmpty(物品.技能) && 数据.技能.TryGetValue(物品.技能, out var 技能))
                     return $"可学习：{技能.名称}（消耗 {技能.消耗精力} 精力）";
                 return "";   // 配方书 / 蓝图：详情由各自面板表达，这里不给数值行
-            default:   // 武器/防具/饰品：合并 攻击/防御/生命/抗性 加成 + 词缀（换行独立列出）
+            default:   // 武器/防具/饰品：本体加成 + 已装**配件**（配件是真实物品，效果查它的物品定义）
                 {
                     var 段 = new List<string>();
                     if (物品.攻击加成 > 0) 段.Add($"攻击 +{物品.攻击加成}");
@@ -31,28 +46,29 @@ public static class 物品工具
                     if (物品.生命加成 > 0) 段.Add($"生命 +{物品.生命加成}");
                     if (物品.抗性 > 0) 段.Add($"抗性 +{物品.抗性}%");
                     string 基础 = string.Join("   ", 段);
-                    if (词缀 != null && 词缀.Count > 0)
+                    if (配件 != null && 配件.Count > 0)
                     {
-                        var 服务 = ServiceRegistry.Get<词缀服务>();
-                        if (服务 != null)
+                        var 行 = new List<string> { 基础 };
+                        foreach (var 条 in 配件)
                         {
-                            var 行 = new List<string> { 基础 };
-                            foreach (var 条 in 词缀) if (!string.IsNullOrEmpty(服务.文本(条))) 行.Add(服务.文本(条));
-                            return string.Join("\n", 行);
+                            if (条 == null || string.IsNullOrEmpty(条.标识)) continue;
+                            if (!数据.物品.TryGetValue(条.标识, out var 件)) continue;
+                            行.Add($"〔{条.槽位}〕{件.标识}{配件加成文本(件)}");
                         }
+                        return string.Join("\n", 行);
                     }
                     return 基础;
                 }
         }
     }
 
-    // 完整详情文本（信息面板/物品网格面板共用）：名称/类型/描述/数值(含词缀)/形状/重量/价值/堆叠/耐久/操作提示
-    public static string 构建详情(玩家档案 档案, DataService 数据, 物品堆叠 堆叠, 网格服务 服务, List<词缀条> 词缀 = null)
+    // 完整详情文本（信息面板/物品网格面板共用）：名称/类型/描述/数值(含配件)/形状/重量/价值/堆叠/耐久/操作提示
+    public static string 构建详情(玩家档案 档案, DataService 数据, 物品堆叠 堆叠, 网格服务 服务, List<配件条> 配件 = null)
     {
         if (堆叠 == null) return "";
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return 堆叠.标识;
         var 形状 = 服务.形状解析?.Invoke(堆叠.标识) ?? new 物品形状(1, 1);
-        string 数值行 = 数值文本(数据, 物品, 词缀 ?? 堆叠.词缀);
+        string 数值行 = 数值文本(数据, 物品, 配件 ?? 堆叠.配件);
         string 操作提示 = 物品.恢复量 > 0 ? "双击使用" : (!string.IsNullOrEmpty(物品.槽位) ? "双击装备" : "");
         int 上限 = 服务.堆叠上限(堆叠.标识);
         string 堆叠文本 = 上限 > 1 ? $"堆叠 {堆叠.数量}/{上限}" : $"数量 {堆叠.数量}";

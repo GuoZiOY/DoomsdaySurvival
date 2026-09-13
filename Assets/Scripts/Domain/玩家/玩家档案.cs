@@ -11,7 +11,7 @@ using System.Collections.Generic;
         public int 行 = -1;        // 网格行位置
         public bool 旋转;          // 是否旋转 90°
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
-        public List<词缀条> 词缀;   // 装备实例的随机词缀（非装备=null/空，随档存档）
+        public List<配件条> 配件;   // 装备实例的随机配件（非装备=null/空，随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
         public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
@@ -64,7 +64,7 @@ using System.Collections.Generic;
         public string 槽位;
         public string 标识;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
-        public List<词缀条> 词缀;   // 装备实例的随机词缀（随档存档）
+        public List<配件条> 配件;   // 装备实例的随机配件（随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         public string 来源;          // 装备前所在网格（"主背包"/"仓库"；空=主背包，旧档兼容）。卸下/回滚 时"从哪来回哪去"
 
@@ -107,7 +107,9 @@ using System.Collections.Generic;
         [NonSerialized] public Func<string, int> 最大耐久解析;        // 标识 -> 最大耐久（0 = 无耐久，不损坏）
         [NonSerialized] public Func<string, (int 列, int 行)> 容器尺寸解析;   // 标识 -> 容器模板网格尺寸（弹挂/腰封/背包 穿戴时初始化）
         [NonSerialized] public Func<string, 家具数据> 家具定义解析;          // 家具标识 -> 家具定义（安全屋 家具效果 查询用；PlayerService 接线）
-        [NonSerialized] public Dictionary<string, 词缀定义> 词缀定义表;   // 词缀实例->模板
+        // 配件加成解析（v51 刀35 取代原 `配件定义表`）：配件物品标识 + 加成类型 → 该配件的加成值。
+        // 配件是普通物品，效果定义在 物品数据（攻击加成/命中加成/潜行加成…），由装配层接线到 DataService。
+        [NonSerialized] public Func<string, 加成类型, int> 配件加成解析;
 
         // —— 身份：职业与天赋 ——
         public string 职业 = "";                        // 职业标识（开局选择）
@@ -257,7 +259,7 @@ using System.Collections.Generic;
             return 实例 != null ? 家具工具.解码(实例.标识).等级 : 0;
         }
 
-        // 指定家具 当前等级 效果值（含义按 功能类型：床=恢复系数×100 / 储物箱=仓库行加成 / 灶台=寒潮豁免等级 / 收音机=电池次数 / 工作台=词缀概率加成%）。
+        // 指定家具 当前等级 效果值（含义按 功能类型：床=恢复系数×100 / 储物箱=仓库行加成 / 灶台=寒潮豁免等级 / 收音机=电池次数 / 工作台=配件概率加成%）。
         // 未建 = 0（无效果）；破损（0 级）= 功能 可用 但 效果 减半（1 级 效果 ÷2）；储物箱 例外——0 级 无 加成（仓库 行数 不 缩水，防 物品 显示 不下/丢失）。
         public int 家具效果(string 定义标识)
         {
@@ -305,11 +307,11 @@ using System.Collections.Generic;
 
         // ================= 派生数值（门面转发：装备/生存/成长 管理器） =================
 
-        // 生命上限（生存管理器：体质/等级/装备/词缀）
+        // 生命上限（生存管理器：体质/等级/装备/配件）
         public int 最大生命 => 生存管理.最大生命;
         // 行动点上限（生存管理器）
         public int 最大行动点 => 生存管理.最大行动点;
-        // 速度（生存管理器：敏捷/词缀/伤病）
+        // 速度（生存管理器：敏捷/配件/伤病）
         public int 速度 => 生存管理.速度;
         // 负重上限（装备管理器）
         public int 负重上限 => 装备管理.负重上限;
@@ -369,8 +371,8 @@ using System.Collections.Generic;
         public string 装备标识(string 槽位) => 装备管理.装备标识(槽位);
         // 按 装备记录 完整恢复槽位（穿回/回滚用，含容器数据/来源）
         public 装备记录 装备到槽(string 槽位, 装备记录 记录) => 装备管理.装备到槽(槽位, 记录);
-        public 装备记录 装备到槽(string 槽位, string 标识, List<词缀条> 词缀 = null, int? 当前耐久 = null, 物品堆叠 容器源 = null, string 来源 = null)
-            => 装备管理.装备到槽(槽位, 标识, 词缀, 当前耐久, 容器源, 来源);
+        public 装备记录 装备到槽(string 槽位, string 标识, List<配件条> 配件 = null, int? 当前耐久 = null, 物品堆叠 容器源 = null, string 来源 = null)
+            => 装备管理.装备到槽(槽位, 标识, 配件, 当前耐久, 容器源, 来源);
         public 装备记录 卸下装备(string 槽位) => 装备管理.卸下装备(槽位);
         public bool 已装备(string 标识) => 装备管理.已装备(标识);
         // 兼容旧引用：饰品槽自动分配
@@ -384,7 +386,7 @@ using System.Collections.Generic;
         public bool 装备已损坏(string 槽位) => 装备管理.装备已损坏(槽位);
         public void 扣装备耐久(string 槽位, int 量) => 装备管理.扣装备耐久(槽位, 量);
         public void 扣装备标识耐久(string 标识, int 量) => 装备管理.扣装备标识耐久(标识, 量);
-        public List<词缀条> 装备词缀(string 标识) => 装备管理.装备词缀(标识);
+        public List<配件条> 装备配件(string 标识) => 装备管理.装备配件(标识);
 
 
         // ================= 统一持有入口（门面转发：持有管理器——3 穿戴容器 + 仓库 + 嵌套容器（弹药箱等）） =================
@@ -394,7 +396,7 @@ using System.Collections.Generic;
         public int 物品数量(string 标识) => 持有管理.物品数量(标识);
         public bool 移除物品(string 标识, int 数量 = 1) => 持有管理.移除物品(标识, 数量);
         public void 移除堆叠实例(物品堆叠 堆叠) => 持有管理.移除堆叠实例(堆叠);
-        public List<词缀条> 背包词缀(string 标识) => 持有管理.背包词缀(标识);
+        public List<配件条> 背包配件(string 标识) => 持有管理.背包配件(标识);
         public int 背包当前耐久(string 标识) => 持有管理.背包当前耐久(标识);
         public bool 扣背包耐久(string 标识, int 量) => 持有管理.扣背包耐久(标识, 量, 有效最大耐久);
         public int 放入物品(string 标识, int 数量 = 1) => 持有管理.放入物品(标识, 数量);

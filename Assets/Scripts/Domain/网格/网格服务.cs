@@ -199,7 +199,7 @@ using System.Collections.Generic;
             return null;
         }
 
-        // 拆分堆叠：从 源 拆出 拆出数量 份为独立新堆叠（同标识/旋转/耐久/品质/词缀），自动找空位放下。
+        // 拆分堆叠：从 源 拆出 拆出数量 份为独立新堆叠（同标识/旋转/耐久/品质/配件），自动找空位放下。
         // 要求 1 <= 拆出数量 < 源.数量；无空位返回 null（不拆分）。
         public 物品堆叠 拆分(物品堆叠 源, int 拆出数量)
         {
@@ -211,7 +211,7 @@ using System.Collections.Generic;
                 旋转 = 源.旋转,
                 当前耐久 = 源.当前耐久,
                 品质 = 源.品质,
-                词缀 = 源.词缀 != null ? new List<词缀条>(源.词缀) : null,
+                配件 = 源.配件 != null ? new List<配件条>(源.配件) : null,
                 列 = 空位.Value.列,
                 行 = 空位.Value.行,
             };
@@ -469,13 +469,13 @@ using System.Collections.Generic;
         // 该标识的堆叠上限（0/缺省 = 不可堆叠）
         public int 堆叠上限(string 标识) => 堆叠上限解析?.Invoke(标识) ?? 0;
 
-        // 两堆叠能否合并：同标识 + 可堆叠 + 无词缀（词缀是装备实例，不可并入）+ 品质覆盖相同（空则忽略）+ 目标未满
+        // 两堆叠能否合并：同标识 + 可堆叠 + 无配件（配件是装备实例，不可并入）+ 品质覆盖相同（空则忽略）+ 目标未满
         public bool 可合并(物品堆叠 目标, 物品堆叠 来源)
         {
             if (目标 == null || 来源 == null || 目标 == 来源) return false;
             if (目标.标识 != 来源.标识) return false;
-            if (目标.词缀 != null && 目标.词缀.Count > 0) return false;
-            if (来源.词缀 != null && 来源.词缀.Count > 0) return false;
+            if (目标.配件 != null && 目标.配件.Count > 0) return false;
+            if (来源.配件 != null && 来源.配件.Count > 0) return false;
             if (!string.IsNullOrEmpty(目标.品质) || !string.IsNullOrEmpty(来源.品质))
                 if (目标.品质 != 来源.品质) return false;
             if (!可堆叠(目标.标识)) return false;
@@ -501,11 +501,11 @@ using System.Collections.Generic;
             if (string.IsNullOrEmpty(标识) || 数量 <= 0) return 0;
             int 原数量 = 数量;
             int 上限 = 堆叠上限(标识);
-            // ① 先填已入格的未满堆叠（仅 列>=0、无词缀）
+            // ① 先填已入格的未满堆叠（仅 列>=0、无配件）
             foreach (var 堆叠 in 网格物品)
             {
                 if (堆叠 == null || 堆叠.列 < 0 || 堆叠.标识 != 标识) continue;
-                if (堆叠.词缀 != null && 堆叠.词缀.Count > 0) continue;
+                if (堆叠.配件 != null && 堆叠.配件.Count > 0) continue;
                 int 空位 = 上限 - 堆叠.数量;
                 if (空位 <= 0) continue;
                 int 并入 = Math.Min(空位, 数量);
@@ -533,7 +533,7 @@ using System.Collections.Generic;
             return 原数量;
         }
 
-        // 放入一个已有堆叠实例（含词缀的装备/掉落物/换装回包/旧存档迁移）：找空位放置并写入坐标；网格满返回 false（不改变该堆叠）
+        // 放入一个已有堆叠实例（含配件的装备/掉落物/换装回包/旧存档迁移）：找空位放置并写入坐标；网格满返回 false（不改变该堆叠）
         public bool 放入网格堆叠(物品堆叠 堆叠)
         {
             if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识) || 堆叠.数量 <= 0 || 形状解析 == null) return false;

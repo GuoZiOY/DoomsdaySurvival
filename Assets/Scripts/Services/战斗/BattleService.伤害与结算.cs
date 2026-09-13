@@ -121,13 +121,11 @@ public sealed partial class BattleService
         }
         if (!string.IsNullOrEmpty(敌.掉落物品) && 随机.值() < 敌.掉落概率)
         {
-            // 掉落装备 → 词缀 实例；非装备 → 普通 堆叠（均 进 尸体）
-            if (数据.物品.TryGetValue(敌.掉落物品, out var 掉物))
-            {
-                var 词缀 = ServiceRegistry.Get<词缀服务>()?.生成(掉物);
-                if (词缀 != null) 战利品入尸(new 物品堆叠(敌.掉落物品, 1) { 词缀 = 词缀, 当前耐久 = 档案.有效最大耐久(敌.掉落物品) });
-                else 战利品入尸(敌.掉落物品, 1);
-            }
+            // 掉落就是**物品本体**（v51 刀35）：装备不再生成随机词缀/配件 ——
+            // 配件是独立物品（占背包、有重量），掉落与拾取都走普通物品那条路。
+            // 这里保留"耐久初始化"：装备类掉落物要带一个有效最大耐久，否则捡起来就是坏的。
+            if (数据.物品.TryGetValue(敌.掉落物品, out _))
+                战利品入尸(new 物品堆叠(敌.掉落物品, 1) { 当前耐久 = 档案.有效最大耐久(敌.掉落物品) });
             else 战利品入尸(敌.掉落物品, 1);
         }
         ServiceRegistry.Get<QuestService>().记录击败(敌.标识);
@@ -135,10 +133,10 @@ public sealed partial class BattleService
         发消息($"击败 <color={游戏主题.危险色值}>{敌.名称}</color> ！获得{补给文本}{敌.经验奖励} 经验。");
     }
 
-    // 战利品 收集：同名（无 词缀）合并 数量；词缀 实例 独立 一件
+    // 战利品 收集：同名（无 配件）合并 数量；配件 实例 独立 一件
     private void 战利品入尸(string 标识, int 数量)
     {
-        var 已有 = 尸体战利品.Find(s => s != null && s.标识 == 标识 && s.词缀 == null);
+        var 已有 = 尸体战利品.Find(s => s != null && s.标识 == 标识 && s.配件 == null);
         if (已有 != null) { 已有.数量 += 数量; return; }
         尸体战利品.Add(new 物品堆叠(标识, 数量));
     }
