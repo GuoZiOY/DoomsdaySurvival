@@ -83,7 +83,7 @@ else { Write-Output ("  定义：{0}" -f $定义处[0]) }
 if ($调用处.Count -eq 0) { 报错 "全仓库没有任何地方调用 推进战斗 —— 战斗永远不会推进（驱动没接上）" }
 foreach ($c in $调用处) {
     Write-Output ("  调用：{0}" -f $c)
-    if ($c -notlike "Assets\Scripts\Services\世界时间管理器.cs:*") {
+    if ($c -notlike "Assets\Scripts\Services\世界\世界时间管理器.cs:*") {
         报错 ("推进战斗 的调用跑出了驱动（{0}）—— 战斗时钟不许再挂回 UI/别处" -f $c)
     }
 }
@@ -105,12 +105,12 @@ foreach ($f in (Get-ChildItem $脚本目录 -Recurse -Filter *.cs)) {
 if ($回派定义.Count -ne 1) { 报错 ("处理自动回派 的定义应为 1 处，实际 {0} 处" -f $回派定义.Count) }
 if ($回派调用.Count -eq 0) { 报错 "没有任何地方调用 处理自动回派 —— 战斗结束后面板切不回去（静默卡死）" }
 else { Write-Output ("  调用：{0}" -f ($回派调用 -join "、")) }
-$驱动文件 = "Assets\Scripts\Services\世界时间管理器.cs"
+$驱动文件 = "Assets\Scripts\Services\世界\世界时间管理器.cs"
 if (-not ($回派调用 | Where-Object { $_ -like "$驱动文件*" })) { 报错 ("处理自动回派 没有在驱动（{0}）里被调用" -f $驱动文件) }
 
 # ---------- 3. 结算与回派拆开 + 幂等锁在分派之后 ----------
 Write-Output "[3] 结算与回派拆开（结束战斗 只登记；分派成功才清结果节点）"
-$战 = 读行 "Assets\Scripts\Services\BattleService.cs"
+$战 = 读行 "Assets\Scripts\Services\战斗\BattleService.cs"
 $结束行 = 找行 $战 'private\s+void\s+结束战斗\s*\('
 $结束体 = 取函数体 $战 $结束行
 if ($null -eq $结束体) { 报错 "取不到 结束战斗 的函数体（签名改名了？脚本要同步更新）" }

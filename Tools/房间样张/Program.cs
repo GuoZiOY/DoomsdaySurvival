@@ -18,7 +18,7 @@ using System.Text.Json;
 // ============================================================
 public static class Program
 {
-    // —— 与 Assets/Scripts/UI/背包/网格面板基类/网格面板配色.cs 的"房间段"对应（改那边记得改这里）——
+    // —— 与 Assets/Scripts/UI/网格/网格面板配色.cs 的"房间段"对应（改那边记得改这里）——
     static readonly Color 地板色 = Color.FromArgb(37, 37, 42);
     static readonly Color 地板斑色 = Color.FromArgb(55, 55, 62);
     static readonly Color 墙顶色 = Color.FromArgb(102, 97, 92);

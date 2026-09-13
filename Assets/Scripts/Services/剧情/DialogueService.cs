@@ -1,0 +1,96 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+    // 对话引擎：数据驱动推进剧情。进入节点 → 应用效果 → 发布 显示剧情事件；
+    // 用户点选项 → StoryController 回调 处理选项(目标) → 推进。
+    public sealed class DialogueService
+    {
+        private readonly EventBus 事件;
+        private readonly DataService 数据;
+        private readonly PlayerService 玩家;
+
+        private 剧情节点 当前节点;
+
+        // 当前显示缓存：StoryController 绑定时先拉取，避免错过装配期的初始事件
+        public 显示剧情事件 当前显示 { get; private set; }
+
+        public DialogueService(EventBus 事件, DataService 数据, PlayerService 玩家)
+        {
+            this.事件 = 事件;
+            this.数据 = 数据;
+            this.玩家 = 玩家;
+        }
+
+        // 返回"是否真的进入了节点"：false = 节点不存在（★ v51 刀17 由 void 改 bool，
+        // 让战斗回派方知道"剧情节点没落地"，从而**保留结果节点**而不是当成已经交出去 ——
+        // 原来是 LogError + return，而调用方（BattleService.返回）已经先把结果节点清空了，玩家便卡在战斗面板。
+        public bool 进入节点(string 节点标识)
+        {
+            if (!数据.剧情.TryGetValue(节点标识, out var 节点))
+            {
+                Debug.LogError($"[DialogueService] 节点不存在: {节点标识}");
+                return false;
+            }
+            当前节点 = 节点;
+            玩家.档案.当前节点 = 节点标识;
+
+            // 注：原来这里有一段「主线阶段推进」—— 非空则写 玩家.档案.主线阶段 → 检查阶段任务() → 自动存档。
+            // v51 刀7b 随 主线阶段 整条删掉（那 9 个阶段名全是奇幻地名：镇长/橡木林/风谷村/骑士团）。
+            // 副作用（有意）：进入剧情节点不再是"关键存档点" —— 存档仍由 自动存档器 在 跨天/战斗结束/回主菜单 触发。
+
+            // 进入效果（生命/物品 等；另含 学习技能/接取任务 扩展）
+            if (节点.效果 != null)
+            {
+                效果结算.应用(事件, 玩家.档案, 节点.效果);
+                if (!string.IsNullOrEmpty(节点.效果.学习技能))
+                    ServiceRegistry.Get<技能服务>().尝试学习(节点.效果.学习技能);
+                if (!string.IsNullOrEmpty(节点.效果.接取任务))
+                    ServiceRegistry.Get<QuestService>().接取(节点.效果.接取任务);
+            }
+
+            // 构建选项（数据载体，不含委托）
+            var 选项列表 = new List<剧情选项数据>();
+            if (节点.选项 != null)
+                foreach (var 选项 in 节点.选项)
+                {
+                    // 条件分支：需持有物品才显示
+                    if (!string.IsNullOrEmpty(选项.需要物品) && !玩家.档案.持有物品(选项.需要物品)) continue;
+                    选项列表.Add(new 剧情选项数据(选项.文本, 选项.目标));
+                }
+
+            // 缓存并发布显示事件，StoryController 订阅渲染；无选项时自动进入 下一节点（剧情链连续播放）
+            当前显示 = new 显示剧情事件(节点.文本 ?? "", 选项列表.ToArray(), 选项列表.Count == 0 ? (节点.下一节点 ?? "") : "");
+            事件.发布(当前显示);
+            return true;
+        }
+
+        // 处理选项目标：节点跳转 / __结束 / 战斗 / 地图（只发事件，UI 管理器订阅切换面板）
+        public void 处理选项(string 目标)
+        {
+            if (目标 == "__结束") { 事件.发布(new 日志事件(日志类型.系统, "序章结束。")); 事件.发布(new 打开结局事件()); return; }
+            if (目标.StartsWith("战斗:"))
+            {
+                // 战斗:敌人组标识:胜利节点[:助战组] —— 开始战斗 内部会先激活战斗面板
+                var 部分 = 目标.Split(':');
+                if (部分.Length >= 3)
+                {
+                    string 助战组 = 部分.Length >= 4 ? 部分[3] : "";
+                    ServiceRegistry.Get<BattleService>().开始战斗(部分[1], 部分[2], 玩家.档案.当前节点, 0, 助战组);
+                }
+                return;
+            }
+            // 注：原有一条 `设施:标识` 指令（发布 打开设施事件 让 UI 开对应设施面板）——
+            // v51 刀7e 随设施子系统整体退役删掉。剧情里不要再写 `设施:`，写了会落到 进入节点() 报"节点不存在"。
+            if (目标.StartsWith("地图:"))
+            {
+                // 地图:大地图[:世界标识] —— 打开大世界（100×100 格子网格）。
+                // v51 起**没有"节点"这个概念了**：方括号位置给的是**世界标识**（Data/世界.json），
+                // 留空就用默认世界。「地图:小地图」随 城镇小地图 一起删掉了，剧情里不要再写。
+                var 部分 = 目标.Split(':');
+                string 世界标识 = 部分.Length >= 3 ? 部分[2] : "";
+                ServiceRegistry.Get<大世界探索服务>()?.打开默认世界(世界标识);
+                return;
+            }
+            进入节点(目标);
+        }
+    }
