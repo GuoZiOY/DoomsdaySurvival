@@ -34,7 +34,7 @@ public sealed class 信息面板 : MonoBehaviour, IBeginDragHandler, IDragHandle
         if (档案 == null) return;
         var 记录 = 档案.装备.Find(e => e.槽位 == 槽位);
         if (记录 == null || string.IsNullOrEmpty(记录.标识)) return;
-        显示详情(new 物品堆叠(记录.标识, 1) { 当前耐久 = 记录.当前耐久, 配件 = 记录.配件 }, 档案.网格服务, 挂载父);
+        显示详情(new 物品堆叠(记录.标识, 1) { 当前耐久 = 记录.当前耐久, 配件 = 记录.配件, 已装填 = 记录.已装填 }, 档案.网格服务, 挂载父);
     }
 
     // 实例化 预制体 + 挂 Canvas 顶层（不受 裁剪 / 不被 覆盖）+ 置顶

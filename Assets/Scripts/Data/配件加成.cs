@@ -26,6 +26,7 @@ public static class 配件加成
             case 加成类型.闪避: return 物.闪避加成;
             case 加成类型.速度: return 物.速度加成;
             case 加成类型.潜行: return 物.潜行加成;
+            case 加成类型.弹匣容量: return 物.弹匣容量加成;   // 弹匣槽配件改造容量（扩容弹匣）
             default: return 0;
         }
     }
@@ -45,6 +46,7 @@ public static class 配件加成
             case 加成类型.闪避: return "闪避率";
             case 加成类型.速度: return "速度";
             case 加成类型.潜行: return "潜行";
+            case 加成类型.弹匣容量: return "弹匣容量";
             default: return "加成";
         }
     }

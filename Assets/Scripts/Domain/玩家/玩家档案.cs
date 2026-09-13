@@ -12,6 +12,7 @@ using System.Collections.Generic;
         public bool 旋转;          // 是否旋转 90°
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<配件条> 配件;   // 装在装备配件槽上的**改装件**（刀35 起取代"随机词缀"；非装备=null/空，随档存档）
+        public int 已装填;         // 弹匣里现在有几发（v51 刀44；只对枪械有意义，0 = 空；随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         // —— 容器实例（塔科夫式嵌套容器）：是容器的物品才有内部网格 ——
         public int 容器列;          // 实例网格列数（缺省用模板；随档存档）
@@ -65,6 +66,7 @@ using System.Collections.Generic;
         public string 标识;
         public int 当前耐久;        // 当前耐久（装备实例；<=0 = 损坏失效；随档存档）
         public List<配件条> 配件;   // 装在装备配件槽上的**改装件**（随档存档）
+        public int 已装填;         // 弹匣里现在有几发（v51 刀44；随档存档）
         public string 品质;          // 合成提升后的品质覆盖（空=用模板品质；随档存档）
         public string 来源;          // 装备前所在网格（"主背包"/"仓库"；空=主背包，旧档兼容）。卸下/回滚 时"从哪来回哪去"
 
@@ -113,6 +115,7 @@ using System.Collections.Generic;
         // 物品类型解析（v51 刀41）：标识 → "武器"/"防具"/"配件"…（`有效最大耐久` 用它把配件从
         //   "武器/防具默认 15 耐久"的兜底里摘出来 —— 否则配件会凭空有耐久、忘了初始化就显示"损坏"）
         [NonSerialized] public Func<string, string> 物品类型解析;
+        [NonSerialized] public Func<string, int> 弹匣容量解析;        // 刀44：标识（武器本体）-> 弹匣容量（0 = 无弹匣）
 
         // —— 身份：职业与天赋 ——
         public string 职业 = "";                        // 职业标识（开局选择）
@@ -374,8 +377,8 @@ using System.Collections.Generic;
         public string 装备标识(string 槽位) => 装备管理.装备标识(槽位);
         // 按 装备记录 完整恢复槽位（穿回/回滚用，含容器数据/来源）
         public 装备记录 装备到槽(string 槽位, 装备记录 记录) => 装备管理.装备到槽(槽位, 记录);
-        public 装备记录 装备到槽(string 槽位, string 标识, List<配件条> 配件 = null, int? 当前耐久 = null, 物品堆叠 容器源 = null, string 来源 = null)
-            => 装备管理.装备到槽(槽位, 标识, 配件, 当前耐久, 容器源, 来源);
+        public 装备记录 装备到槽(string 槽位, string 标识, List<配件条> 配件 = null, int? 当前耐久 = null, 物品堆叠 容器源 = null, string 来源 = null, int 已装填 = 0)
+            => 装备管理.装备到槽(槽位, 标识, 配件, 当前耐久, 容器源, 来源, 已装填);
         public 装备记录 卸下装备(string 槽位) => 装备管理.卸下装备(槽位);
         public bool 已装备(string 标识) => 装备管理.已装备(标识);
         // 兼容旧引用：饰品槽自动分配
@@ -402,6 +405,7 @@ using System.Collections.Generic;
         public List<配件条> 背包配件(string 标识) => 持有管理.背包配件(标识);
         public int 背包当前耐久(string 标识) => 持有管理.背包当前耐久(标识);
         public bool 扣背包耐久(string 标识, int 量) => 持有管理.扣背包耐久(标识, 量, 有效最大耐久);
+        public int 背包已装填(string 标识) => 持有管理.背包已装填(标识);
         public int 放入物品(string 标识, int 数量 = 1) => 持有管理.放入物品(标识, 数量);
         public int 放入堆叠(物品堆叠 堆叠) => 持有管理.放入堆叠(堆叠);
         public 网格服务 穿戴容器视图(string 槽位) => 持有管理.穿戴容器视图(槽位);

@@ -380,9 +380,31 @@ foreach ($f in (Get-ChildItem (Join-Path $数据 "物品") -Recurse -Filter *.js
         }
     }
 }
-Write-Output ("  配件 {0} 件；违规 {1} 处" -f $配件数, $配件坏)
+        if (($it.PSObject.Properties.Name -contains '弹匣容量加成') -and [int]$it.弹匣容量加成 -ne 0 -and [string]$it.槽位 -ne '弹匣') {
+            报错 ("配件[{0}] 配了 弹匣容量加成 但槽位是[{1}] —— 只有 弹匣 槽的配件才能改容量" -f $it.标识, $it.槽位); $配件坏++
+        }Write-Output ("  配件 {0} 件；违规 {1} 处" -f $配件数, $配件坏)
 if ($配件数 -eq 0) { 报错 "一件配件都没扫到 —— 判据失效了（路径/字段名变了？）" }
 
 Write-Output ""
-if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑与街上敌人 / 世界区域与敌人 / 配件规则 全部存在）"; exit 0 }
+Write-Output "[弹匣] 只做枪械：手枪/步枪/霰弹枪 可以有容量；弓弩/近战 不许配"
+$枪械 = @('手枪', '步枪', '霰弹枪'); $有弹匣 = 0; $弹匣坏 = 0
+foreach ($f in (Get-ChildItem (Join-Path $数据 "物品") -Recurse -Filter *.json)) {
+    try { $j = ([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json) }
+    catch { continue }
+    foreach ($it in $j.物品) {
+        if (-not $it -or $it.类型 -ne '武器') { continue }
+        if (-not ($it.PSObject.Properties.Name -contains '弹匣容量')) { continue }
+        $n = [int]$it.弹匣容量
+        if ($n -eq 0) { continue }
+        $有弹匣++
+        if ($枪械 -notcontains [string]$it.武器种类) { 报错 ("武器[{0}]（{1}）配了 弹匣容量={2} —— 弹匣只做枪械（弓弩/近战 不走弹匣）" -f $it.标识, $it.武器种类, $n); $弹匣坏++ }
+        if ($n -lt 1) { 报错 ("武器[{0}] 弹匣容量={1} 非法（要么不配=无弹匣，要么 >= 1）" -f $it.标识, $n); $弹匣坏++ }
+    }
+}
+Write-Output ("  配了弹匣的枪械 {0} 把；违规 {1} 处" -f $有弹匣, $弹匣坏)
+if ($有弹匣 -eq 0) { 报错 "一把配弹匣的枪都没有 —— 判据失效了（字段名变了？）" }
+if ($配件数 -eq 0) { 报错 "一件配件都没扫到 —— 判据失效了（路径/字段名变了？）" }
+
+Write-Output ""
+if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑与街上敌人 / 世界区域与敌人 / 配件规则 / 弹匣规则 全部存在）"; exit 0 }
 Write-Output ("❌ 数据引用核对失败：{0} 处" -f $script:失败); exit 1
