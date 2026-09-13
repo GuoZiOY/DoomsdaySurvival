@@ -39,6 +39,14 @@ public sealed partial class BattleService
     private float 敌人双词缀率 = 0.25f;    // 已经是变异体时，再来一条的概率
     private bool 强制敌人词缀;             // 调试/测试面板用：这一场每只敌人必带词缀
 
+    // —— 弹匣（v51 刀46，用户拍板"只自动换弹"）——
+    // 换弹 = 1.5 秒的**自动**动作：这期间**玩家行动条冻结**（= 占用一次行动），眩晕则被打断（重新装）。
+    // 为什么冻结行动条而不是加个独立计时：项目里"占行动条"是玩家已经熟悉的语言（读条大招/移动都用它），
+    //   再加一套并行计时会出现"读条和换弹同时在涨"的怪状态。
+    private float 换弹剩余秒;
+    private string 换弹槽位;               // 正在换弹的武器槽（主手/副手）
+    private const float 换弹秒 = 1.5f;
+
     // —— 战斗状态 ——
     public bool 战斗中 { get; private set; }
     public int 回合数 { get; private set; }
@@ -90,7 +98,7 @@ public sealed partial class BattleService
         单位.名称 = 敌人特性.命名(单位.名称, 特性们);
         单位.词缀名 = new List<string>();
         foreach (var 特 in 特性们) if (特 != null) 单位.词缀名.Add(敌人特性.文本(特));
-        发消息($"<color={游戏主题.危险色值}>{单位.名称}</color> —— {string.Join("、", 单位.词缀名)}");
+        发消息($"<color={危险色}>{单位.名称}</color> —— {string.Join("、", 单位.词缀名)}");   // 用本类自带的 危险色 常量（避免 Services→UI 越层）
     }
 
     // 调试/测试面板：让**下一场**敌人必带词缀（用完清回；与 指定下一场种子 同一套用法）
@@ -125,6 +133,7 @@ public sealed partial class BattleService
         this.先手模式 = 先手;
         战斗中 = true; 回合数 = 1; 战斗分钟 = 0f;
         强制敌人词缀 = false;   // "下一场必带"是一次性的（与 指定种子 同一纪律）
+        换弹剩余秒 = 0f; 换弹槽位 = null;   // 刀46：新一局不许继承上一局的换弹
         待推进秒 = 0f;   // 新的一局不许继承上一局剩下的步长余量（v51 刀27）
         // 本场随机种子（v51 刀33）：世界种子 + 场次 → 可复现；也可被 指定下一场种子 强制覆盖
         战斗场次++;
@@ -138,6 +147,7 @@ public sealed partial class BattleService
         取消待行动作();   // 新 战斗 清 残留 蓄力
         var 玩家单位 = 战斗单位.从玩家投影(档案);
         玩家 = 玩家单位; 我方.Add(玩家单位);
+        装填满(玩家);   // 刀46：出战自动装满弹匣（从 弹挂/腰封 抽；没弹药就空着，打的时候会提示）
         // 轻量助战：加入我方，AI 行动表自动出手（玩家不可手动操控；倒下无碍，玩家倒下=败）
         if (!string.IsNullOrEmpty(助战组标识) && 数据.助战组.TryGetValue(助战组标识, out var 助战组) && 助战组.成员 != null)
             foreach (var 项 in 助战组.成员)

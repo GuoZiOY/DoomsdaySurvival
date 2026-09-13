@@ -20,19 +20,20 @@ using System.Collections.Generic;
 public static class 敌人特性
 {
     // 效果类型（JSON 里 `效果` 写这些名字；写错会被 数据引用核对 + DataService 报出来）
-    public const string 生命 = "生命";         // 百分比：+50 = 生命上限 ×1.5
-    public const string 攻击 = "攻击";         // 百分比
-    public const string 防御 = "防御";         // 点数：+15 = 减伤 +15%（1 点 = 1%）
-    public const string 速度 = "速度";         // 百分比
-    public const string 暴击 = "暴击";         // 点数：+15 = 暴击率 +15%（0.15）
-    public const string 闪避 = "闪避";         // 点数
-    public const string 攻击距离 = "攻击距离"; // 点数（格）
-    public const string 攻击间隔 = "攻击间隔"; // 百分比：-20 = 出手更快（间隔 ×0.8）
-    public const string 移动间隔 = "移动间隔"; // 百分比
+    // 效果名常量与清单的**单一真源在 Data**（`敌人特性效果名`）：DataService 校验也要用，而 Data 不能引用 Domain。
+    public const string 生命 = 敌人特性效果名.生命;         // 百分比：+50 = 生命上限 ×1.5
+    public const string 攻击 = 敌人特性效果名.攻击;         // 百分比
+    public const string 防御 = 敌人特性效果名.防御;         // 点数：+15 = 减伤 +15%（1 点 = 1%）
+    public const string 速度 = 敌人特性效果名.速度;         // 百分比
+    public const string 暴击 = 敌人特性效果名.暴击;         // 点数：+15 = 暴击率 +15%（0.15）
+    public const string 闪避 = 敌人特性效果名.闪避;         // 点数
+    public const string 攻击距离 = 敌人特性效果名.攻击距离; // 点数（格）
+    public const string 攻击间隔 = 敌人特性效果名.攻击间隔; // 百分比：-20 = 出手更快（间隔 ×0.8）
+    public const string 移动间隔 = 敌人特性效果名.移动间隔; // 百分比
 
-    public static readonly string[] 全部效果 = { 生命, 攻击, 防御, 速度, 暴击, 闪避, 攻击距离, 攻击间隔, 移动间隔 };
+    public static string[] 全部效果 => 敌人特性效果名.全部;
 
-    public static bool 认得出(string 效果) => Array.IndexOf(全部效果, 效果) >= 0;
+    public static bool 认得出(string 效果) => 敌人特性效果名.认得出(效果);
 
     // 抽特性：逐条按权重轮盘抽，**不重复**（同一条不会叠两次）
     //   概率 = 精英率（普怪也会中，只是概率低）；条数 = 1 条起，命中"双特性率"再补 1 条（最多 `最多条数`）

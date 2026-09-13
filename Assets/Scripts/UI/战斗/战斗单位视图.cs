@@ -145,6 +145,15 @@ public sealed class 战斗单位视图 : MonoBehaviour, IPointerClickHandler
     {
         if (单位 == null) return "";
         var 片段 = new List<string>();
+        // 刀46：玩家的**弹匣**放状态行最前（战斗中最想知道"还剩几发 / 是不是在换弹"）
+        if (单位.是否我方)
+        {
+            string 匣 = ServiceRegistry.Get<BattleService>()?.弹匣文本();
+            if (!string.IsNullOrEmpty(匣)) 片段.Add($"弹匣 {匣}");
+        }
+        // 刀45：敌人的**词缀**（"迅捷（速度 +30%）"）—— 精英要能一眼看出来
+        if (!单位.是否我方 && 单位.词缀名 != null)
+            foreach (var 词 in 单位.词缀名) if (!string.IsNullOrEmpty(词)) 片段.Add(词);
         if (单位.眩晕剩余秒 > 0f) 片段.Add("眩晕");
         foreach (var b in 单位.Buffs)
             if (b != null && b.定义 != null)

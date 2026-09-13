@@ -129,6 +129,16 @@ using System;
     // 一条特性 = 名字 + 若干条**属性修正**（Tier 1，生成时一次性改数，零战斗钩子）。
     // 例：迅捷 = 速度+30%、攻击间隔-20%；厚皮 = 防御+15、生命+50%。
     // 用户拍板：**只要随机的**（战斗开始时逐只掷，走可播种随机源）；数据里不写死谁带什么。
+    // 效果名清单放在 **Data**：DataService 校验要用它，而 Data 不能引用 Domain（分层铁律）
+    //   → 单一真源只能落在最底层；Domain 的 敌人特性 类反过来引用这里（Domain→Data 是允许方向）。
+    public static class 敌人特性效果名
+    {
+        public const string 生命 = "生命", 攻击 = "攻击", 防御 = "防御", 速度 = "速度", 暴击 = "暴击",
+                            闪避 = "闪避", 攻击距离 = "攻击距离", 攻击间隔 = "攻击间隔", 移动间隔 = "移动间隔";
+        public static readonly string[] 全部 = { 生命, 攻击, 防御, 速度, 暴击, 闪避, 攻击距离, 攻击间隔, 移动间隔 };
+        public static bool 认得出(string 效果) => System.Array.IndexOf(全部, 效果) >= 0;
+    }
+
     [Serializable]
     public class 敌人特性效果
     {
