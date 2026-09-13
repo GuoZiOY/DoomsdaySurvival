@@ -14,6 +14,7 @@
     <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
     <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\战斗\战斗单位.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\战斗\伤害计算.cs" />
     <!-- 品质 是真实文件（它只是借了 UnityEngine 的 Color，见 桩.cs 的说明） -->
     <Compile Include="..\..\Assets\Scripts\Domain\玩家\品质.cs" />
     <!--

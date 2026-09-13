@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // BattleService · （主） 分部 —— 基础设施与入口（字段/构造/开始战斗/棋盘与落位）
-// （v51 刀25 纯组织性拆分：**零逻辑改动**，只是把一个 1486 行的文件按原有分节切开。
-//    「哪些该真的拆成类」的判据见 docs/优化实施进度.md §一之十一：先拆文件，再沉纯逻辑。）
 public sealed partial class BattleService
 {
     private readonly EventBus 事件;
