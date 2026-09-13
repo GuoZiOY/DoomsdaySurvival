@@ -70,8 +70,9 @@ public sealed class 战斗单位
     public readonly HashSet<string> 已学技能 = new HashSet<string>();
     public readonly Dictionary<string, int> 技能熟练 = new Dictionary<string, int>();
 
-    // —— 战斗消耗道具清单（离场统一回写扣档案，D14-B） ——
-    public readonly List<string> 消耗道具 = new List<string>();
+    // 注：原有 `List<string> 消耗道具`（"离场统一回写扣档案"）—— v51 刀15 删了 BattleService 里那份，
+    //     v51 刀24 删掉这里最后一份：全仓库**只声明、零写入**（真正的消耗走"扣战斗容器"直接改容器）。
+    //     留着会让读者以为"战斗消耗品有统一登记口"，照着它登记还会双重扣减。
 
     public bool 存活 => 生命 > 0;
 

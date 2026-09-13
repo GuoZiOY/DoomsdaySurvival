@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>战斗验证</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接链接 Assets 下的源文件：验证用的就是游戏里跑的那份代码，不复制副本（避免漂移） -->
+    <Compile Include="Program.cs" />
+    <Compile Include="桩.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\战斗\战斗单位.cs" />
+    <!-- 品质 是真实文件（它只是借了 UnityEngine 的 Color，见 桩.cs 的说明） -->
+    <Compile Include="..\..\Assets\Scripts\Domain\玩家\品质.cs" />
+    <!--
+      为什么**不**链接 玩家档案.cs：
+        它的依赖闭包 = 生存/成长/效果结算/任务/网格/容器 管理器 + EventBus + Events/*
+        → 而 `Events/导航事件.cs` 里有 `面板基类` 字段（事件直接拖着 UI 类，审计 A 组记过这条）
+        → 为了一个"本批根本不验"的 从玩家投影 把半个工程+UI 拖进验证器，不值。
+      代价（写在明处）：`玩家档案` 在 桩.cs 里是最小桩 —— 真实档案改了成员名，本验证器**不会**发现
+        （但游戏程序集编译会立刻发现），所以本批**不**断言 从玩家投影。
+    -->
+  </ItemGroup>
+</Project>
