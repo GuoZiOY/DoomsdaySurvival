@@ -1,9 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// BattleService · （主） 分部 —— 基础设施与入口（字段/构造/开始战斗/棋盘与落位）
+// BattleService · （主） 分部 —— 基础设施与入口（字段/构造/开始战斗/棋盘与落位 + 全部单位/发消息/名）
+//
+// ===== 分部索引（v51 刀25 拆、刀27 合并与补索引）=====
+// 同一个类按职责拆成 8 个文件；**字段全在本文件**，找方法照下表（别的分部不重复定义任何字段）：
+//   BattleService.推进.cs        时钟与轮次：推进战斗/轮次结算/满条行动/意图间隔/意图选定
+//   BattleService.行动.cs        行动与移动：单位自动行动/技能意图/可选目标/自动移动/防御/行动条重置/速率
+//   BattleService.操作.cs        玩家主动操作：主动技能与道具/预约与取消/模式切换/逃跑/切武器
+//   BattleService.AI.cs          敌人 AI：旧回合制入口/AI抽行动/AI选目标
+//   BattleService.行动执行.cs    统一行动执行：弹药与消耗物/攻击/技能/位移/推挤/中断读条/眩晕/Buff/可释放技能
+//   BattleService.伤害与结算.cs  **唯一伤害公式**（数值在 Domain/战斗/伤害计算.cs）+ 单位死亡/战利品入尸/检查战斗结束
+//   BattleService.回派.cs        战斗结束：结束战斗/自动回派/失败惩罚/结算回写/返回/分派结果节点
+// 为什么这么拆 / 哪些该进一步拆成类：见 docs/优化实施进度.md §一之十一。
 public sealed partial class BattleService
 {
+    // 固定步长累加器的余量（v51 刀27）：驱动每帧喂现实秒，这里攒够 1/30 秒就推进一步
+    private float 待推进秒;
+
     private readonly EventBus 事件;
     private readonly DataService 数据;
     private readonly PlayerService 玩家服务;
@@ -67,6 +81,7 @@ public sealed partial class BattleService
         this.胜利节点 = 胜利后节点; this.返回节点 = 返回节点;
         this.先手模式 = 先手;
         战斗中 = true; 回合数 = 1; 战斗分钟 = 0f;
+        待推进秒 = 0f;   // 新的一局不许继承上一局剩下的步长余量（v51 刀27）
         我方.Clear(); 敌方.Clear();
         累计经验 = 0;
         尸体战利品.Clear();
