@@ -168,3 +168,27 @@ if ($骨架.Count -eq 0) { Write-Output "   （无）" }
 Write-Output ""
 Write-Output "提醒：这只是一份**候选清单**。该不该合并要看两边语义是否真的一样；"
 Write-Output "      另外「首行不同、其余相同」的整对克隆会被漏掉（分桶启发式的已知边界）。"
+
+# ============================================================
+# ③ 已收敛的不变量：**只许有一份实现**（防漂移断言，不是候选清单 —— 这里会判失败）
+# 为什么加：刀32 把「门口四邻」（原来 4 处生成期 + 2 处验证期各写一遍、作者栽过两次）收敛成
+#   `Domain/网格/门口保护.cs` 一份。但"收敛"只在这一刻成立 —— 下次谁再手写一遍 Math.Abs ≤1，
+#   就又回到多份实现。所以这里钉住：这个形状的判据只许出现在 门口保护.cs 里。
+# 判据：`Math.Abs(…) <= 1 && Math.Abs(…)`（切比雪夫 ≤1 的手写写法），先去掉注释再数。
+# ============================================================
+Write-Output ""
+Write-Output "③ 已收敛不变量：手写「切比雪夫 ≤1」只许出现在 门口保护.cs"
+$允许 = @('Assets\Scripts\Domain\网格\门口保护.cs')
+$越界 = New-Object System.Collections.Generic.List[string]
+foreach ($f in (Get-ChildItem (Join-Path $仓库根 'Assets\Scripts') -Recurse -Filter *.cs)) {
+    $相对 = $f.FullName.Substring($仓库根.Length + 1)
+    $净 = [regex]::Replace([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8), '(?m)//.*$', '')
+    $命中 = [regex]::Matches($净, 'Math\.Abs\([^)]*\)\s*<=\s*1\s*&&').Count
+    if ($命中 -gt 0 -and ($允许 -notcontains $相对)) { $越界.Add(("{0}（{1} 处）" -f $相对, $命中)) }
+}
+if ($越界.Count -eq 0) { Write-Output ("  ✓ 0 处越界（都走 门口保护；该文件自己 2 处：相邻 / 算间距）") }
+else {
+    foreach ($x in $越界) { Write-Output ("  ✗ {0} —— 手写了门口四邻/间距，应改调 门口保护.相邻 / 碰门口 / 足迹碰门口 / 算间距" -f $x) }
+    Write-Output ("❌ 重复代码扫描失败：{0} 处越界" -f $越界.Count)
+    exit 1
+}

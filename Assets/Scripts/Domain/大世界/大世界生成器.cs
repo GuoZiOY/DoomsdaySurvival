@@ -319,22 +319,18 @@ public static class 大世界生成器
         if (列 < 世界规格.边距 || 行 < 世界规格.边距 || 列 > 世界.列 - 1 - 世界规格.边距 || 行 > 世界.行 - 1 - 世界规格.边距) return false;
         if (!世界.可通行(列, 行)) return false;
 
-        var 营门 = 营地门口格(世界);
-        if (Math.Abs(列 - 营门.列) <= 1 && Math.Abs(行 - 营门.行) <= 1) return false;
+        // 门口四邻一律留空（营地 / 区域 / 临时建筑 —— 由 门口保护 统一判，含紧邻八格）
+        if (门口保护.碰世界门口(世界, 列, 行)) return false;
 
         foreach (var 区 in 区域列表(世界))
-        {
             if (区.覆盖(列, 行)) return false;
-            var 区门 = 区域门口格(区);
-            if (Math.Abs(列 - 区门.列) <= 1 && Math.Abs(行 - 区门.行) <= 1) return false;
-        }
 
-        // 与已有的 障碍 / 敌人 / 临时建筑 都至少隔 1 格
+        // 与已有的 障碍 / 敌人 / 临时建筑 都至少隔 1 格（这是"割集必是 8 连通屏障"那条论证的落点，见文件头）
         foreach (var 他 in 世界.实体)
         {
             if (他 == null) continue;
             if (他.类型 != 网格实体类型.障碍 && 他.类型 != 网格实体类型.敌人 && 他.类型 != 网格实体类型.临时建筑) continue;
-            if (Math.Abs(他.列 - 列) <= 1 && Math.Abs(他.行 - 行) <= 1) return false;
+            if (门口保护.算间距(列, 行, 他.列, 他.行)) return false;
         }
         return true;
     }
@@ -443,14 +439,8 @@ public static class 大世界生成器
                     if (e.覆盖(c, r)) return false;
         }
         // 也不许碰**任何门口格及其紧邻八格**（含已有临时建筑的门口）—— 见方法头上那条 ★
-        for (int r = 行; r < 行 + 临时建筑高; r++)
-            for (int c = 列; c < 列 + 临时建筑宽; c++)
-                foreach (var e in 世界.实体)
-                {
-                    if (!网格数据.是带门洞的占格物(e) || e.门口格 < 0) continue;
-                    int 门列 = e.门口格 / 1000, 门行 = e.门口格 % 1000;
-                    if (Math.Abs(c - 门列) <= 1 && Math.Abs(r - 门行) <= 1) return false;
-                }
+        // 判据统一在 门口保护（原来这里自己写了一遍"解 门口格 编码 + Math.Abs ≤1"，刀32 收敛）
+        if (门口保护.足迹碰门口(世界, null, 列, 行, 临时建筑宽, 临时建筑高)) return false;
         return true;
     }
 

@@ -14,6 +14,7 @@
     <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\确定性随机.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格数据.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\门口保护.cs" />   <!-- 刀32：门口四邻的唯一实现（生成期与验证期共用） -->
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格视野.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\视野规则.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格可见性.cs" />

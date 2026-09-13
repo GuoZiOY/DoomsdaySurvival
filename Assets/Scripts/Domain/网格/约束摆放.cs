@@ -200,11 +200,7 @@ public static class 约束摆放
                 if (格 != null && 格.类型 == 网格实体类型.墙) return false;   // 后来补的墙（楼梯间隔墙）
             }
         var 通路 = 约束?.通道格;
-        if (通路 != null)
-            for (int r = 行; r < 行 + 高; r++)
-                for (int c = 列; c < 列 + 宽; c++)
-                    for (int i = 0; i < 通路.Count; i++)
-                        if (Math.Abs(c - 通路[i].列) <= 1 && Math.Abs(r - 通路[i].行) <= 1) return false;
+        if (通路 != null && 门口保护.足迹碰门口(世界, 通路, 列, 行, 宽, 高)) return false;
         for (int i = 0; i < 世界.实体.Count; i++)
         {
             var e = 世界.实体[i];
