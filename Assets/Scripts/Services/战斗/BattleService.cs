@@ -8,7 +8,7 @@ using UnityEngine;
 //   BattleService.推进.cs        时钟与轮次：推进战斗/轮次结算/满条行动/意图间隔/意图选定
 //   BattleService.行动.cs        行动与移动：单位自动行动/技能意图/可选目标/自动移动/防御/行动条重置/速率
 //   BattleService.操作.cs        玩家主动操作：主动技能与道具/预约与取消/模式切换/逃跑/切武器
-//   BattleService.AI.cs          敌人 AI：旧回合制入口/AI抽行动/AI选目标
+//   BattleService.AI.cs          敌人 AI 的服务侧胶水（查存活/掷点/执行）；决策在 Domain/战斗/敌人AI.cs
 //   BattleService.行动执行.cs    统一行动执行：弹药与消耗物/攻击/技能/位移/推挤/中断读条/眩晕/Buff/可释放技能
 //   BattleService.伤害与结算.cs  **唯一伤害公式**（数值在 Domain/战斗/伤害计算.cs）+ 单位死亡/战利品入尸/检查战斗结束
 //   BattleService.回派.cs        战斗结束：结束战斗/自动回派/失败惩罚/结算回写/返回/分派结果节点
