@@ -407,7 +407,7 @@ public sealed class 制作面板 : 浮动面板基类
         var 行 = new List<string>();
         if (目标 == null && 装备们.Count == 0)
         {
-            行.Add("<color=#888888>把要改装的装备放进材料区，再把配件也放进去。</color>");
+            行.Add("<color=#888888>把要改装的装备放进材料区，再把配件也放进去；结果出在【输出区】。</color>");
         }
         else if (装备们.Count > 1)
         {
@@ -435,73 +435,128 @@ public sealed class 制作面板 : 浮动面板基类
             行.Add("<color=#888888>待装： </color>" + string.Join("、", 名));
         }
         行.Add("");
-        if (动作 == "装配") 行.Add("<color=#7fae6a>点〔装配改装件〕把配件装上去。</color>");
-        else if (动作 == "拆解") 行.Add("<color=#7fae6a>点〔拆解配件〕把已装的配件拆下来。</color>");
-        else if (目标 != null) 行.Add("<color=#888888>这件装备上没有配件，也不在待装状态。</color>");
+        if (动作 == "装配") 行.Add("<color=#7fae6a>点〔装配改装件〕把配件装上去 —— 成品与换下来的旧配件都会出现在【输出区】。</color>");
+        else if (动作 == "拆解") 行.Add("<color=#7fae6a>点〔拆解配件〕把配件拆下来 —— 装备本体与配件都会出现在【输出区】。</color>");
+        else if (目标 != null) 行.Add("<color=#888888>这件装备上没有配件，也没有待装的配件（只放装备 = 没动作可做）。</color>");
         详情文本.text = string.Join("\n", 行);
         设行动按钮文字(动作 == "拆解" ? "拆解配件" : "装配改装件");
         设制作按钮状态(动作.Length > 0);
         同步数量控件(null);   // 改装 不用 份数 控件
     }
 
-    // 执行 装配：把材料区里的配件装到目标装备上
+    // 执行 装配：材料区的「装备 + 配件」→ **结果（装好配件的装备）进输出区**
+    //   · 换下来的旧配件 也进输出区（它同样是"这次操作的产出"，不该塞回材料区把玩家搞糊涂）
+    //   · 输出区放不下 → **整体回滚**（装备回材料区、旧配件不动、新配件不消耗）—— 绝不半途留下烂摊子
     private bool 执行装配(物品堆叠 目标, List<物品堆叠> 配件们)
     {
         if (目标 == null || 配件们.Count == 0) return false;
         if (!数据.物品.TryGetValue(目标.标识, out var 目标物)) return false;
         if (目标.配件 == null) 目标.配件 = new List<配件条>();
-        int 装了几件 = 0; string 拒绝 = "";
+
+        // ① 先算清楚：哪些配件装得上、会换下哪些旧件（都只是"算"，不动数据）
+        var 待装 = new List<(物品堆叠 堆叠, 物品数据 件)>();
+        var 待换下 = new List<配件条>();
+        string 拒绝 = "";
         foreach (var 堆叠 in 配件们)
         {
             if (!数据.物品.TryGetValue(堆叠.标识, out var 件)) continue;
-            if (!配件槽.允许(目标物, 件)) { 拒绝 = $"{件.标识}不适合装在{目标.标识}上（槽位 不对）"; continue; }
-            // 槽已占：旧件退回材料区（退不回 = 放不下 → 这一件整体跳过，绝不吞掉玩家的东西）
+            if (!配件槽.允许(目标物, 件)) { 拒绝 = $"{件.标识} 不适合装在 {目标.标识} 上（槽位不对）"; continue; }
             var 旧 = 目标.配件.Find(c => c != null && c.槽位 == 件.槽位);
-            if (旧 != null)
-            {
-                var 旧堆叠 = new 物品堆叠(旧.标识, 1);
-                if (!输入会话.放入网格堆叠(旧堆叠)) { 拒绝 = $"材料区放不下拆下来的{旧.标识}"; continue; }
-                目标.配件.Remove(旧);
-            }
+            if (旧 != null && !待换下.Exists(x => x.槽位 == 件.槽位)) 待换下.Add(旧);
+            待装.Add((堆叠, 件));
+        }
+        if (待装.Count == 0) { if (拒绝.Length > 0) ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝))); return false; }
+
+        // ② 目标装备 从材料区 → 输出区（放不下就放回材料区，什么都别改）
+        if (!输入会话.网格物品.Remove(目标)) return false;
+        if (!输出会话.放入网格堆叠(目标))
+        {
+            输入会话.放入网格堆叠(目标);
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示("输出区放不下这件装备——先把输出区的东西拿走。")));
+            return false;
+        }
+
+        // ③ 换下来的旧配件 → 输出区；任何一个放不下 → 整体回滚
+        var 已放输出 = new List<物品堆叠>();
+        var 已造堆叠 = new List<物品堆叠>();   // 重建的 目标 也要能从输出区摘掉
+        已造堆叠.Add(目标);
+        bool 失败 = false;
+        foreach (var 旧 in 待换下)
+        {
+            var 旧堆叠 = new 物品堆叠(旧.标识, 1);
+            if (!输出会话.放入网格堆叠(旧堆叠)) { 失败 = true; 拒绝 = $"输出区放不下换下来的 {旧.标识}"; break; }
+            已放输出.Add(旧堆叠);
+        }
+        if (失败)
+        {
+            foreach (var s in 已放输出) 输出会话.网格物品.Remove(s);
+            输出会话.网格物品.Remove(目标);
+            输入会话.放入网格堆叠(目标);
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝 + "（本次改装已取消，材料区的东西都在）")));
+            return false;
+        }
+
+        // ④ 提交：改配件表 + 消耗材料区的配件（数量 >1 只扣 1）
+        foreach (var 旧 in 待换下) 目标.配件.Remove(旧);
+        foreach (var (堆叠, 件) in 待装)
+        {
             目标.配件.Add(new 配件条(件.槽位, 件.标识));
-            // 从材料区扣掉这一个配件（数量 >1 时只扣 1）
             if (堆叠.数量 > 1) 堆叠.数量 -= 1;
-            else { 输入会话.网格物品.Remove(堆叠); }
-            装了几件++;
+            else 输入会话.网格物品.Remove(堆叠);
         }
         var 事件 = ServiceRegistry.Get<EventBus>();
-        if (装了几件 > 0)
-        {
-            事件?.发布(new 日志事件(日志类型.角色, $"改装：{目标.标识} 装上 {装了几件} 个配件。"));
-            事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
-            var 档 = ServiceRegistry.Get<PlayerService>()?.档案; if (档 != null) 事件?.发布(new 属性变化事件(档.体质, 档.力量, 档.智慧, 档.敏捷, 档.意志, 档.自由属性点));
-        }
-        if (!string.IsNullOrEmpty(拒绝)) 事件?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝)));
-        return 装了几件 > 0;
+        事件?.发布(new 日志事件(日志类型.角色, $"改装：{目标.标识} 装上 {待装.Count} 个配件，成品在输出区。"));
+        事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
+        发属性变化();
+        if (拒绝.Length > 0) 事件?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝)));
+        return true;
     }
 
-    // 执行 拆解：把目标装备上已装的配件全部退回材料区
+    // 执行 拆解：材料区的「带配件的装备」→ **装备本体 + 拆下来的配件 一起进输出区**
+    //   全放得下才动 配件表（放不下则整体回滚，装备原样回材料区）
     private bool 执行拆解(物品堆叠 目标)
     {
         if (目标?.配件 == null || 目标.配件.Count == 0) return false;
-        int 拆了几件 = 0; string 拒绝 = "";
-        for (int i = 目标.配件.Count - 1; i >= 0; i--)
+        var 待拆 = new List<配件条>();
+        foreach (var c in 目标.配件) if (c != null && !string.IsNullOrEmpty(c.标识)) 待拆.Add(c);
+        if (待拆.Count == 0) return false;
+
+        if (!输入会话.网格物品.Remove(目标)) return false;
+        if (!输出会话.放入网格堆叠(目标))
         {
-            var 条 = 目标.配件[i];
-            if (条 == null) { 目标.配件.RemoveAt(i); continue; }
-            if (!输入会话.放入网格堆叠(new 物品堆叠(条.标识, 1))) { 拒绝 = $"材料区放不下拆下来的{条.标识}"; continue; }
-            目标.配件.RemoveAt(i);
-            拆了几件++;
+            输入会话.放入网格堆叠(目标);
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示("输出区放不下这件装备——先把输出区的东西拿走。")));
+            return false;
         }
+        var 已放输出 = new List<物品堆叠>();
+        string 拒绝 = "";
+        foreach (var 条 in 待拆)
+        {
+            var 件堆叠 = new 物品堆叠(条.标识, 1);
+            if (!输出会话.放入网格堆叠(件堆叠)) { 拒绝 = $"输出区放不下拆下来的 {条.标识}"; break; }
+            已放输出.Add(件堆叠);
+        }
+        if (拒绝.Length > 0)
+        {
+            foreach (var s in 已放输出) 输出会话.网格物品.Remove(s);
+            输出会话.网格物品.Remove(目标);
+            输入会话.放入网格堆叠(目标);
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝 + "（本次拆解已取消，装备还带着配件）")));
+            return false;
+        }
+        foreach (var 条 in 待拆) 目标.配件.Remove(条);
         var 事件 = ServiceRegistry.Get<EventBus>();
-        if (拆了几件 > 0)
-        {
-            事件?.发布(new 日志事件(日志类型.角色, $"改装：从 {目标.标识} 拆下 {拆了几件} 个配件。"));
-            事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
-            var 档 = ServiceRegistry.Get<PlayerService>()?.档案; if (档 != null) 事件?.发布(new 属性变化事件(档.体质, 档.力量, 档.智慧, 档.敏捷, 档.意志, 档.自由属性点));
-        }
-        if (!string.IsNullOrEmpty(拒绝)) 事件?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝)));
-        return 拆了几件 > 0;
+        事件?.发布(new 日志事件(日志类型.角色, $"改装：从 {目标.标识} 拆下 {待拆.Count} 个配件，本体与配件都在输出区。"));
+        事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
+        发属性变化();
+        return true;
+    }
+
+    // 属性变化事件（可能有装备/配件变化 → HUD/角色面板刷新）。档案取不到就跳过（关面板时的竞态）。
+    private void 发属性变化()
+    {
+        var 档 = ServiceRegistry.Get<PlayerService>()?.档案;
+        if (档 != null) ServiceRegistry.Get<EventBus>()?.发布(new 属性变化事件(档.体质, 档.力量, 档.智慧, 档.敏捷, 档.意志, 档.自由属性点));
     }
 
     // 警告 一律 带 前缀，方便 与 制作 的 提示 区分
