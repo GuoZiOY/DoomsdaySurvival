@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,6 +22,13 @@ public sealed class 制作面板 : 浮动面板基类
     [SerializeField] private GameObject 配方行模板; // 配方行 模板（挂 配方行：物品图/名称/选中背景）
     [SerializeField] private TMP_Text 详情文本;     // 选中 配方 详情（场景 搭）
     [SerializeField] private Button 制作按钮;       // 制作 按钮（场景 搭；interactable = 可制作）
+    // —— 模式切换（v51 刀37，用户点子）：工作台 除了「制作」还要能「改装」——
+    //   用户原话："在工作台进行，将配件和武器放在材料区，点击行动按钮，即可将配件和武器合体。
+    //   反之将有配件的武器拆分出武器本体和配件。那么对于工作台，就要有2个按钮来进行功能的切换：制作、其他。"
+    // 为什么用「其他」而不是「改装」：按钮以后还要收别的非制作功能（拆解/维修…），先留一个宽口子。
+    // 可空：预制体没搭时**运行时自动建两个按钮**（内建兜底，免得改了玩法要求你先改预制体）。
+    [SerializeField] private Button 制作模式按钮;
+    [SerializeField] private Button 其他模式按钮;
     [SerializeField] private Button 关闭按钮;       // 关闭 按钮（场景 搭；点击 = 关闭 面板）
     [SerializeField] private 制作输入网格 输入网格;   // 材料 输入 区（只收 当前 配方 材料）
     [SerializeField] private 制作输出网格 输出网格;   // 产物 输出 区（禁 拖入；产物 可 拖走）
@@ -50,6 +58,9 @@ public sealed class 制作面板 : 浮动面板基类
     private 工作台制作服务.制作上下文 当前制作;
     private float 已推分钟;         // 动画 期间 已 推进 的 游戏 分钟（取消 时 回滚）
 
+    // —— 模式（v51 刀37）：false = 制作（原行为），true = 其他（当前 = 改装：装配/拆解配件）——
+    private bool 其他模式;
+
     // 背包变化 订阅 句柄（动态 面板：销毁 时 必须 取消 订阅，否则 残留 订阅 撞 已销毁 实例）
     private System.Action<背包变化事件> 背包变化订阅;
 
@@ -71,6 +82,10 @@ public sealed class 制作面板 : 浮动面板基类
             制作按钮.onClick.AddListener(点击制作);
             音效管理器.实例?.注册按钮(制作按钮);   // 点击 制作 按钮 → 点击 音效（本帧 失败 时 自动 跳过）
         }
+        // 模式 按钮（v51 刀37）：预制体 搭了 就 用；没 搭 → 运行时 建（三级 回落 见 确保模式按钮）
+        确保模式按钮();
+        if (制作模式按钮 != null) 制作模式按钮.onClick.AddListener(() => 切模式(false));
+        if (其他模式按钮 != null) 其他模式按钮.onClick.AddListener(() => 切模式(true));
         // 数量 控件：滑条 / 输入框 / 减 / 加（可空——没搭 = 固定 1 份）
         if (数量滑条 != null)
         {
@@ -90,6 +105,47 @@ public sealed class 制作面板 : 浮动面板基类
             });
         }
         隐藏进度UI();   // 进度 条 初始 隐藏（制作 时 才 显示）
+    }
+
+    // ===== 模式切换（v51 刀37）：制作 / 其他 =====
+
+    // 预制体没搭模式按钮时，运行时补两个（借 小菜单工具.建条目 的三级回落：预制体 → 共享按钮 → 代码兜底）。
+    // 挂在 面板根 上（**不能**挂 内容区：刷新() 会清空 内容区，按钮会被一起清掉）。
+    private void 确保模式按钮()
+    {
+        if (制作模式按钮 != null && 其他模式按钮 != null) return;
+        var 父 = 面板根 != null ? 面板根 : (详情文本 != null ? 详情文本.transform.parent as RectTransform : null);
+        if (父 == null) return;   // 连父都没有（手搭面板异常）：静默降级 —— 面板仍能制作，只是切不到"其他"
+        if (制作模式按钮 == null) 制作模式按钮 = 小菜单工具.建条目(null, 父, "制作", () => 切模式(false), 76f);
+        if (其他模式按钮 == null) 其他模式按钮 = 小菜单工具.建条目(null, 父, "其他", () => 切模式(true), 76f);
+        if (制作模式按钮 != null) 音效管理器.实例?.注册按钮(制作模式按钮);
+        if (其他模式按钮 != null) 音效管理器.实例?.注册按钮(其他模式按钮);
+    }
+
+    // 切模式：制作中不许切（半成品状态会错乱）；切之前把输入区的料**全数返还**（旧模式的合法性判定不适用于新模式，
+    // 留着会出现"材料区里有几件东西，但按钮永远是灰的"的困惑）。返不回去（背包满）→ 取消切换，防丢物。
+    private void 切模式(bool 要到其他)
+    {
+        if (制作中) { ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "制作中，无法切换功能。")); 音效管理器.实例?.播放失败(); return; }
+        if (其他模式 == 要到其他) return;
+        if (!返还会话物品(输入会话))
+        {
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "背包/仓库已满，无法取回材料区的物品——请先腾出空间。"));
+            音效管理器.实例?.播放失败();
+            if (输入网格 != null) 输入网格.立即刷新();
+            return;
+        }
+        其他模式 = 要到其他;
+        if (输入网格 != null) 输入网格.立即刷新();   // 允许放入 判定 换 一套
+        刷新();
+    }
+
+    // 换 行动按钮 的文字（模式/动作不同，按钮还是那一个 —— 用户要的是"一个行动按钮，两个模式按钮"）
+    private void 设行动按钮文字(string 文字)
+    {
+        if (制作按钮 == null) return;
+        var t = 制作按钮.GetComponentInChildren<TMP_Text>();
+        if (t != null) t.text = 文字;
     }
 
     // 初始化（基类 创建 调用）：家具 实例 → 家具 标识 + 会话 网格 + 刷新
@@ -180,6 +236,12 @@ public sealed class 制作面板 : 浮动面板基类
     // 输入 允许 材料 判定：当前 选中 配方 的 材料（未选 = 拒收）
     private bool 当前允许材料(string 标识)
     {
+        // 其他（改装）模式：只收**能被改装的装备**与**配件**（用户流程：把武器和配件一起放进材料区）
+        if (其他模式)
+        {
+            if (!数据.物品.TryGetValue(标识, out var 物)) return false;
+            return 物.类型 == "配件" || 配件槽.装备可用(物).Length > 0;
+        }
         if (string.IsNullOrEmpty(选中配方标识) || !数据.配方.TryGetValue(选中配方标识, out var 配方) || 配方.材料 == null) return false;
         foreach (var 材 in 配方.材料)
             if (材 != null && 材.物品 == 标识) return true;
@@ -262,9 +324,17 @@ public sealed class 制作面板 : 浮动面板基类
     private void 刷新()
     {
         if (string.IsNullOrEmpty(家具标识) || 制作 == null) return;
-        if (标题 != null) 标题.text = $"{家具名(家具标识)} · 制作";
+        if (标题 != null) 标题.text = 其他模式 ? $"{家具名(家具标识)} · 改装" : $"{家具名(家具标识)} · 制作";
         if (内容区 == null || 配方行模板 == null) return;
         面板基类.清空(内容区);
+        if (其他模式)
+        {
+            // 改装模式：没有配方列表 —— 内容区 只放一行说明（材料区/行动按钮 才是主界面）
+            面板基类.创建标签(内容区, "把装备与配件放进材料区");
+            面板基类.创建标签(内容区, "点行动按钮合体 / 拆解");
+            刷新改装详情();
+            return;
+        }
         var 配方列表 = 制作.配方列表(家具标识);
         if (配方列表.Length == 0)
         {
@@ -280,6 +350,149 @@ public sealed class 制作面板 : 浮动面板基类
         }
         刷新详情();
     }
+
+    // ===== 改装（其他模式）：材料区 = 装备 + 配件 → 合体 / 拆解（v51 刀37） =====
+    // 用户定的交互：**一个行动按钮**，方向由材料区里放了什么决定 ——
+    //   · 放「1 件装备 + ≥1 个配件」→ 装配（配件按自己的槽装上去；槽被占则**旧件退回材料区**）
+    //   · 放「1 件**已带配件**的装备」→ 拆解（把已装配件全部退回材料区）
+    // 不做任何材料消耗（改装只是装配件，不像制作要扣料）；也不推进时间（demo 阶段先不加"改装耗时"）。
+
+    // 材料区里的装备（能被改装的：有配件槽的）与配件
+    private void 收材料区(out List<物品堆叠> 装备们, out List<物品堆叠> 配件们)
+    {
+        装备们 = new List<物品堆叠>();
+        配件们 = new List<物品堆叠>();
+        if (输入会话?.网格物品 == null) return;
+        foreach (var 堆叠 in 输入会话.网格物品)
+        {
+            if (堆叠 == null || 堆叠.列 < 0) continue;
+            if (!数据.物品.TryGetValue(堆叠.标识, out var 物)) continue;
+            if (物.类型 == "配件") 配件们.Add(堆叠);
+            else if (配件槽.装备可用(物).Length > 0) 装备们.Add(堆叠);
+        }
+    }
+
+    // 当前材料区能不能动手 / 该动哪个手（刷新详情 与 点击 都用它，判据只写一遍）
+    private string 改装动作(out 物品堆叠 目标, out List<物品堆叠> 配件们)
+    {
+        目标 = null; 配件们 = new List<物品堆叠>();
+        收材料区(out var 装备们, out 配件们);
+        if (装备们.Count == 0) return "";
+        if (装备们.Count > 1) return "";      // 一次只改装一件（多件会让人不知道配件装到了谁身上）
+        目标 = 装备们[0];
+        if (配件们.Count > 0) return "装配";
+        if (目标.配件 != null && 目标.配件.Count > 0) return "拆解";
+        return "";
+    }
+
+    private void 刷新改装详情()
+    {
+        if (详情文本 == null) return;
+        收材料区(out var 装备们, out var 配件们);
+        string 动作 = 改装动作(out var 目标, out _);
+        var 行 = new List<string>();
+        if (目标 == null && 装备们.Count == 0)
+        {
+            行.Add("<color=#888888>把要改装的装备放进材料区，再把配件也放进去。</color>");
+        }
+        else if (装备们.Count > 1)
+        {
+            行.Add("<color=#d9a441>材料区里有 " + 装备们.Count + " 件装备 —— 一次只改装一件，请先拿走多余的。</color>");
+        }
+        else
+        {
+            行.Add($"<color=#d9a441><b>[{目标.标识}]</b></color>");
+            var 可用 = 配件槽.装备可用(数据.物品[目标.标识]);
+            行.Add("<color=#888888>配件槽： </color>" + (可用.Length > 0 ? string.Join(" / ", 可用) : "（无）"));
+            var 已装 = 目标.配件 ?? new List<配件条>();
+            foreach (var 槽 in 可用)
+            {
+                var 条 = 已装.Find(c => c != null && c.槽位 == 槽);
+                if (条 == null) { 行.Add($"  〔{槽}〕（空）"); continue; }
+                数据.物品.TryGetValue(条.标识, out var 件);
+                行.Add($"  〔{槽}〕{条.标识}{物品工具.配件加成文本(件)}");
+            }
+        }
+        if (配件们.Count > 0)
+        {
+            var 名 = new List<string>();
+            foreach (var 堆叠 in 配件们) 名.Add(堆叠.标识);
+            行.Add("");
+            行.Add("<color=#888888>待装： </color>" + string.Join("、", 名));
+        }
+        行.Add("");
+        if (动作 == "装配") 行.Add("<color=#7fae6a>点〔装配改装件〕把配件装上去。</color>");
+        else if (动作 == "拆解") 行.Add("<color=#7fae6a>点〔拆解配件〕把已装的配件拆下来。</color>");
+        else if (目标 != null) 行.Add("<color=#888888>这件装备上没有配件，也不在待装状态。</color>");
+        详情文本.text = string.Join("\n", 行);
+        设行动按钮文字(动作 == "拆解" ? "拆解配件" : "装配改装件");
+        设制作按钮状态(动作.Length > 0);
+        同步数量控件(null);   // 改装 不用 份数 控件
+    }
+
+    // 执行 装配：把材料区里的配件装到目标装备上
+    private bool 执行装配(物品堆叠 目标, List<物品堆叠> 配件们)
+    {
+        if (目标 == null || 配件们.Count == 0) return false;
+        if (!数据.物品.TryGetValue(目标.标识, out var 目标物)) return false;
+        if (目标.配件 == null) 目标.配件 = new List<配件条>();
+        int 装了几件 = 0; string 拒绝 = "";
+        foreach (var 堆叠 in 配件们)
+        {
+            if (!数据.物品.TryGetValue(堆叠.标识, out var 件)) continue;
+            if (!配件槽.允许(目标物, 件)) { 拒绝 = $"{件.标识}不适合装在{目标.标识}上（槽位 不对）"; continue; }
+            // 槽已占：旧件退回材料区（退不回 = 放不下 → 这一件整体跳过，绝不吞掉玩家的东西）
+            var 旧 = 目标.配件.Find(c => c != null && c.槽位 == 件.槽位);
+            if (旧 != null)
+            {
+                var 旧堆叠 = new 物品堆叠(旧.标识, 1);
+                if (!输入会话.放入网格堆叠(旧堆叠)) { 拒绝 = $"材料区放不下拆下来的{旧.标识}"; continue; }
+                目标.配件.Remove(旧);
+            }
+            目标.配件.Add(new 配件条(件.槽位, 件.标识));
+            // 从材料区扣掉这一个配件（数量 >1 时只扣 1）
+            if (堆叠.数量 > 1) 堆叠.数量 -= 1;
+            else { 输入会话.网格物品.Remove(堆叠); }
+            装了几件++;
+        }
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        if (装了几件 > 0)
+        {
+            事件?.发布(new 日志事件(日志类型.角色, $"改装：{目标.标识} 装上 {装了几件} 个配件。"));
+            事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
+            var 档 = ServiceRegistry.Get<PlayerService>()?.档案; if (档 != null) 事件?.发布(new 属性变化事件(档.体质, 档.力量, 档.智慧, 档.敏捷, 档.意志, 档.自由属性点));
+        }
+        if (!string.IsNullOrEmpty(拒绝)) 事件?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝)));
+        return 装了几件 > 0;
+    }
+
+    // 执行 拆解：把目标装备上已装的配件全部退回材料区
+    private bool 执行拆解(物品堆叠 目标)
+    {
+        if (目标?.配件 == null || 目标.配件.Count == 0) return false;
+        int 拆了几件 = 0; string 拒绝 = "";
+        for (int i = 目标.配件.Count - 1; i >= 0; i--)
+        {
+            var 条 = 目标.配件[i];
+            if (条 == null) { 目标.配件.RemoveAt(i); continue; }
+            if (!输入会话.放入网格堆叠(new 物品堆叠(条.标识, 1))) { 拒绝 = $"材料区放不下拆下来的{条.标识}"; continue; }
+            目标.配件.RemoveAt(i);
+            拆了几件++;
+        }
+        var 事件 = ServiceRegistry.Get<EventBus>();
+        if (拆了几件 > 0)
+        {
+            事件?.发布(new 日志事件(日志类型.角色, $"改装：从 {目标.标识} 拆下 {拆了几件} 个配件。"));
+            事件?.发布(new 背包变化事件("", 0, 变化原因.获得));
+            var 档 = ServiceRegistry.Get<PlayerService>()?.档案; if (档 != null) 事件?.发布(new 属性变化事件(档.体质, 档.力量, 档.智慧, 档.敏捷, 档.意志, 档.自由属性点));
+        }
+        if (!string.IsNullOrEmpty(拒绝)) 事件?.发布(new 日志事件(日志类型.警告, 改装提示(拒绝)));
+        return 拆了几件 > 0;
+    }
+
+    // 警告 一律 带 前缀，方便 与 制作 的 提示 区分
+    private static string 改装提示(string 文) => $"[改装] {文}";
+
 
     private void 选中配方(string 标识)
     {
@@ -390,7 +603,25 @@ public sealed class 制作面板 : 浮动面板基类
 
     private void 点击制作()
     {
-        if (制作中 || string.IsNullOrEmpty(选中配方标识)) return;
+        if (制作中) return;
+        // 其他（改装）模式：同一个行动按钮，方向由材料区决定（装配 / 拆解）
+        if (其他模式)
+        {
+            string 动作 = 改装动作(out var 目标, out var 配件们);
+            bool 成了 = 动作 == "装配" ? 执行装配(目标, 配件们)
+                      : 动作 == "拆解" ? 执行拆解(目标)
+                      : false;
+            if (!成了)
+            {
+                音效管理器.实例?.播放失败();
+                ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 改装提示(动作.Length == 0 ? "材料区里没有可改装的组合（放 1 件装备 + 配件，或 1 件带配件的装备）。" : "没有可执行的动作。")));
+            }
+            else 音效管理器.实例?.播放成功();
+            if (输入网格 != null) 输入网格.立即刷新();
+            刷新();
+            return;
+        }
+        if (string.IsNullOrEmpty(选中配方标识)) return;
         // 会话 制作：材料 从 输入 区 扣（输入 网格 校验 足够）；数量 = 当前 滑条/加减 值
         var 上下文 = 制作.开始制作_会话(选中配方标识, 输入会话, 制作数量);
         if (上下文 == null)
