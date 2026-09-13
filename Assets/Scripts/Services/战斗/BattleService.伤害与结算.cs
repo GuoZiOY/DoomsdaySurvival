@@ -23,7 +23,7 @@ public sealed partial class BattleService
             return;
         }
         // 命中判定：基础命中率 vs 目标当前闪避（敏捷 buff 生效）
-        if (!伤害计算.是否命中(Random.value, 攻击者.命中率, 目标.当前闪避率))
+        if (!伤害计算.是否命中(随机.值(), 攻击者.命中率, 目标.当前闪避率))
         {
             事件.发布(new 伤害事件(目标, 0, 类型, false, true));
             发消息($"{名(目标)} 闪避了{名(攻击者)}的攻击！");
@@ -41,7 +41,7 @@ public sealed partial class BattleService
             目标防御减伤 = 目标.防御减伤,
             目标抗性百分比 = 目标.抗性百分比,
             目标防御姿态 = 目标.防御姿态,
-            掷暴击 = 类型 == 伤害类型.真实 ? 0f : Random.value,
+            掷暴击 = 类型 == 伤害类型.真实 ? 0f : 随机.值(),
         });
         // 耐久消耗：玩家命中 → 主武器武器耐久 -1；玩家被击中 → 胸部防具耐久 -1
         //   （真实伤害/固定伤害不走这条 —— 与拆分前一致：耐久在原实现里位于真伤分支之后）
@@ -119,7 +119,7 @@ public sealed partial class BattleService
             }
             事件.发布(new 属性变化事件(档案.体质, 档案.力量, 档案.智慧, 档案.敏捷, 档案.意志, 档案.自由属性点));
         }
-        if (!string.IsNullOrEmpty(敌.掉落物品) && Random.value < 敌.掉落概率)
+        if (!string.IsNullOrEmpty(敌.掉落物品) && 随机.值() < 敌.掉落概率)
         {
             // 掉落装备 → 词缀 实例；非装备 → 普通 堆叠（均 进 尸体）
             if (数据.物品.TryGetValue(敌.掉落物品, out var 掉物))

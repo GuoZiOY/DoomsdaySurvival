@@ -164,7 +164,7 @@ public sealed partial class BattleService
         {
             // ★ 刀28：抽招决策唯一入口（纯函数 + 掷点由这里给）。抽到的招**锁进 意图技能**，
             //   满条执行时不再抽第二次（原来 自动攻击 会再抽一次 → 权重被采样两次、且"读条显示攻击却甩技能"）。
-            string 动作 = 敌人AI.抽行动(源, Random.Range(0, 敌人AI.权重总和(源)));
+            string 动作 = 敌人AI.抽行动(源, 随机.范围(0, 敌人AI.权重总和(源)));
             if (!string.IsNullOrEmpty(动作) && 动作 != "普攻" && 数据.技能.TryGetValue(动作, out _) && 敌.冷却剩余(动作) <= 0f)
             {
                 敌.当前意图 = 战斗单位.意图类型.技能; 敌.意图技能 = 动作; return;

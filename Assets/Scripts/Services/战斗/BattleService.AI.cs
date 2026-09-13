@@ -13,7 +13,7 @@ public sealed partial class BattleService
     {
         var 敌数据 = 敌人.源数据;
         string 行动 = 敌数据?.行动表 != null && 敌数据.行动表.Length > 0
-            ? 敌人AI.抽行动(敌数据, Random.Range(0, 敌人AI.权重总和(敌数据)))
+            ? 敌人AI.抽行动(敌数据, 随机.范围(0, 敌人AI.权重总和(敌数据)))
             : 敌人AI.普攻;
         // 治疗/增益类技能（我方单体/我方全体/自己 目标）：选友方（同伴）目标，否则会误治疗玩家
         战斗单位 目标;
@@ -36,6 +36,6 @@ public sealed partial class BattleService
     private 战斗单位 AI选目标(战斗单位 敌人, 敌人数据 敌数据)
     {
         var 存活 = 我方.FindAll(u => u.存活);
-        return 敌人AI.选目标(敌数据, 存活, Random.Range(0, 存活.Count <= 0 ? 1 : 存活.Count));
+        return 敌人AI.选目标(敌数据, 存活, 随机.范围(0, 存活.Count <= 0 ? 1 : 存活.Count));
     }
 }

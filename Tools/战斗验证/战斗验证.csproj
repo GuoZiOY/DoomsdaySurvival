@@ -17,6 +17,8 @@
     <Compile Include="..\..\Assets\Scripts\Domain\战斗\伤害计算.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\战斗\固定步长.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\战斗\敌人AI.cs" />
+    <!-- 随机源（刀33）：战斗唯一随机入口；本验证器断言它的口径与可复现性 -->
+    <Compile Include="..\..\Assets\Scripts\Domain\战斗\随机源.cs" />
     <!-- 品质 是真实文件（它只是借了 UnityEngine 的 Color，见 桩.cs 的说明） -->
     <Compile Include="..\..\Assets\Scripts\Domain\玩家\品质.cs" />
     <!--

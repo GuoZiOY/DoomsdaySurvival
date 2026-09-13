@@ -248,7 +248,7 @@ public sealed partial class BattleService
         int 敌速 = 0;
         foreach (var e in 敌方) if (e.存活 && e.基础速度 > 敌速) 敌速 = e.基础速度;
         float 概率 = Mathf.Clamp(0.5f + (玩家.基础速度 - 敌速) * 0.02f, 0.2f, 0.95f);
-        if (Random.value < 概率) { 结束战斗(false, "你成功逃离了战斗。", 返回节点, false); return; }
+        if (随机.值() < 概率) { 结束战斗(false, "你成功逃离了战斗。", 返回节点, false); return; }
         音效管理器.实例?.播放失败();
         发消息("逃跑失败！");
         重置行动条(玩家);   // 逃跑 = 主动操作：重置行动条

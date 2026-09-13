@@ -189,8 +189,58 @@ if ($写入点.Count -ne 4) {
 }
 
 Write-Output ""
+# ============================================================
+# [6] 战斗的掷点必须走 随机源（v51 刀33 / 档2 #26）
+# 为什么：战斗原来直接掷 UnityEngine.Random（全局静态、不可播种，序列还会被特效/UI 搅动），
+#   `战斗单位` 里还自己 `new System.Random()`（按时间播种 → 一场战斗无法复现、且每次分配）。
+#   改完之后"一场战斗 = 初始状态 + 种子"：报 bug 能带种子离线重放、胜率能离线批量量。
+#   这类回退**不会让编译失败、不会让任何验证器变红**（域层自己掷随机一样能跑），
+#   只会静默地让"可复现"这个能力消失 —— 所以只能靠这条盯着。
+# ============================================================
+Write-Output "[6] 掷点唯一入口：Services/战斗 不许出现 UnityEngine.Random；Domain/战斗 不许自己掷"
+$战斗服务目录 = Join-Path $脚本目录 "Services\战斗"
+$域战斗目录 = Join-Path $脚本目录 "Domain\战斗"
+if (-not (Test-Path (Join-Path $域战斗目录 "随机源.cs"))) { 报错 "Domain/战斗/随机源.cs 不存在（掷点入口被删了？）" }
+
+$服务掷点 = New-Object System.Collections.Generic.List[string]
+foreach ($f in (Get-ChildItem $战斗服务目录 -Filter *.cs)) {
+    $行们 = [System.IO.File]::ReadAllLines($f.FullName, [System.Text.Encoding]::UTF8)
+    for ($i = 0; $i -lt $行们.Count; $i++) {
+        $去 = $行们[$i] -replace '//.*$', ''
+        if ($去 -match '\bRandom\s*\.\s*(value|Range|InitState)') { $服务掷点.Add(("{0}:{1} {2}" -f $f.Name, ($i + 1), $行们[$i].Trim())) }
+    }
+}
+if ($服务掷点.Count -eq 0) { Write-Output "  ✓ Services/战斗：0 处 UnityEngine.Random（8 处掷点都走 随机源）" }
+else { foreach ($x in $服务掷点) { 报错 ("{0} —— 直接掷 UnityEngine.Random：不可播种/不可复现，请改走 随机源.值()/范围()" -f $x) } }
+
+$域掷点 = New-Object System.Collections.Generic.List[string]
+foreach ($f in (Get-ChildItem $域战斗目录 -Filter *.cs)) {
+    if ($f.Name -eq "随机源.cs") { continue }   # 唯一允许持有 System.Random 的文件
+    $行们 = [System.IO.File]::ReadAllLines($f.FullName, [System.Text.Encoding]::UTF8)
+    for ($i = 0; $i -lt $行们.Count; $i++) {
+        $去 = $行们[$i] -replace '//.*$', ''
+        if ($去 -match 'new\s+(System\.)?Random\s*\(' -or $去 -match '\bRandom\s*\.\s*(value|Range)') { $域掷点.Add(("{0}:{1} {2}" -f $f.Name, ($i + 1), $行们[$i].Trim())) }
+    }
+}
+if ($域掷点.Count -eq 0) { Write-Output "  ✓ Domain/战斗：0 处自掷随机（掷点在服务层，域层只吃参数）" }
+else { foreach ($x in $域掷点) { 报错 ("{0} —— 域层自己掷随机：无法同种子复现，请把掷点当参数传进来" -f $x) } }
+
+$服务 = 读行 "Assets\Scripts\Services\战斗\BattleService.cs"
+if ($null -ne $服务) {
+    $有字段 = $false; $有派生 = $false
+    foreach ($l in $服务) {
+        $去 = $l -replace '//.*$', ''
+        if ($去 -match '随机源\s+随机\s*;') { $有字段 = $true }
+        if ($去 -match '随机\s*=\s*new\s+随机源\(') { $有派生 = $true }
+    }
+    if (-not $有字段) { 报错 "BattleService 少了「随机源 随机;」字段（掷点入口没了）" }
+    if (-not $有派生) { 报错 "BattleService 开局没有 new 随机源 —— 种子没接上，可复现能力等于没有" }
+    if ($有字段 -and $有派生) { Write-Output "  ✓ BattleService：随机源 字段 + 开局派生种子（世界种子 + 场次）" }
+}
+
+Write-Output ""
 if ($script:失败 -eq 0) {
-    Write-Output "✅ 战斗接线核对通过（时钟归属 / 自动回派 / 结算与回派拆开 / 可用性判定唯一 / 生命行动点写入点）"
+    Write-Output "✅ 战斗接线核对通过（时钟归属 / 自动回派 / 结算与回派拆开 / 可用性判定唯一 / 生命行动点写入点 / 掷点唯一入口）"
     Write-Output "   ⚠ 这只证明**接线没被改回去**；运行期行为仍需进 Unity 打三场（房间·区域·大世界 各 胜/败/逃）"
     exit 0
 }

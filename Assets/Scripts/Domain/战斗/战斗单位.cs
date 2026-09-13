@@ -101,13 +101,25 @@ public sealed class 战斗单位
         return 总;
     }
 
-    // 移除一个随机的减益 buff（小净化用）；无减益返回 false
-    public bool 移除随机减益()
+    // 减益个数（净化 用）：掷点必须在服务层掷（Domain 不掷随机），所以先报个数给调用方
+    public int 减益数量()
+    {
+        int 数 = 0;
+        for (int i = 0; i < Buffs.Count; i++)
+            if (Buffs[i].定义.类型枚举 == Buff类型.减益) 数++;
+        return 数;
+    }
+
+    // 移除第 掷点 个减益（小净化用）；无减益返回 false。
+    // 掷点由调用方给（v51 刀33）：原来这里自己 `new System.Random()` —— 按时间播种、不可复现，
+    // 同帧连建实例还会拿到相关的数。域层不掷随机，才能做到"同种子两遍逐掷一致"。
+    public bool 移除随机减益(int 掷点)
     {
         var 减益 = Buffs.FindAll(b => b.定义.类型枚举 == Buff类型.减益);
         if (减益.Count == 0) return false;
-        var 选中 = 减益[Random(减益.Count)];
-        Buffs.Remove(选中);
+        int i = 掷点 % 减益.Count;
+        if (i < 0) i += 减益.Count;
+        Buffs.Remove(减益[i]);
         return true;
     }
 
@@ -283,9 +295,10 @@ public sealed class 战斗单位
     }
 
     // —— 纯 C# 数值工具（零 UnityEngine 依赖） ——
+    // 注：这里原来还有一个 `Random(int 上限) => new System.Random().Next(上限)`，v51 刀33 删掉了 ——
+    //     域层不掷随机（掷点在服务层，走 随机源），域层一旦自己掷就没法"同种子复现"。
     private static int Min(int a, int b) => a < b ? a : b;
     private static int Max(int a, int b) => a > b ? a : b;
-    private static int Random(int 上限) => 上限 <= 0 ? 0 : new System.Random().Next(上限);
     private static int Round(float v) => (int)(v + 0.5f);
     private static int 修正(int 基础, int 百分比) => Max(0, Round(基础 * (1f + 百分比 / 100f)));
 }
