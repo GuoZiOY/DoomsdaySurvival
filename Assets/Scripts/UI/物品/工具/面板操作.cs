@@ -29,6 +29,13 @@ public static class 面板操作
     // 注意：这是"按标识取第一件"的模板级入口（旧背包列表 UI 用）；塔科夫实例级操作（容器里的具体一件，保留配件/耐久/容器数据）请用 换装堆叠。
     public static bool 换装(玩家档案 玩家, 物品数据 物品)
     {
+        // 配件（改装件）不是装备 —— 同 换装堆叠 的拦截（模板级入口也堵上，避免有人从这条路绕进来）
+        if (物品.类型 == "配件" || 配件槽.认得出(物品.槽位))
+        {
+            音效管理器.实例?.播放失败();
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, $"{物品.标识} 是改装件、不能装备 —— 到【工作台】「其他」里改装。"));
+            return false;
+        }
         string 槽 = 物品.槽位;
         if (string.IsNullOrEmpty(槽)) return false;   // 非装备类防误用
         if (槽 == "饰品") 槽 = 玩家.饰品目标槽();
@@ -72,6 +79,17 @@ public static class 面板操作
         if (堆叠 == null || string.IsNullOrEmpty(堆叠.标识)) return false;
         var 数据 = ServiceRegistry.Get<DataService>();
         if (!数据.物品.TryGetValue(堆叠.标识, out var 物品)) return false;
+        // 配件（改装件）**不是装备**，不许走装备这条路（v51 刀41，用户："插件不是装备，不能选择被装备"）。
+        // 为什么在这里拦：`换装堆叠` 是双击 / 右键 / 拖拽三个入口的共同落点 —— 拦这一处，
+        //   三个入口全兜住（比在每个入口各判一次可靠；这个项目在"多份实现"上栽过）。
+        //   配件的 `槽位` 是**配件槽**（枪口/瞄具/插板…），不是装备槽位，所以判据用 配件槽.认得出。
+        if (物品.类型 == "配件" || 配件槽.认得出(物品.槽位))
+        {
+            音效管理器.实例?.播放失败();
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告,
+                $"{堆叠.标识} 是改装件、不能装备 —— 到【工作台】切到「其他」，把它和装备一起放进材料区。"));
+            return false;
+        }
         string 槽 = !string.IsNullOrEmpty(指定槽) ? 指定槽 : 物品.槽位;
         if (string.IsNullOrEmpty(槽)) return false;
         if (槽 == "饰品" && string.IsNullOrEmpty(指定槽)) 槽 = 玩家.饰品目标槽();

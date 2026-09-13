@@ -110,6 +110,9 @@ using System.Collections.Generic;
         // 配件加成解析（v51 刀35 取代原 `配件定义表`）：配件物品标识 + 加成类型 → 该配件的加成值。
         // 配件是普通物品，效果定义在 物品数据（攻击加成/命中加成/潜行加成…），由装配层接线到 DataService。
         [NonSerialized] public Func<string, 加成类型, int> 配件加成解析;
+        // 物品类型解析（v51 刀41）：标识 → "武器"/"防具"/"配件"…（`有效最大耐久` 用它把配件从
+        //   "武器/防具默认 15 耐久"的兜底里摘出来 —— 否则配件会凭空有耐久、忘了初始化就显示"损坏"）
+        [NonSerialized] public Func<string, string> 物品类型解析;
 
         // —— 身份：职业与天赋 ——
         public string 职业 = "";                        // 职业标识（开局选择）
