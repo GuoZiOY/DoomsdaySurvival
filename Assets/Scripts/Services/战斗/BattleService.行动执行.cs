@@ -11,6 +11,16 @@ public sealed partial class BattleService
     // 自动普攻：近战（攻击距离 1）→ 物理伤害；远程（攻击距离 >1）→ 远程伤害
     // ===== 弹药 / 技能 消耗物（玩家：弹挂/腰封 供；敌人 天然 无限，不 参与） =====
 
+    // 该武器能吃哪些弹药（刀57：**数据化**）——`物品数据.适用弹药` 为空才回退到"按武器种类"的旧映射。
+    //   顺序有意义：排在前面的先消耗（土制火枪 先打手装弹、再打通用铁砂弹）。
+    private string[] 武器可用弹药()
+    {
+        if (数据 != null && 数据.物品.TryGetValue(玩家.当前武器标识, out var 武)
+            && 武.适用弹药 != null && 武.适用弹药.Length > 0) return 武.适用弹药;
+        string 旧 = 武器弹药标识(玩家.当前武器);
+        return string.IsNullOrEmpty(旧) ? System.Array.Empty<string>() : new[] { 旧 };
+    }
+
     private string 武器弹药标识(武器种类 种类) => 种类 switch
     {
         武器种类.手枪 => "手枪弹",
@@ -186,12 +196,17 @@ public sealed partial class BattleService
         return true;
     }
 
-    // 主弹药 优先，其次 任意 弹药 类 兜底（"有没有弹药"与"扣哪一堆"必须是同一个判据 ——
+    // 主弹药 优先（按 `适用弹药` 的顺序），其次 任意 弹药 类 兜底（"有没有弹药"与"扣哪一堆"必须是同一个判据 ——
     // 抽成一个查询，别的判定（如 可释放技能）才能与真的扣减保持一致）
     private 物品堆叠 找弹药堆叠()
     {
-        string 主 = 武器弹药标识(玩家.当前武器);
-        return 找战斗容器堆叠(s => s.标识 == 主) ?? 找战斗容器堆叠(s => 是弹药类(s.标识));
+        foreach (var 标 in 武器可用弹药())
+            if (!string.IsNullOrEmpty(标))
+            {
+                var 堆 = 找战斗容器堆叠(s => s.标识 == 标);
+                if (堆 != null) return 堆;
+            }
+        return 找战斗容器堆叠(s => 是弹药类(s.标识));
     }
 
     // 技能 指定 消耗物品（从 弹挂/腰封 扣 指定 数量）
