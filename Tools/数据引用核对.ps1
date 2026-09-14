@@ -461,6 +461,130 @@ if ($tj) {
 Write-Output ("  敌人特性 {0} 条；违规 {1} 处" -f $特性数, $特性坏)
 if ($特性数 -eq 0) { 报错 "敌人特性.json 一条都没扫到（文件缺失或字段名变了）" }
 
+# ---------- 物品用途 / 配方门槛 / 成本比（刀54）----------
+# 为什么离线也要查：这是"**每件物品都要有用途**"这条口径的门禁，靠人眼看会漏。
+#   ★ 口径（踩过两次坑才定下来）：**配方材料 与 家具建造/升级材料 都是【消费方】，不是来源**。
+#     来源只算：搜刮 / 配方产物 / 敌人掉落 / 职业初始 / 门锁投放 / 技能消耗物 / 种植成熟 / 腐坏产出。
+#     （把"被配方当材料"当来源 → 鸡蛋 曾被误判可达；把"家具材料"当来源 → 医药箱 零来源没被逮到。）
+#   ① 零来源：玩家在正式流程里摸不到
+#   ② 无用途：不能直接用、不是任何配方料、不是任何家具料 —— `种类=贵重物品` 例外（交易硬通货，预留）
+#   ③ 奢侈品不许进配方/家具（它们是商品，不是生产资料）
+#   ④ 配方.需要工具 的标识必须存在（持有即可、不消耗）
+#   ⑤ 成本比 越界（装备 0.6~1.6；弹药·材料·饮食 0.4~1.6）
+Write-Output ""
+Write-Output "[物品用途] 零来源 / 无用途 / 奢侈品禁入 / 需要工具 / 成本比"
+
+$物 = @{}
+foreach ($f in (Get-ChildItem (Join-Path $数据 "物品") -Recurse -Filter *.json)) {
+    try { $j = ([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json) }
+    catch { continue }
+    foreach ($it in $j.物品) { if ($it) { $物[[string]$it.标识] = $it } }
+}
+$来源 = @{}; $用途 = @{}
+function 记来源([string]$键, [string]$标签) {
+    if ([string]::IsNullOrEmpty($键) -or -not $物.ContainsKey($键)) { return }
+    if (-not $来源.ContainsKey($键)) { $来源[$键] = New-Object System.Collections.Generic.HashSet[string] }
+    [void]$来源[$键].Add($标签)
+}
+function 记用途([string]$键, [string]$标签) {
+    if ([string]::IsNullOrEmpty($键) -or -not $物.ContainsKey($键)) { return }
+    if (-not $用途.ContainsKey($键)) { $用途[$键] = New-Object System.Collections.Generic.HashSet[string] }
+    [void]$用途[$键].Add($标签)
+}
+# ① 搜刮
+foreach ($m in $地图类型.地图类型) {
+    foreach ($r in $m.房间) {
+        foreach ($c in $r.容器) {
+            foreach ($e in $c.搜索表) { 记来源 ([string]$e.物品标识) "搜刮" }
+        }
+    }
+}
+# ② 配方（产物 = 来源；材料/图纸/工具 = 用途）+ 成本比 + 需要工具存在性
+$配方全部 = @()
+foreach ($f in @("recipes_工作台.json", "recipes_灶台.json", "recipes_医疗站.json")) {
+    $j = 读JSON $f
+    if ($j) { foreach ($r in $j.配方) { $配方全部 += $r } }
+}
+$工具坏 = 0; $成本坏 = 0; $配方数 = 0
+foreach ($r in $配方全部) {
+    $配方数++
+    记来源 ([string]$r.产物) ("制作:" + $r.标识)
+    foreach ($m in $r.材料) { 记用途 ([string]$m.物品) ("配方材料:" + $r.标识) }
+    if ($r.解锁图纸) { 记用途 ([string]$r.解锁图纸) ("解锁配方:" + $r.标识) }
+    if ($r.需要工具) {
+        foreach ($tg in $r.需要工具) {
+            if (-not $物.ContainsKey([string]$tg)) { 报错 ("配方[{0}] → 需要工具[{1}] 不存在" -f $r.标识, $tg); $工具坏++ }
+            else { 记用途 ([string]$tg) ("配方工具:" + $r.标识) }
+        }
+    }
+    $成 = 0
+    foreach ($m in $r.材料) { if ($物.ContainsKey([string]$m.物品)) { $成 += [int]$物[[string]$m.物品].价值 * [int]$m.数量 } }
+    $份 = 1; if ($r.PSObject.Properties.Name -contains '产物数量' -and [int]$r.产物数量 -gt 0) { $份 = [int]$r.产物数量 }
+    $值 = 0
+    if ($物.ContainsKey([string]$r.产物)) { $值 = [int]$物[[string]$r.产物].价值 * $份 }
+    if ($值 -gt 0) {
+        $比 = [math]::Round($成 / $值, 2)
+        $类型 = ""
+        if ($物.ContainsKey([string]$r.产物)) { $类型 = [string]$物[[string]$r.产物].类型 }
+        $装备类 = @('武器', '防具', '医疗', '容器', '配件') -contains $类型
+        $低 = 0.4; if ($装备类) { $低 = 0.6 }
+        if ($比 -lt $低 -or $比 -gt 1.6) {
+            报错 ("配方[{0}] 成本比 {1} 越界（{2}：装备 0.6~1.6 / 弹药·材料·饮食 0.4~1.6）" -f $r.标识, $比, $类型)
+            $成本坏++
+        }
+    }
+}
+# ③ 家具（建造/升级材料 = 用途）
+$家具根 = 读JSON "家具.json"
+$奢入配方家具 = 0
+foreach ($fu in $家具根.家具) {
+    foreach ($m in $fu.材料) { 记用途 ([string]$m.物品) ("家具建造:" + $fu.标识) }
+    if ($fu.升级) { foreach ($u in $fu.升级) { if ($u.材料) { foreach ($m in $u.材料) { 记用途 ([string]$m.物品) ("家具升级:" + $fu.标识) } } } }
+}
+# ④ 敌人掉落 = 来源
+foreach ($e in $敌人根.敌人) { 记来源 ([string]$e.掉落物品) "掉落" }
+# ⑤ 职业初始装备 = 来源
+foreach ($c in $职业.职业) { foreach ($e in $c.初始装备) { 记来源 ([string]$e.标识) "职业初始" } }
+# ⑥ 门锁：钥匙 = 开门用途；钥匙投放（塞进本房容器/挂本房敌人）= 来源
+foreach ($r in $房间模板.房间) { if ($r.门) { foreach ($d in $r.门) { 记用途 ([string]$d.锁) ("开门:" + $r.标识); 记来源 ([string]$d.锁) "钥匙投放" } } }
+# ⑦ 技能消耗物 = 来源 + 用途
+foreach ($s in $sj.技能) { if ($s.消耗物品) { 记来源 ([string]$s.消耗物品) ("技能:" + $s.标识); 记用途 ([string]$s.消耗物品) ("技能消耗:" + $s.标识) } }
+# ⑧ 世界区域解锁条件（条件=物品）= 用途
+foreach ($w in $世界.世界) { foreach ($q in $w.区域) { if ($q.解锁) { foreach ($t in $q.解锁) { if ($t.条件 -eq '物品') { 记用途 ([string]$t.标识) ("解锁区域:" + $q.区域模板) } } } } }
+# ⑨ 直接使用 / 用途字段 / 就地转化 / 交易预留
+$直用类型 = @('武器', '防具', '配件', '饮食', '医疗', '弹药', '容器', '书籍')
+foreach ($k in $物.Keys) {
+    $it = $物[$k]
+    if ($直用类型 -contains [string]$it.类型) { 记用途 $k "直接使用" }
+    if ($it.用途) { 记用途 $k ("用途字段:" + $it.用途) }
+    if ([string]$it.种类 -eq '贵重物品') { 记用途 $k "交易预留" }
+    if ($it.PSObject.Properties.Name -contains '生长时间' -and [int]$it.生长时间 -gt 0 -and $it.成熟产物) {
+        记用途 $k "就地转化"
+        # 可转化物 自己另有来源 → 它的成熟产物 才算可达（种子自身不算来源）
+        $自有 = $false
+        if ($来源.ContainsKey($k)) { foreach ($t in $来源[$k]) { if ($t -ne '就地转化') { $自有 = $true } } }
+        if ($自有) { 记来源 ([string]$it.成熟产物) ("转化:" + $k) }
+    }
+}
+记来源 "腐坏食物" "腐坏产出"
+
+$零来源 = @(); $无用途 = @()
+foreach ($k in $物.Keys) { if (-not $来源.ContainsKey($k)) { $零来源 += $k } }
+foreach ($k in $物.Keys) { if (-not $用途.ContainsKey($k)) { $无用途 += $k } }
+foreach ($k in ($零来源 | Sort-Object)) { 报错 ("物品[{0}] 零来源（搜刮/掉落/职业/门锁/技能/种植 都没有）" -f $k) }
+foreach ($k in ($无用途 | Sort-Object)) { 报错 ("物品[{0}] 无用途（不能直接用、不是配方料、也不是家具料）" -f $k) }
+# 奢侈品 不许进配方/家具（它们是商品）—— 与"无用途"的白名单成对
+foreach ($r in $配方全部) { foreach ($m in $r.材料) { if ($物.ContainsKey([string]$m.物品) -and [string]$物[[string]$m.物品].种类 -eq '贵重物品') { 报错 ("奢侈品[{0}] 出现在配方[{1}] 里 —— 贵重物品只做交易硬通货，不进配方" -f $m.物品, $r.标识); $奢入配方家具++ } } }
+foreach ($fu in $家具根.家具) {
+    $料们 = @()
+    foreach ($m in $fu.材料) { $料们 += $m }
+    if ($fu.升级) { foreach ($u in $fu.升级) { if ($u.材料) { foreach ($m in $u.材料) { $料们 += $m } } } }
+    foreach ($m in $料们) { if ($物.ContainsKey([string]$m.物品) -and [string]$物[[string]$m.物品].种类 -eq '贵重物品') { 报错 ("奢侈品[{0}] 出现在家具[{1}] 里 —— 贵重物品只做交易硬通货，不进家具" -f $m.物品, $fu.标识); $奢入配方家具++ } }
+}
+Write-Output ("  物品 {0} 件；零来源 {1} / 无用途 {2} / 奢侈品误入配方家具 {3} / 配方 {4} 条（需要工具坏 {5} · 成本比坏 {6}）" -f $物.Count, $零来源.Count, $无用途.Count, $奢入配方家具, $配方数, $工具坏, $成本坏)
+if ($物.Count -eq 0) { 报错 "一件物品都没扫到 —— 判据失效了（路径/字段名变了？）" }
+
+
 Write-Output ""
 if ($script:失败 -eq 0) { Write-Output "✅ 数据引用核对通过（搜索表物品 / 容器池 / 敌人组 / 门锁钥匙 / 楼层房间 / 区域建筑与街上敌人 / 世界区域与敌人 / 配件规则 / 弹匣规则 / 敌人特性规则 全部存在）"; exit 0 }
 Write-Output ("❌ 数据引用核对失败：{0} 处" -f $script:失败); exit 1
