@@ -49,19 +49,28 @@ public sealed class 持有面板 : 面板基类
     // 收集"要让位"的三件并记下它们的原始 offsetMax（只在第一次调用时做）
     private void 确保让位表()
     {
-        if (让位基线 != null) return;
+        if (让位基线 != null && 让位区 != null && 让位区.Length > 0) return;   // 已经收好了
         var 表 = new System.Collections.Generic.List<RectTransform>();
-        if (让位区 != null && 让位区.Length > 0)
-        {
+        if (让位区 != null)
             foreach (var 件 in 让位区) if (件 != null) 表.Add(件);
-        }
-        else
+        if (表.Count == 0)
         {
+            // 自动收：仓库 / 搜索 用本组件已有的引用位，装具区 用静态单例
             if (仓库 != null && 仓库.transform is RectTransform 仓) 表.Add(仓);
             if (搜索 != null && 搜索.transform is RectTransform 搜) 表.Add(搜);
             if (装具区.实例 != null && 装具区.实例.transform is RectTransform 具) 表.Add(具);
+            // ★ 一件都没收到就 **return（不记基线）** —— 原来会把空数组钉死，之后再也不重试，
+            //   表现就是"让位完全不动、也没有任何日志"。这些引用（尤其 `装具区.实例` 这个静态单例）
+            //   有可能在第一次调用时还没准备好，所以要允许它下次再收。
+            if (表.Count == 0)
+            {
+                Debug.LogWarning("[持有面板] 侧边栏让位：一件都没收到（仓库/搜索/装具区 都拿不到）——" +
+                                 "请在 Inspector 把三件拖进 `让位区`。");
+                return;
+            }
+            Debug.Log($"[持有面板] 侧边栏让位：自动收到 {表.Count} 件 —— {string.Join("、", 表.ConvertAll(x => x.name))}");
         }
-        让位区 = 表.ToArray();   // 写回字段：Inspector 里能看到实际生效的是哪三件
+        让位区 = 表.ToArray();   // 写回字段：Inspector 里能看到实际生效的是哪几件
         让位基线 = new Vector2[让位区.Length];
         for (int i = 0; i < 让位区.Length; i++) 让位基线[i] = 让位区[i].offsetMax;
     }
@@ -75,6 +84,7 @@ public sealed class 持有面板 : 面板基类
         var 偏移 = 让位 ? new Vector2(-让位宽, 0f) : Vector2.zero;
         for (int i = 0; i < 让位区.Length; i++)
             if (让位区[i] != null) 让位区[i].offsetMax = 让位基线[i] + 偏移;
+        Debug.Log($"[持有面板] 侧边栏让位：{(让位 ? "左移" : "复位")} {让位宽}px（{让位区.Length} 件）");
     }
 
     // 侧边栏现在可见吗（拿不到侧边栏就当作"不可见" = 不让位，保持原样最安全）
