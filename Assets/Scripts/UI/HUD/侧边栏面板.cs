@@ -42,8 +42,12 @@ public sealed class 侧边栏面板 : MonoBehaviour
 
     // 用户通过 HUD 开关决定的显隐意图（见文件头：必须记住，否则一切面板就弹回来）
     private bool 用户要看见 = true;
+    private bool 上次广播可见 = true;   // 只在真的变了才广播 `侧边栏显隐变化事件`
 
     public bool 显示中 => 用户要看见;
+
+    // 实际可见（已经把"未开局/主菜单"算进去）——会被侧边栏盖住的右区部件读这个来"让位"
+    public bool 可见 => gameObject.activeSelf;
 
     void Awake()
     {
@@ -108,6 +112,13 @@ public sealed class 侧边栏面板 : MonoBehaviour
         // 回主菜单 = 顺手重置：下一局开始时侧边栏默认是开着的（否则玩家会以为它坏了）
         if (主菜单) 用户要看见 = true;
         gameObject.SetActive(用户要看见 && !主菜单);
+        // ★ 只在**可见性真的变了**时广播一次（这个方法会被面板切换/战斗开始结束频繁调到）
+        bool 现在可见 = gameObject.activeSelf;
+        if (现在可见 != 上次广播可见)
+        {
+            上次广播可见 = 现在可见;
+            ServiceRegistry.Get<EventBus>()?.发布(new 侧边栏显隐变化事件(现在可见));
+        }
 
         bool 战斗中 = ServiceRegistry.Get<BattleService>()?.战斗中 ?? false;
         if (暂停按钮 != null) 暂停按钮.gameObject.SetActive(!主菜单);
