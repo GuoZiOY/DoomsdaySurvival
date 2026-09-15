@@ -65,22 +65,17 @@ public sealed class 侧边栏面板 : MonoBehaviour
     }
 
     // 存档：打开存档面板（选槽保存/读取/删除）。
-    // ★ 刀64：以前这里是"立刻覆盖写唯一那个键"—— 没有槽位、没有确认、没有读取入口。
-    //   现在交给 存档面板：4 个槽（自动 + 手动 3）、覆盖/删除二次确认、损坏档可见。
-    // 「战斗中禁存档」在代码层由 SaveService 调用侧的守卫 + 这里的按钮显隐两层保证（原先只有显隐这一层）。
+    // ★ 刀64：允许条件收敛到 **存档门禁**（"唯一真相"）—— 未开局 / 战斗中 都在那里判，
+    //   文案也统一从那里来（含用户口径「战斗时不需要存档读档」）。
+    //   原来这里自己写了两段 if，而**读**那条路一段守卫都没有。
+    //   本按钮的显隐（刷新显隐）仍是第一层"体验"，门禁才是第二层"正确性"——两层都要在。
     private void 存档()
     {
-        var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
-        if (玩家 == null || string.IsNullOrEmpty(玩家.当前节点))
+        string 拒 = 存档门禁.存前检查();
+        if (拒 != "")
         {
             音效管理器.实例?.播放失败();
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "尚未开始冒险，无可保存的进度。"));
-            return;
-        }
-        if (ServiceRegistry.Get<BattleService>()?.战斗中 ?? false)
-        {
-            音效管理器.实例?.播放失败();
-            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "战斗中不能存档（档案里不含战斗状态，存了会得到一个时间与状态不一致的档）。"));
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 拒));
             return;
         }
         存档面板.打开(false);
