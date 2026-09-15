@@ -510,11 +510,18 @@ function 记用途([string]$键, [string]$标签) {
     if (-not $用途.ContainsKey($键)) { $用途[$键] = New-Object System.Collections.Generic.HashSet[string] }
     [void]$用途[$键].Add($标签)
 }
-# ① 搜刮
+# ① 搜刮（顺便数"每个物品有几个搜刮落点"——只有一个落点 = 换个容器池就断供）
+$搜刮数 = @{}
 foreach ($m in $地图类型.地图类型) {
     foreach ($r in $m.房间) {
         foreach ($c in $r.容器) {
-            foreach ($e in $c.搜索表) { 记来源 ([string]$e.物品标识) "搜刮" }
+            foreach ($e in $c.搜索表) {
+                记来源 ([string]$e.物品标识) "搜刮"
+                if ($物.ContainsKey([string]$e.物品标识)) {
+                    if (-not $搜刮数.ContainsKey([string]$e.物品标识)) { $搜刮数[[string]$e.物品标识] = 0 }
+                    $搜刮数[[string]$e.物品标识]++
+                }
+            }
         }
     }
 }
@@ -603,6 +610,11 @@ foreach ($k in $物.Keys) {
 }
 foreach ($k in ($零来源 | Sort-Object)) { 报错 ("物品[{0}] 零来源（搜刮/掉落/职业/门锁/技能/种植 都没有）" -f $k) }
 foreach ($k in ($无用途 | Sort-Object)) { 报错 ("物品[{0}] 无用途（不能直接用、不是配方料、也不是家具料）" -f $k) }
+# 单通路（刀59 定的口径，刀60 被我打回过一次 → 现在做成门禁）：
+#   只要一件物品**有搜刮落点**，就必须有 **≥2 个** —— 一个容器池调整就会让它彻底断供。
+#   零搜刮落点的物品不算（它们的来源是 配方/掉落/职业/门锁/种植，不属于这一条）。
+$单通路 = @($搜刮数.Keys | Where-Object { $搜刮数[$_] -eq 1 } | Sort-Object)
+foreach ($k in $单通路) { 报错 ("物品[{0}] 单通路（只有 1 个搜刮容器 —— 换个容器池就断供，请再补一个）" -f $k) }
 # 奢侈品 不许进配方/家具（它们是商品）—— 与"无用途"的白名单成对
 foreach ($r in $配方全部) { foreach ($m in $r.材料) { if ($物.ContainsKey([string]$m.物品) -and [string]$物[[string]$m.物品].种类 -eq '贵重物品') { 报错 ("奢侈品[{0}] 出现在配方[{1}] 里 —— 贵重物品只做交易硬通货，不进配方" -f $m.物品, $r.标识); $奢入配方家具++ } } }
 foreach ($fu in $家具根.家具) {
