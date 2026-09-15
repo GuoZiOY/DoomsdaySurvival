@@ -10,8 +10,12 @@ using TMPro;
 // 注意：基类不含「内容区」——需要动态内容容器的面板（地图/战斗/制作等）自行声明各自的内容区。
 public abstract class 面板基类 : MonoBehaviour
 {
-    // 共享按钮预制体（由 面板管理器 在 Inspector 设置，运行时生成按钮用）
-    public static GameObject 按钮预制体;
+    // 共享按钮预制体（由 面板管理器 在装配时**注入**，运行时生成行用）
+    // ★ 刀66：原来是 `public static GameObject 按钮预制体;` —— 一个**谁赋值都全局生效**的可变静态字段，
+    //   任何地方一句赋值就能改掉全项目所有列表行的外观，而且没人知道是谁改的。
+    //   现在：只读 + 显式注入入口（唯一的写点 = 面板管理器.Awake）。
+    public static GameObject 按钮预制体 { get; private set; }
+    public static void 注入按钮预制体(GameObject 预制体) => 按钮预制体 = 预制体;
 
     // 面板管理器调用：激活 + 刷新内容
     public virtual void 显示面板(object 上下文 = null, bool 上下互切 = false, bool 返回方向 = false)

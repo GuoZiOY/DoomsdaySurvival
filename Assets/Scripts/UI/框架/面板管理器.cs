@@ -105,7 +105,7 @@ public sealed class 面板管理器 : MonoBehaviour
     void Awake()
     {
         实例 = this;
-        面板基类.按钮预制体 = 按钮预制体;
+        面板基类.注入按钮预制体(按钮预制体);
 
         GameBootstrap.装配();
 
@@ -178,12 +178,14 @@ public sealed class 面板管理器 : MonoBehaviour
         // 安全屋面板/持有面板 等 游戏内 面板 显示 HUD。
         foreach (var ui in 常驻UI) if (ui != null) ui.SetActive(目标 != null && 目标 != 主菜单 && 目标 != 角色创建);
         if (HUD != null) HUD.SetActive(目标 != null && 目标 != 主菜单 && 目标 != 角色创建);
+        // ★ 隐藏一律走面板**自己的** `隐藏面板()`。
+        //   原来是两条路：`面板 == 当前显示面板` 走虚方法（会跑面板自己的清理：隐藏背景模糊 / 关搜索 / 退出摆放），
+        //   其余走硬 `SetActive(false)`（**跳过一切清理**）。于是"从一个面板直接跳到第三个面板"时，
+        //   中间那个若已处于隐藏态就永远不跑清理 → **背景模糊残留**（共享一张模糊层时尤其明显）。
+        //   现在：只对"正在显示的"与"当前可见的"调 `隐藏面板()`，**各跑一次清理**；从未显示过的不动它。
         foreach (var 面板 in 可切换面板)
-            if (面板 != null && 面板 != 目标)
-            {
-                if (面板 == 当前显示面板) 面板.隐藏面板(上下互切, 返回方向);
-                else 面板.gameObject.SetActive(false);
-            }
+            if (面板 != null && 面板 != 目标 && (面板 == 当前显示面板 || 面板.gameObject.activeSelf))
+                面板.隐藏面板(上下互切, 返回方向);
         目标?.显示面板(上下文, 上下互切, 返回方向);
         当前显示面板 = 目标;
         ServiceRegistry.Get<EventBus>()?.发布(new 面板切换事件(目标));
@@ -201,6 +203,7 @@ public sealed class 面板管理器 : MonoBehaviour
     public void 回主菜单()
     {
         _返回意图 = true;
+        背景模糊层.强制清零();   // ★ 刀66：整盘重置 —— 计数靠"面板配对调用"维持，漏一次就永久 >0（见 背景模糊层.强制清零）
         显示(主菜单);
     }
 

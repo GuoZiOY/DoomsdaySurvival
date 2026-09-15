@@ -40,8 +40,16 @@ public abstract class 浮动面板基类 : MonoBehaviour, IBeginDragHandler, IDr
         // 防重：同一容器已打开 → 提到最上层并复用，不重复创建（所有 子类 共用 防重表）
         if (已打开.TryGetValue(容器, out var 已有) && 已有 != null)
         {
-            已有.根矩形.SetAsLastSibling();   // 聚焦已有面板（顶到最上层）
-            return 已有 as T;
+            // ★ 刀66：类型不符时必须**报错**。原来写的是 `return 已有 as T` —— 命中别的子类时
+            //   `as` 返回 null，调用方拿到个 null **且没有任何线索**（静默失败）。
+            //   触发场景：先对某个容器开了 容器面板，再对同一容器请求 制作面板。
+            if (已有 is T 命中)
+            {
+                命中.根矩形.SetAsLastSibling();   // 聚焦已有面板（顶到最上层）
+                return 命中;
+            }
+            Debug.LogError($"[浮动面板] 同一个容器上已经开着 {已有.GetType().Name}，不能再开 {typeof(T).Name} —— 请先关掉它。");
+            return null;
         }
         var 预制 = Resources.Load<T>(预制体路径);
         if (预制 == null)
