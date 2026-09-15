@@ -479,7 +479,7 @@ public abstract class 格子探索服务
 
     // 声音在**这一层**传得多远：大世界 1.0（旷野）/ 区域 0.65（街区，楼挡着）/ 房间 0.35（室内）。
     // 乘在**半径**上，不乘在强度上 —— 否则"房子小"会让室内开枪不算巨响（两件事被混成一件）。
-    public virtual float 噪音层系数 => 1f;   // public：Editor 的流场可视化窗口要读它去画"听距圈"
+    public virtual float 噪音层系数 => 1f;   // public：探索图层的流场调试叠层（F2）要在面板上显示它
 
     // 敌人移动之后"玩家还走得出去吗"要校验的落点（派生给；默认不校验）。
     protected virtual void 收撤退点(List<(int 列, int 行)> 收) { }
@@ -655,8 +655,7 @@ public abstract class 格子探索服务
     private float 分钟累计;
     private bool 敌人AI已启动;
 
-    // public：Editor 可视化窗口要按敌人查数据（只读，不改任何状态）
-    public 敌人数据 取敌数据(网格实体 敌)
+    private 敌人数据 取敌数据(网格实体 敌)
         => 数据 != null && 敌 != null && 数据.敌人.TryGetValue(敌.定义标识 ?? "", out var d) ? d : null;
 
     private 大世界敌人AI.敌人AI态 取态(网格实体 敌)
@@ -669,11 +668,6 @@ public abstract class 格子探索服务
     }
 
     // 敌人被打死 / 被连通校验撤掉之后，它的态要跟着走（否则字典一直攥着旧实体 → 泄漏 + 误命中）
-    // ★ 只读调试口（Editor 的 流场可视化 要用）：拿某只敌人的 AI 运行期态。
-    //   **不创建**（没记录过就返回 null）—— 可视化窗口不该有副作用。
-    public 大世界敌人AI.敌人AI态 敌人AI态只读(网格实体 敌)
-        => 敌 != null && 敌人态.TryGetValue(敌, out var 态) ? 态 : null;
-
     private void 剪掉失联的敌人态(List<网格实体> 敌人们)
     {
         if (敌人态.Count == 敌人们.Count) return;   // 数量一致就一定没有失联项
