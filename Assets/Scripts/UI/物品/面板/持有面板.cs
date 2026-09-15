@@ -37,6 +37,12 @@ public sealed class 持有面板 : 面板基类
         public RectTransform 件;
         public Vector2 基线;   // (Pos X, Width) —— 未让位时的值
         public Vector2 增量;
+        // ★ 宽度"按内容自适应"的组件。有它在，我们写进 `sizeDelta.x` 的宽度会被它下一次布局重算顶掉
+        //   （而它不管 `anchoredPosition`，所以位置留住了、宽度没留住 —— 正是实测到的现象）。
+        //   让位期间把它临时改成 `Unconstrained`，复位时放回去并重建布局。
+        public UnityEngine.UI.ContentSizeFitter 拟合器;
+        public UnityEngine.UI.ContentSizeFitter.FitMode 原横向;
+        public bool 有布局组;
     }
     private readonly System.Collections.Generic.List<让位记录> 让位表 = new System.Collections.Generic.List<让位记录>();
     private bool 让位表已建, 已让位;
@@ -47,7 +53,16 @@ public sealed class 持有面板 : 面板基类
         void 加(RectTransform 件, Vector2 增量)
         {
             if (件 == null) return;
-            让位表.Add(new 让位记录 { 件 = 件, 基线 = new Vector2(件.anchoredPosition.x, 件.sizeDelta.x), 增量 = 增量 });
+            var 拟合 = 件.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+            让位表.Add(new 让位记录
+            {
+                件 = 件,
+                基线 = new Vector2(件.anchoredPosition.x, 件.sizeDelta.x),
+                增量 = 增量,
+                拟合器 = 拟合,
+                原横向 = 拟合 != null ? 拟合.horizontalFit : UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained,
+                有布局组 = 件.GetComponent<UnityEngine.UI.LayoutGroup>() != null,
+            });
         }
         加(装具区.实例 != null ? 装具区.实例.transform as RectTransform : null, new Vector2(装具区位置增量, 装具区宽度增量));
         加(仓库 != null ? 仓库.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
@@ -60,8 +75,9 @@ public sealed class 持有面板 : 面板基类
             return;
         }
         让位表已建 = true;
-        Debug.Log($"[持有面板] 侧边栏让位表建好：{让位表.Count} 件 —— " +
-                  string.Join("、", 让位表.ConvertAll(x => $"{x.件.name}({x.基线.x:0},{x.基线.y:0})")));
+        Debug.Log($"[持有面板] 侧边栏让位表建好：{让位表.Count} 件 —— " + string.Join("、",
+            让位表.ConvertAll(x => $"{x.件.name}(x={x.基线.x:0},宽={x.基线.y:0}" +
+                                   (x.拟合器 != null ? $",自适应={x.原横向}" : "") + (x.有布局组 ? ",有布局组" : "") + ")")));
     }
 
     // 让位 / 复位（幂等）。只动 x 与宽度，**y 保留当前值**（免得踩到别的系统正在改的 y）。
@@ -73,8 +89,15 @@ public sealed class 持有面板 : 面板基类
         foreach (var 记 in 让位表)
         {
             if (记.件 == null) continue;
+            // ① 先处理"自适应宽度"：让位时关掉它，否则下面写的宽度会被它重算顶掉
+            if (记.拟合器 != null)
+                记.拟合器.horizontalFit = 让位 ? UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained : 记.原横向;
+            // ② 写位置与宽度（只动 x / 宽，y 与高保留当前值）
             记.件.anchoredPosition = new Vector2(记.基线.x + (让位 ? 记.增量.x : 0f), 记.件.anchoredPosition.y);
             记.件.sizeDelta = new Vector2(记.基线.y + (让位 ? 记.增量.y : 0f), 记.件.sizeDelta.y);
+            // ③ 复位时让自适应重新算一遍（算出来的就是基线宽度），并重建布局
+            if (!让位 && 记.拟合器 != null)
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(记.件);
         }
         Debug.Log($"[持有面板] 侧边栏让位：{(让位 ? "开" : "关")}（{让位表.Count} 件）");
     }
