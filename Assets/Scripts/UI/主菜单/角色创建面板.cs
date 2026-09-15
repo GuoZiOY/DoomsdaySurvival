@@ -85,6 +85,8 @@ public sealed class 角色创建面板 : 面板基类
         return true;
     }
 
+    // 用户：这个面板不需要 HUD 上那颗关闭按钮（它有自己的「返回」按钮）
+    public override bool 可关闭 => false;
     public override string 取消文本 => "返回主菜单";
 
     // ===== 按钮绑定（只执行一次） =====

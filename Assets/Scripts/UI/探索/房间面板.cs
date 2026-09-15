@@ -27,8 +27,11 @@ public sealed class 房间面板 : 面板基类
     public override string 取消文本 => "离开";
 
     // 面板自己的出口按钮：离开房间（清本局状态）并回上一个面板
-    public override bool 回退()
-    {
+    public override bool 回退(){
+        // 用户要求：离开这一层不能瞬移 —— 得自己走出去（路上照常耗时间、会遇敌）。
+        // 起步了就返回；已经站在出口上 / 走不到 -> 落到下面的原逻辑（那正是玩家走到门口那一刻的分支）。
+        if (ServiceRegistry.Get<房间探索服务>()?.自动走向出口() == true) return true;
+
         服务?.离开();
         if (面板管理器.实例 != null) 面板管理器.实例.返回上一面板();
         return true;
