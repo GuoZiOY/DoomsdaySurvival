@@ -37,6 +37,37 @@ using UnityEngine;
         public Dictionary<string, 建筑模板> 建筑模板 { get; private set; } = new Dictionary<string, 建筑模板>();
         public Dictionary<string, 世界模板> 世界 { get; private set; } = new Dictionary<string, 世界模板>();
 
+        // ================= ★ 刀65：静态"搜索容器定义"查表 =================
+        // 战局快照读回来时，`网格实体.容器定义` 是**空的**（快照故意不存它 —— 那是共享引用，
+        // 存了会把每张搜索表复制进存档），要按实体上本来就有的 `定义标识` 回填到这里查到的模板。
+        // 为什么要缓存：回填要对一层的每个容器各查一次，而 `搜索地图类型` 是"类型 → 房间 → 容器"
+        // 一棵树，每次全树扫一遍在 100×100 层上会明显卡（`搜索服务.查找容器` 原来就是全树扫）。
+        private Dictionary<string, 搜索容器> 搜索容器表;
+
+        public 搜索容器 搜索容器定义(string 标识)
+        {
+            if (string.IsNullOrEmpty(标识)) return null;
+            if (搜索容器表 == null)
+            {
+                搜索容器表 = new Dictionary<string, 搜索容器>();
+                foreach (var 类型 in 搜索地图类型.Values)
+                {
+                    if (类型?.房间 == null) continue;
+                    foreach (var 房间 in 类型.房间)
+                    {
+                        if (房间?.容器 == null) continue;
+                        foreach (var 容器 in 房间.容器)
+                        {
+                            if (容器 == null || string.IsNullOrEmpty(容器.标识)) continue;
+                            if (!搜索容器表.ContainsKey(容器.标识)) 搜索容器表[容器.标识] = 容器;
+                        }
+                    }
+                }
+                Debug.Log($"[DataService] 搜索容器定义表：{搜索容器表.Count} 条（战局快照回填用）");
+            }
+            return 搜索容器表.TryGetValue(标识, out var 定) ? 定 : null;
+        }
+
         public List<string> 校验错误 { get; } = new List<string>();
         // 校验警告：不致命（游戏照进），但多半是数据写歪了——例如"门通向那间房，可那边没门通回来"
         public List<string> 校验警告 { get; } = new List<string>();

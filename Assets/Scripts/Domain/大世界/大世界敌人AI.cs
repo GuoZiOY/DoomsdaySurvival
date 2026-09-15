@@ -42,6 +42,9 @@ public static class 大世界敌人AI
 
     // 单只敌人的运行期态。**由服务层持有**（Domain 不认识 Services，所以这里是参数不是字段）。
     // 生命期 = 一趟出行：回安全屋（清战局）整体作废，与"内容每趟重置"同一口径。
+    // ★ 刀65：补 `[Serializable]` —— 战局快照要把它存下来（不存的话"正在追你的那只"读档后回静默，
+    //   位置对了状态不对）。字段全是 enum/bool/int，所以加了 attribute 就能被 JsonUtility 存。
+    [Serializable]
     public sealed class 敌人AI态
     {
         public 敌人状态 状态 = 敌人状态.静默;

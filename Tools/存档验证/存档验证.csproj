@@ -16,8 +16,9 @@
     <!-- 最小桩：补上领域层里那两个**已知越层引用**所需的类型（不参与断言，见文件头注释） -->
     <Compile Include="_桩_越层依赖.cs" />
 
-    <!-- 存档载荷本体（刀64）：版本检查 / 迁移链 / 指纹 / 槽位规格 -->
+    <!-- 存档载荷本体（刀64/刀65）：版本检查 / 迁移链 / 指纹 / 槽位规格 / 战局快照形状 -->
     <Compile Include="..\..\Assets\Scripts\Domain\存档\存档模型.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\存档\存档战局.cs" />
     <!-- ★ 整点结算：世界时间管理器.推进() 用的**就是**这一份（所以断言验的是真代码，不是副本） -->
     <Compile Include="..\..\Assets\Scripts\Domain\时间\整点结算.cs" />
 
@@ -36,6 +37,14 @@
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格服务.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格数据.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\迷雾位图.cs" />
+    <!-- 刀65：存档战局.cs 里 敌人态条 引用它（顺带要它依赖的几个网格算法件） -->
+    <Compile Include="..\..\Assets\Scripts\Domain\大世界\大世界敌人AI.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\确定性随机.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\流场.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格视野.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\视野规则.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格可见性.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\门口保护.cs" />
 
     <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
     <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
