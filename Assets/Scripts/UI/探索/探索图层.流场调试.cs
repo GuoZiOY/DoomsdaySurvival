@@ -31,7 +31,7 @@ public abstract partial class 探索图层
     private 网格数据 调试场世界;          // 场是按哪个世界算的（换世界要重算）
     private int 调试目标列 = -1, 调试目标行 = -1;
     private bool 调试跟玩家 = true;
-    private bool 调试数字 = true, 调试箭头 = true, 调试挡格 = true;
+    private bool 调试数字 = true, 调试箭头 = true, 调试挡格 = true, 调试敌人 = true;
     private GUIStyle 样式数字, 样式箭头, 样式小字;
     private Texture2D 白图;                // 半透明底色块用（1×1）
     private int 调试可达, 调试最远;
@@ -49,6 +49,7 @@ public abstract partial class 探索图层
         if (调试键(KeyCode.F5)) { 调试目标列 = -1; 调试目标行 = -1; }   // 清目标 → 下一帧重算
         if (调试键(KeyCode.F6)) 调试箭头 = !调试箭头;
         if (调试键(KeyCode.F7)) 调试挡格 = !调试挡格;
+        if (调试键(KeyCode.F8)) 调试敌人 = !调试敌人;
 
         // Shift + 左键：把目标钉在这一格（能点在墙上/柜子上 —— 场会**吸附**到最近可走格，正好演示那一步）
         if (Shift按住() && 调试键(KeyCode.Mouse0))
@@ -78,6 +79,7 @@ public abstract partial class 探索图层
                 case KeyCode.F5: if (Keyboard.current.f5Key.wasPressedThisFrame) 按下 = true; break;
                 case KeyCode.F6: if (Keyboard.current.f6Key.wasPressedThisFrame) 按下 = true; break;
                 case KeyCode.F7: if (Keyboard.current.f7Key.wasPressedThisFrame) 按下 = true; break;
+                case KeyCode.F8: if (Keyboard.current.f8Key.wasPressedThisFrame) 按下 = true; break;
                 case KeyCode.Mouse0: if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) 按下 = true; break;
             }
         }
@@ -122,14 +124,26 @@ public abstract partial class 探索图层
         return 画布.renderMode == RenderMode.ScreenSpaceOverlay ? null : 画布.worldCamera;
     }
 
+    // ⚠ 坐标语义（第一版这里错了，记下来）：
+    //   `相机位置` 那套公式（见 在窗口内）算出来的是**"相对视口左上角"**的坐标（x 向右、y 向下）。
+    //   而 `RectTransform.TransformPoint` 吃的局部坐标是**"相对 pivot"**的 —— 视口 pivot 不是 (0,0) 时
+    //   两者差一个 (rect.xMin, rect.yMax)，表现就是整层叠层**整体偏移**。
+    //   所以这里显式做一次换算：左上角 ↔ pivot。
+    private Vector3 左上角转局部(float 左上x, float 左上y)
+    {
+        var r = 视口.rect;
+        return new Vector3(r.xMin + 左上x, r.yMax - 左上y, 0f);
+    }
+
     private bool 格屏幕中心(int 列2, int 行2, out Vector2 屏幕)
     {
         屏幕 = Vector2.zero;
         if (视口 == null || 列2 < 0 || 行2 < 0 || 列2 >= 列 || 行2 >= 行) return false;
         float 格 = Mathf.Max(1f, 网格面板基类.格尺寸);
-        // 与 摆格 / 更新实体框 同一套坐标：左上锚定 → x = 列*格 + 相机位置.x，y = -(行*格) + 相机位置.y
-        var 局部 = new Vector3(列2 * 格 + 相机位置.x + 格 * 0.5f, -(行2 * 格) + 相机位置.y - 格 * 0.5f, 0f);
-        var 世界 = 视口.TransformPoint(局部);
+        // 与 在窗口内 / 摆格 / 更新实体框 同一套：相对视口左上角
+        float 左上x = 列2 * 格 + 相机位置.x + 格 * 0.5f;
+        float 左上y = 行2 * 格 - 相机位置.y + 格 * 0.5f;
+        var 世界 = 视口.TransformPoint(左上角转局部(左上x, 左上y));
         屏幕 = RectTransformUtility.WorldToScreenPoint(画布相机(), 世界);
         return true;
     }
@@ -137,22 +151,26 @@ public abstract partial class 探索图层
     // 一格在屏幕上占多少像素（画布缩放 / CanvasScaler 都算进去 —— 不要自己拿格尺寸当像素）
     private float 格屏幕边长()
     {
-        if (!格屏幕中心(0, 0, out var a)) return 8f;
+        if (视口 == null) return 8f;
         float 格 = Mathf.Max(1f, 网格面板基类.格尺寸);
-        var 局部 = new Vector3(0f * 格 + 相机位置.x + 格 * 1.5f, 0f, 0f);
-        var 屏2 = RectTransformUtility.WorldToScreenPoint(画布相机(), 视口.TransformPoint(局部));
-        return Mathf.Max(2f, Mathf.Abs(屏2.x - a.x));
+        var 相机 = 画布相机();
+        var a = RectTransformUtility.WorldToScreenPoint(相机, 视口.TransformPoint(左上角转局部(0f, 0f)));
+        var b = RectTransformUtility.WorldToScreenPoint(相机, 视口.TransformPoint(左上角转局部(格, 0f)));
+        return Mathf.Max(2f, Mathf.Abs(b.x - a.x));
     }
 
     private (int 列, int 行)? 屏幕点转格(Vector2 屏幕)
     {
         if (视口 == null) return null;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(视口, 屏幕, 画布相机(), out var 局部)) return null;
+        var r = 视口.rect;
+        float 左上x = 局部.x - r.xMin;      // 局部(pivot) → 左上角
+        float 左上y = r.yMax - 局部.y;
         float 格 = Mathf.Max(1f, 网格面板基类.格尺寸);
-        int c = Mathf.FloorToInt((局部.x - 相机位置.x) / 格);
-        int r = Mathf.FloorToInt((相机位置.y - 局部.y) / 格);
-        if (c < 0 || r < 0 || c >= 列 || r >= 行) return null;
-        return (c, r);
+        int c = Mathf.FloorToInt((左上x - 相机位置.x) / 格);
+        int r2 = Mathf.FloorToInt((左上y + 相机位置.y) / 格);
+        if (c < 0 || r2 < 0 || c >= 列 || r2 >= 行) return null;
+        return (c, r2);
     }
 
     // ================= 算场 =================
@@ -163,19 +181,21 @@ public abstract partial class 探索图层
         var 世界 = 服?.当前世界;
         if (世界 == null) { 调试场 = null; 调试场世界 = null; return; }
 
-        int 列2 = 调试目标列, 行2 = 调试目标行;
-        if (调试跟玩家 && 世界.列 * 世界.行 <= 自动跟随上限格)
-        {
-            列2 = 服.玩家列;
-            行2 = 服.玩家行;
-            调试目标列 = 列2;
-            调试目标行 = 行2;
-        }
-        if (世界 == 调试场世界 && 列2 == 调试目标列 && 行2 == 调试目标行 && 调试场 != null) return;
-        if (列2 < 0 || 行2 < 0) { 列2 = 服.玩家列; 行2 = 服.玩家行; 调试目标列 = 列2; 调试目标行 = 行2; }
+        // 这一帧"想要的目标格"
+        int 要列 = 调试目标列, 要行 = 调试目标行;
+        if (调试跟玩家 && 世界.列 * 世界.行 <= 自动跟随上限格) { 要列 = 服.玩家列; 要行 = 服.玩家行; }
+        if (要列 < 0 || 要行 < 0) { 要列 = 服.玩家列; 要行 = 服.玩家行; }
 
+        // ★ 重算判据必须拿**上一张场实际用的目标**（调试场.请求列/行）去比。
+        //   第一版写成"先把 调试目标列 赋值成 要列，再拿它跟 要列 比" → 比较恒真 →
+        //   第一次建完就永远提前 return，数字/箭头再不更新（用户报的"没有实时更新"就是这个）。
+        if (调试场 != null && 世界 == 调试场世界
+            && 要列 == 调试场.请求列 && 要行 == 调试场.请求行) return;
+
+        调试目标列 = 要列;
+        调试目标行 = 要行;
         调试场世界 = 世界;
-        调试场 = 流场.建场(世界, 列2, 行2);
+        调试场 = 流场.建场(世界, 要列, 要行);
         调试可达 = 0; 调试最远 = 0;
         for (int r = 0; r < 世界.行; r++)
             for (int c = 0; c < 世界.列; c++)
@@ -248,6 +268,20 @@ public abstract partial class 探索图层
                 }
             }
 
+        // 敌人：**按 AI 三态上色**（蓝静默 / 黄巡逻 / 红追踪）—— 测 AI 最直接的一眼。
+        //   读的是只读口 敌人AI态只读()，不改任何状态；位置本来就每帧在变，所以这块天然实时。
+        if (调试敌人)
+            foreach (var 敌 in 服.当前世界.取类型(网格实体类型.敌人))
+            {
+                if (敌 == null) continue;
+                var 态 = 服.敌人AI态只读(敌);
+                Color 色 = 态 == null ? new Color(0.9f, 0.9f, 0.4f, 0.5f)
+                    : 态.状态 == 敌人状态.静默 ? new Color(0.4f, 0.75f, 1f, 0.55f)
+                    : 态.状态 == 敌人状态.巡逻 ? new Color(0.95f, 0.9f, 0.35f, 0.55f)
+                    : new Color(1f, 0.3f, 0.25f, 0.7f);
+                色块(格屏幕框(敌.列, 敌.行, 边长), 色);
+            }
+
         // 目标 / 源（吸附后会分开）+ 玩家
         if (调试场.有源) 色块(格屏幕框(调试场.源列, 调试场.源行, 边长), new Color(0.3f, 1f, 0.45f, 0.30f));
         色块(格屏幕框(调试目标列, 调试目标行, 边长), new Color(1f, 1f, 0.25f, 0.30f));
@@ -308,8 +342,8 @@ public abstract partial class 探索图层
         GUILayout.Label($"<b>流场</b>　目标 ({调试目标列},{调试目标行}){(吸附 ? "  ⚠吸附→源 " + 调试场.源列 + "," + 调试场.源行 : "")}", 样式小字);
         GUILayout.Label($"可达 {调试可达} 格　最远 {调试最远} 步　本层 {服.噪音层系数:0.##}　潜行 {潜行}", 样式小字);
         GUILayout.Label(过期 ? "<color=#ffcc44>⚠ 大网格不自动跟随 —— 按 F5 重算</color>" : "目标：" + (调试跟玩家 ? "跟随玩家" : "固定"), 样式小字);
-        GUILayout.Label("F2 关　F3 目标　F4 数字　F5 重算　F6 箭头　F7 挡格　Shift+左键 = 钉目标", 样式小字);
-        GUILayout.Label($"数字 {(调试数字 ? "开" : "关")}　箭头 {(调试箭头 ? "开" : "关")}　挡格 {(调试挡格 ? "开" : "关")}　格 {边长:0}px", 样式小字);
+        GUILayout.Label("F2 关　F3 目标　F4 数字　F5 重算　F6 箭头　F7 挡格　F8 敌人　Shift+左键 = 钉目标", 样式小字);
+        GUILayout.Label($"数字 {(调试数字 ? "开" : "关")}　箭头 {(调试箭头 ? "开" : "关")}　挡格 {(调试挡格 ? "开" : "关")}　敌人 {(调试敌人 ? "开" : "关")}　格 {边长:0}px", 样式小字);
         GUILayout.EndArea();
     }
 }

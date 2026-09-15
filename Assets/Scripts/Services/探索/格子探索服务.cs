@@ -667,6 +667,10 @@ public abstract class 格子探索服务
         return 态;
     }
 
+    // ★ 只读口（探索图层的流场调试叠层用）：拿某只敌人的 AI 运行期态，**不创建**（没记录过返回 null）
+    public 大世界敌人AI.敌人AI态 敌人AI态只读(网格实体 敌)
+        => 敌 != null && 敌人态.TryGetValue(敌, out var 态) ? 态 : null;
+
     // 敌人被打死 / 被连通校验撤掉之后，它的态要跟着走（否则字典一直攥着旧实体 → 泄漏 + 误命中）
     private void 剪掉失联的敌人态(List<网格实体> 敌人们)
     {
