@@ -31,6 +31,9 @@ using UnityEngine;
 
             var 事件 = new EventBus();
             ServiceRegistry.Register(事件);
+            // ★ 步2：游戏会话状态（"现在玩家在哪个阶段"的唯一答案）。
+            // 放在最前面注册：它只依赖事件总线，而 面板管理器 / 世界时间管理器 / 存档门禁 都要读它。
+            ServiceRegistry.Register(new 游戏会话(事件));
             var 数据 = new DataService(事件);
             ServiceRegistry.Register(数据);
 
