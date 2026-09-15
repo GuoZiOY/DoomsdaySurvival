@@ -47,6 +47,14 @@ public sealed class 持有面板 : 面板基类
     private readonly System.Collections.Generic.List<让位记录> 让位表 = new System.Collections.Generic.List<让位记录>();
     private bool 让位表已建, 已让位;
 
+    // ★ 找 装具区 —— **不能只信 `装具区.实例`**。
+    //   那个静态单例是在 `装具区.Awake` 里赋值的，而 持有面板 与它**同帧激活、Awake 顺序不保证** →
+    //   曾经在这里拿到 null，于是让位表里只有 2 件（仓库 + 搜索），**装具区的宽度永远不变**
+    //   （实测日志：`侧边栏让位：开（2 件）`）。
+    //   直接在本面板子树里找（`true` = 含未激活），绕开 Awake 顺序这个不确定性。
+    private 装具区 找装具区()
+        => 装具区.实例 != null ? 装具区.实例 : GetComponentInChildren<装具区>(true);
+
     private void 建让位表()
     {
         if (让位表已建) return;
@@ -64,14 +72,19 @@ public sealed class 持有面板 : 面板基类
                 有布局组 = 件.GetComponent<UnityEngine.UI.LayoutGroup>() != null,
             });
         }
-        加(装具区.实例 != null ? 装具区.实例.transform as RectTransform : null, new Vector2(装具区位置增量, 装具区宽度增量));
+        加(找装具区(), new Vector2(装具区位置增量, 装具区宽度增量));
         加(仓库 != null ? 仓库.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
         加(搜索 != null ? 搜索.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
         // 一件都没拿到就**下次再试**（`装具区.实例` 这个静态单例可能还没准备好）——
         // 上一版在这里把空表钉死，表现是"让位完全不动、也没有任何日志"。
-        if (让位表.Count == 0)
+        // 期望 3 件（装具区 / 仓库 / 搜索）。**没凑齐就先不钉死** —— 上一版"只要非空就钉死"，
+        // 于是缺一件就永远缺（实测日志 `开（2 件）`：装具区缺失 → 它的宽度永远不变）。
+        // 注：只有在还没让位过的时候才敢清表重来；已经让位过就保留现状（清表会让基线变成"让位后的值"）。
+        if (让位表.Count < 3 && !已让位)
         {
-            Debug.LogWarning("[持有面板] 侧边栏让位：装具区/仓库/搜索 一件都没拿到 —— 稍后会再试。");
+            int 拿到 = 让位表.Count;
+            让位表.Clear();
+            Debug.LogWarning($"[持有面板] 侧边栏让位：只拿到 {拿到} 件（要 3 件：装具区/仓库/搜索）—— 稍后重试。");
             return;
         }
         让位表已建 = true;
