@@ -30,7 +30,7 @@ using UnityEngine.UI;
 // 派生要填的（房间图层 / 区域图层）：
 //   服务（格子探索服务）/ 地表贴图()；可覆写：有迷雾（默认开，房间与区域都开）/ 每格现实秒 / 点线贴图 / 落点贴图
 // ============================================================
-public abstract class 探索图层 : MonoBehaviour, 探索图层接口
+public abstract partial class 探索图层 : MonoBehaviour, 探索图层接口
 {
     private const int 路径池上限 = 96;
     private const float 落点时长 = 0.30f;   // 点击落点圈：亮到灭的秒数（= 走一格的时间）
@@ -129,6 +129,7 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         跟随相机();
         更新池();          // 池化：相机滚过一格就把池槽重排（非池化时是空操作）
         刷实体();          // ★ 刀61：实体会动（敌人巡街）→ 位置变了就请面板重摆实体框
+        流场调试_每帧();    // ★ 刀61：流场调试叠层（F2 开/关）——游玩时直接画在真实格子上
         跟随悬停();
         推进闪红();
         推进落点();
@@ -902,4 +903,7 @@ public abstract class 探索图层 : MonoBehaviour, 探索图层接口
         float 明 = 0.90f + t * 0.20f;
         return new Color(明, 明, 明, 1f);
     }
+
+    // ★ 刀61：流场调试叠层的绘制入口（实现见 探索图层.流场调试.cs）
+    private void OnGUI() => 流场调试_画();
 }
