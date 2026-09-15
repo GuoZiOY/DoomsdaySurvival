@@ -16,110 +16,79 @@ public sealed class 持有面板 : 面板基类
     [SerializeField] private Button 返回按钮;    // 返回按钮（Inspector 暴露引用）：点击 = 回退——返回 上一面板
                                                 // （从 安全屋 储物箱「使用」打开 → 回 安全屋；F1 打开 → 回 F1 前 面板；主菜单 打开 → 回 主菜单）
 
-    // ================= 侧边栏让位（"UI 适应"· 由用户手测的数值驱动） =================
+    // ================= 侧边栏让位（"UI 适应"） =================
     // 侧边栏弹出时盖住右区最右边一条 → 这两组各自"位置左移 + 收窄"：
-    //     装具区    ：Pos X −30、Width −60
-    //     仓库/搜索 ：Pos X −70、Width −20
-    //
-    // ★ 这四个数是用户在编辑器里用矩形工具拖到"看着合适"之后报的**实测增量**，不是我推导的。
-    //   之前那版改 `offsetMax`（语义 = "只动右边界"）在装具区上对、在仓库/搜索上**必然不对** ——
-    //   这两件连**左边界也左移了 60**（不是单纯拉右边界）。所以这里直接改
-    //   `anchoredPosition.x` / `sizeDelta.x` —— 就是 Inspector 上那两个数（Pos X / Width）。
-    //   注释里给的"改前 → 改后"是用户当时报的绝对值，方便对账。
+    //     装具区    ：Pos X −30、Width −60   （1190→1160、740→680）
+    //     仓库/搜索 ：Pos X −70、Width −20   （−500→−570、1000→980）
+    // 这四个数是**手测出来的实测增量**（在编辑器里用矩形工具拖到看着合适），不是推导的。
+    // 三件一律走 Inspector 引用（项目惯例：全静态场景搭建 + 拖引用）——
+    // `装具区让位` **必须拖**：不能靠 `装具区.实例`（那个静态单例在它自己的 Awake 里赋值，
+    // 与 持有面板 **同帧激活、顺序不保证** → 曾经拿到 null，于是装具区的宽度永远不变）。
     [Header("侧边栏让位（侧边栏弹出时右区怎么挪）")]
-    [SerializeField] private float 装具区位置增量 = -30f;   // 1190 → 1160
-    [SerializeField] private float 装具区宽度增量 = -60f;   //  740 → 680
-    [SerializeField] private float 右区位置增量 = -70f;     // -500 → -570（仓库 / 搜索 共用）
-    [SerializeField] private float 右区宽度增量 = -20f;     // 1000 →  980
-
-    // 装具区的让位目标 —— **请在 Inspector 拖进来**（项目惯例：全静态场景搭建 + 拖引用，一眼可见）。
-    // 为什么当初会出错、现在为什么要有这个字段：原来只靠 `装具区.实例`（那个静态单例在 `装具区.Awake`
-    // 里赋值），而 `持有面板` 与它**同帧激活、Awake 顺序不保证** → 拿到 null → 让位表里只有 2 件，
-    // **装具区的宽度永远不变**（实测日志 `侧边栏让位：开（2 件）`）。拖引用就不存在这个不确定性。
-    // 留了兜底（没拖 → `装具区.实例` → 子树里找），所以不拖也能用；但**拖了就以你为准**。
     [SerializeField] private RectTransform 装具区让位;
+    [SerializeField] private float 装具区位置增量 = -30f;
+    [SerializeField] private float 装具区宽度增量 = -60f;
+    [SerializeField] private float 右区位置增量 = -70f;
+    [SerializeField] private float 右区宽度增量 = -20f;
 
     private sealed class 让位记录
     {
         public RectTransform 件;
-        public Vector2 基线;   // (Pos X, Width) —— 未让位时的值
-        public Vector2 增量;
-        // ★ 宽度"按内容自适应"的组件。有它在，我们写进 `sizeDelta.x` 的宽度会被它下一次布局重算顶掉
-        //   （而它不管 `anchoredPosition`，所以位置留住了、宽度没留住 —— 正是实测到的现象）。
-        //   让位期间把它临时改成 `Unconstrained`，复位时放回去并重建布局。
+        public float 基X, 基宽;
+        public float 位置增量, 宽度增量;
+        // 宽度"按内容自适应"的组件：让位期间要临时关掉它，否则写进 `sizeDelta.x` 的宽度会被它下一次
+        // 布局重算顶掉（它不管 `anchoredPosition` → 位置留住了、宽度没留住，正是实测到的现象）。
         public UnityEngine.UI.ContentSizeFitter 拟合器;
         public UnityEngine.UI.ContentSizeFitter.FitMode 原横向;
-        public bool 有布局组;
     }
-    private readonly System.Collections.Generic.List<让位记录> 让位表 = new System.Collections.Generic.List<让位记录>();
-    private bool 让位表已建, 已让位;
-
-    // 装具区要让位的那件：**先看你拖的**，没拖才去查（见字段注释）。
-    private RectTransform 找装具区()
-    {
-        if (装具区让位 != null) return 装具区让位;
-        var 具 = 装具区.实例 != null ? 装具区.实例 : GetComponentInChildren<装具区>(true);
-        return 具 != null ? 具.transform as RectTransform : null;
-    }
+    private 让位记录[] 让位表;
+    private bool 已让位;
 
     private void 建让位表()
     {
-        if (让位表已建) return;
-        void 加(RectTransform 件, Vector2 增量)
+        if (让位表 != null) return;
+        var 表 = new System.Collections.Generic.List<让位记录>();
+        加(表, 装具区让位, 装具区位置增量, 装具区宽度增量);
+        加(表, 仓库 != null ? 仓库.transform as RectTransform : null, 右区位置增量, 右区宽度增量);
+        加(表, 搜索 != null ? 搜索.transform as RectTransform : null, 右区位置增量, 右区宽度增量);
+        让位表 = 表.ToArray();
+
+        static void 加(System.Collections.Generic.List<让位记录> 表, RectTransform 件, float 位置增量, float 宽度增量)
         {
             if (件 == null) return;
             var 拟合 = 件.GetComponent<UnityEngine.UI.ContentSizeFitter>();
-            让位表.Add(new 让位记录
+            表.Add(new 让位记录
             {
                 件 = 件,
-                基线 = new Vector2(件.anchoredPosition.x, 件.sizeDelta.x),
-                增量 = 增量,
+                基X = 件.anchoredPosition.x,
+                基宽 = 件.sizeDelta.x,
+                位置增量 = 位置增量,
+                宽度增量 = 宽度增量,
                 拟合器 = 拟合,
                 原横向 = 拟合 != null ? 拟合.horizontalFit : UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained,
-                有布局组 = 件.GetComponent<UnityEngine.UI.LayoutGroup>() != null,
             });
         }
-        加(找装具区(), new Vector2(装具区位置增量, 装具区宽度增量));
-        加(仓库 != null ? 仓库.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
-        加(搜索 != null ? 搜索.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
-        // 一件都没拿到就**下次再试**（`装具区.实例` 这个静态单例可能还没准备好）——
-        // 上一版在这里把空表钉死，表现是"让位完全不动、也没有任何日志"。
-        // 期望 3 件（装具区 / 仓库 / 搜索）。**没凑齐就先不钉死** —— 上一版"只要非空就钉死"，
-        // 于是缺一件就永远缺（实测日志 `开（2 件）`：装具区缺失 → 它的宽度永远不变）。
-        // 注：只有在还没让位过的时候才敢清表重来；已经让位过就保留现状（清表会让基线变成"让位后的值"）。
-        if (让位表.Count < 3 && !已让位)
-        {
-            int 拿到 = 让位表.Count;
-            让位表.Clear();
-            Debug.LogWarning($"[持有面板] 侧边栏让位：只拿到 {拿到} 件（要 3 件：装具区/仓库/搜索）—— 稍后重试。");
-            return;
-        }
-        让位表已建 = true;
-        Debug.Log($"[持有面板] 侧边栏让位表建好：{让位表.Count} 件 —— " + string.Join("、",
-            让位表.ConvertAll(x => $"{x.件.name}(x={x.基线.x:0},宽={x.基线.y:0}" +
-                                   (x.拟合器 != null ? $",自适应={x.原横向}" : "") + (x.有布局组 ? ",有布局组" : "") + ")")));
     }
 
-    // 让位 / 复位（幂等）。只动 x 与宽度，**y 保留当前值**（免得踩到别的系统正在改的 y）。
+    // 让位 / 复位（幂等）。只动 x 与宽度，**y 与高保留当前值**（免得踩到别的系统正在改的）。
     private void 应用让位(bool 让位)
     {
         建让位表();
-        if (让位表.Count == 0 || 让位 == 已让位) return;
+        if (让位 == 已让位) return;
         已让位 = 让位;
         foreach (var 记 in 让位表)
         {
             if (记.件 == null) continue;
-            // ① 先处理"自适应宽度"：让位时关掉它，否则下面写的宽度会被它重算顶掉
+            // ① 自适应宽度：让位时关掉它，否则下面写的宽度会被它重算顶掉
             if (记.拟合器 != null)
                 记.拟合器.horizontalFit = 让位 ? UnityEngine.UI.ContentSizeFitter.FitMode.Unconstrained : 记.原横向;
-            // ② 写位置与宽度（只动 x / 宽，y 与高保留当前值）
-            记.件.anchoredPosition = new Vector2(记.基线.x + (让位 ? 记.增量.x : 0f), 记.件.anchoredPosition.y);
-            记.件.sizeDelta = new Vector2(记.基线.y + (让位 ? 记.增量.y : 0f), 记.件.sizeDelta.y);
-            // ③ 复位时让自适应重新算一遍（算出来的就是基线宽度），并重建布局
+            // ② 写位置与宽度
+            记.件.anchoredPosition = new Vector2(记.基X + (让位 ? 记.位置增量 : 0f), 记.件.anchoredPosition.y);
+            记.件.sizeDelta = new Vector2(记.基宽 + (让位 ? 记.宽度增量 : 0f), 记.件.sizeDelta.y);
+            // ③ 复位时让自适应重新算一遍（算出来的就是基线宽度）
             if (!让位 && 记.拟合器 != null)
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(记.件);
         }
-        Debug.Log($"[持有面板] 侧边栏让位：{(让位 ? "开" : "关")}（{让位表.Count} 件）");
     }
 
     private void OnEnable() => 应用让位(侧边栏面板.实例 != null && 侧边栏面板.实例.可见);
