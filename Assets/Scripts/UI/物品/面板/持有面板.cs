@@ -136,10 +136,27 @@ public sealed class 持有面板 : 面板基类
         }
         else
         {
+            // ★ 用户要求：**外出时不给看仓库** —— 仓库是家底，要回安全屋才整理。
+            //   "外出" = 有探索层活着（大世界 / 区域 / 房间 任一 `探索中`）；在安全屋时三层都是空的
+            //   （`回安全屋清战局` + 各层 `离开()` 会把 `当前世界` 置空）。
+            //   为什么不用"当前显示面板是不是安全屋面板"判断：本面板一显示，当前面板就是**自己**了，
+            //   那个判断恒为假 —— 要从"外面那一层还活着吗"来问。
             if (搜索 != null) { 搜索.关闭(); 搜索.gameObject.SetActive(false); }
-            if (仓库 != null) { 仓库.gameObject.SetActive(true); 仓库.刷新(); }
+            bool 在外面 = 外出中;
+            if (仓库 != null)
+            {
+                仓库.gameObject.SetActive(!在外面);
+                if (!在外面) 仓库.刷新();
+            }
         }
     }
+
+    // 外出中？（三个探索层任一活着 = 不在安全屋）
+    private static bool 外出中
+        => (探索中<大世界探索服务>()) || (探索中<区域探索服务>()) || (探索中<房间探索服务>());
+
+    private static bool 探索中<T>() where T : 格子探索服务
+        => ServiceRegistry.已注册<T>() && ServiceRegistry.Get<T>()?.探索中 == true;
 
     public override bool 回退()
     {
