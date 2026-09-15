@@ -243,9 +243,57 @@ foreach ($f in (Get-ChildItem $探索UI -Filter "*网格面板.cs")) {
     }
 }
 
+# ---------- 11. 噪音接线（刀61）----------
+# 为什么钉：噪音这一刀最容易犯的错**不是算错，而是"表里写了、代码里没接"**。
+#   实测代价：设计稿列了 11 档强度，落地后**只有 2 个发声点**，而我一度把"搜索噪音 45"当已完成
+#   写进了 docs/优化实施进度.md —— 这种错**编译不报、跑起来也看不出来**（只表现成"敌人反应不对"）。
+#   所以把它变成红灯：① 每个强度常量必须有调用方 ② 发声点必须真的存在 ③ 必须真的有一层在结算。
+Write-Output "[11] 噪音接线（强度常量有调用方 / 发声点存在 / 有层真的结算）"
+$数据模型 = 读行 (Join-Path $根 "Assets\Scripts\Data\数据模型.cs")
+$类起 = 找行 $数据模型 'public\s+static\s+class\s+噪音强度'
+if ($类起 -lt 0) { 报错 "数据模型.cs 里找不到 噪音强度 类" }
+else {
+    $类体 = 取函数体 $数据模型 $类起
+    $常量名 = New-Object System.Collections.Generic.List[string]
+    foreach ($l in $类体) {
+        $m = [regex]::Match(($l -replace '//.*$', ''), 'public\s+const\s+int\s+([^\s=]+)\s*=')
+        if ($m.Success) { $常量名.Add($m.Groups[1].Value) }
+    }
+    if ($常量名.Count -eq 0) { 报错 "噪音强度 里一个常量都没读到（类被改名了？）" }
+    else {
+        # 把除 数据模型.cs 以外的全部源码**拼一次**（逐常量反复读盘会把这条脚本拖成分钟级）
+        $拼接 = New-Object System.Text.StringBuilder
+        foreach ($f in (Get-ChildItem (Join-Path $根 "Assets\Scripts") -Recurse -Filter *.cs | Where-Object { $_.Name -ne '数据模型.cs' })) {
+            [void]$拼接.AppendLine([regex]::Replace([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8), '//[^\r\n]*', ''))
+        }
+        $源码 = $拼接.ToString()
+        foreach ($名 in $常量名) {
+            if ($源码 -notmatch ("噪音强度\." + [regex]::Escape($名) + "\b")) {
+                报错 ("噪音强度.{0} 没有任何调用方 —— 死数据（要么接上，要么把值搬到设计稿里）" -f $名)
+            }
+        }
+        Write-Output ("      · 强度常量 {0} 档：{1}" -f $常量名.Count, ($常量名 -join " / "))
+    }
+}
+# ② 发声点：必须真的有调用（定义行不算）
+$发声 = 0
+foreach ($f in (Get-ChildItem (Join-Path $根 "Assets\Scripts") -Recurse -Filter *.cs)) {
+    $去 = 去注释 (读行 $f.FullName)
+    for ($i = 0; $i -lt $去.Count; $i++) {
+        if ($去[$i] -match '播噪音\s*\(' -and $去[$i] -notmatch 'protected\s+void\s+播噪音') { $发声++ }
+    }
+}
+if ($发声 -lt 2) { 报错 ("播噪音 的调用点只有 {0} 处 —— 噪音系统等于没接（至少该有 走路 + 开战 两个）" -f $发声) }
+else { Write-Output ("      · 播噪音 调用点 {0} 处" -f $发声) }
+# ③ 必须真的有一层在结算：否则 播噪音 只是把事件丢进空气
+$大世界服 = Join-Path $根 "Assets\Scripts\Services\探索\大世界探索服务.cs"
+if (-not ((去注释 (读行 $大世界服)) -match 'override\s+void\s+噪音结算')) {
+    报错 "大世界探索服务 没有覆写 噪音结算 —— 大世界是唯一有会动敌人的层，噪音在这里必须有人接"
+}
+
 Write-Output ""
 if ($script:失败 -eq 0) {
-    Write-Output "✅ 探索接线核对通过（雾输入写入点 / 去重键重置 / 池重排强制刷雾 / 路径从尾分配 / CanvasGroup 缓存 / 底格与拖拽开关 / 单面交互层 / 平铺格线 / 实体框骨架在基类）"
+    Write-Output "✅ 探索接线核对通过（雾输入写入点 / 去重键重置 / 池重排强制刷雾 / 路径从尾分配 / CanvasGroup 缓存 / 底格与拖拽开关 / 单面交互层 / 平铺格线 / 实体框骨架在基类 / 噪音接线）"
     Write-Output "   ⚠ 只证明接线没被改回去；走路时「雾跟不跟手、路径会不会停在旧路线」仍要进 Unity 看一眼"
     exit 0
 }
