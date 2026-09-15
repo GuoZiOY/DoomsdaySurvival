@@ -113,7 +113,7 @@ public sealed class 角色创建面板 : 面板基类
         // 角色名
         if (角色名输入 != null) 角色名输入.onValueChanged.AddListener(v => 角色名 = string.IsNullOrEmpty(v) ? "无名幸存者" : v);
         // 底部
-        if (返回按钮 != null) 返回按钮.onClick.AddListener(() => 回退());   // 返回主菜单（与右键/侧边栏取消同语义）
+        if (返回按钮 != null) 返回按钮.onClick.AddListener(() => 回退());   // 返回主菜单（与右键同语义）
         if (随机按钮 != null) 随机按钮.onClick.AddListener(随机角色);
         if (重置按钮 != null) 重置按钮.onClick.AddListener(() => { 重置构筑(); 渲染(); });
         if (确认按钮 != null) 确认按钮.onClick.AddListener(确认开始);
