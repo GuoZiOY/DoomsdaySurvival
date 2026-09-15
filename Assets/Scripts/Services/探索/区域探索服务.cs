@@ -41,8 +41,22 @@ public sealed class 区域探索服务 : 格子探索服务
     // 遭遇：走完一步先看有没有撞上街上敌人（与房间层/大世界层同一个实现，基类里那套）
     protected override bool 抵达后检查() => 检查遭遇();
 
-    protected override string 遭遇胜利节点 => "__区域胜利";
-    protected override string 遭遇返回节点 => "__区域返回";
+    // ================= 敌人 AI（刀61）—— 本层只填"差异" =================
+    // 机制全在 格子探索服务（三层共用：区域街上的敌人也会巡街、听声、追人）。
+
+    // ① 街区里声音传得比旷野近（有楼挡着）：0.65
+    protected override float 噪音层系数 => 0.65f;
+
+    // ② 撤退点 = **街口（出口格）**：会动的敌人是"活的墙"，
+    //    移动之后必须校验"玩家还走不走得出这片区域"，破了就整体撤销那一步。
+    protected override void 收撤退点(List<(int 列, int 行)> 收)
+    {
+        if (当前世界 == null) return;
+        var 口 = 区域生成器.出口格(当前世界);
+        收.Add(口);
+    }
+
+    protected override string 遭遇胜利节点 => "__区域胜利";    protected override string 遭遇返回节点 => "__区域返回";
     protected override string 遭遇日志前缀 => "区域";
     // ★ 区域的迷雾**随档永久保留**（v52）：区域布局种子 = 派生(世界种子, 区域标识) 固定 → 重看信息量为零。
     //   内容照旧每趟重置（柜子/门锁/街上敌人），所以"路我认得、东西得重新翻"。

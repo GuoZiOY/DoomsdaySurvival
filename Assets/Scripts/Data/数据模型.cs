@@ -214,8 +214,11 @@ using System;
     public static class 噪音强度
     {
         public const int 基准 = 50;            // 听觉半径 的基准强度（大世界敌人AI 听觉半径 读它）
-        public const int 走一格 = 3;           // 大世界探索服务.玩家走了一步
+        public const int 走一格 = 3;           // 格子探索服务.玩家走了一步（三层）
         public const int 大世界搜索 = 30;      // 大世界探索服务.搜索（翻箱倒柜找临时建筑）
+        public const int 搜索容器首次 = 15;    // 房间探索服务.搜索容器（翻柜子；房间系数 0.35 → 只传 1 格）
+        public const int 搜索容器重复 = 8;     //   同上（翻过的地方动静小）
+        public const int 撬锁 = 22;            // 房间探索服务.撬锁开门（金属摩擦）
         public const int 开枪 = 90;            // 格子探索服务.开始遭遇（按当前武器种类）
         public const int 弓弩 = 25;            //   同上
         public const int 近战 = 15;            //   同上
