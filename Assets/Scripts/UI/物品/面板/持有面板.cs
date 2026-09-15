@@ -32,6 +32,13 @@ public sealed class 持有面板 : 面板基类
     [SerializeField] private float 右区位置增量 = -70f;     // -500 → -570（仓库 / 搜索 共用）
     [SerializeField] private float 右区宽度增量 = -20f;     // 1000 →  980
 
+    // 装具区的让位目标 —— **请在 Inspector 拖进来**（项目惯例：全静态场景搭建 + 拖引用，一眼可见）。
+    // 为什么当初会出错、现在为什么要有这个字段：原来只靠 `装具区.实例`（那个静态单例在 `装具区.Awake`
+    // 里赋值），而 `持有面板` 与它**同帧激活、Awake 顺序不保证** → 拿到 null → 让位表里只有 2 件，
+    // **装具区的宽度永远不变**（实测日志 `侧边栏让位：开（2 件）`）。拖引用就不存在这个不确定性。
+    // 留了兜底（没拖 → `装具区.实例` → 子树里找），所以不拖也能用；但**拖了就以你为准**。
+    [SerializeField] private RectTransform 装具区让位;
+
     private sealed class 让位记录
     {
         public RectTransform 件;
@@ -47,13 +54,10 @@ public sealed class 持有面板 : 面板基类
     private readonly System.Collections.Generic.List<让位记录> 让位表 = new System.Collections.Generic.List<让位记录>();
     private bool 让位表已建, 已让位;
 
-    // ★ 找 装具区 —— **不能只信 `装具区.实例`**。
-    //   那个静态单例是在 `装具区.Awake` 里赋值的，而 持有面板 与它**同帧激活、Awake 顺序不保证** →
-    //   曾经在这里拿到 null，于是让位表里只有 2 件（仓库 + 搜索），**装具区的宽度永远不变**
-    //   （实测日志：`侧边栏让位：开（2 件）`）。
-    //   直接在本面板子树里找（`true` = 含未激活），绕开 Awake 顺序这个不确定性。
+    // 装具区要让位的那件：**先看你拖的**，没拖才去查（见字段注释）。
     private RectTransform 找装具区()
     {
+        if (装具区让位 != null) return 装具区让位;
         var 具 = 装具区.实例 != null ? 装具区.实例 : GetComponentInChildren<装具区>(true);
         return 具 != null ? 具.transform as RectTransform : null;
     }
