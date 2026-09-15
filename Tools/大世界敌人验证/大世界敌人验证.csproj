@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyName>大世界验证</AssemblyName>
+    <AssemblyName>大世界敌人验证</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
@@ -14,8 +14,9 @@
     <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\确定性随机.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格数据.cs" />
-    <Compile Include="..\..\Assets\Scripts\Domain\网格\门口保护.cs" />   <!-- 刀32：门口四邻的唯一实现（生成期与验证期共用） -->
-    <Compile Include="..\..\Assets\Scripts\Domain\网格\流场.cs" />       <!-- 刀61：大世界生成器.玩家能回营地 用它的早退可达查询 -->
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\门口保护.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格寻路.cs" />       <!-- 性能对照 + 越界自检 -->
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\流场.cs" />           <!-- 刀61：BFS 积分场 -->
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格视野.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\视野规则.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\网格\网格可见性.cs" />
@@ -24,5 +25,6 @@
     <Compile Include="..\..\Assets\Scripts\Domain\区域\区域生成器.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\大世界\大世界生成器.cs" />
     <Compile Include="..\..\Assets\Scripts\Domain\大世界\搜索规则.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\大世界\大世界敌人AI.cs" />  <!-- 刀61：三态 + 噪音 + 落子判据 -->
   </ItemGroup>
 </Project>
