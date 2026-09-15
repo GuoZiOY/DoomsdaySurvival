@@ -21,12 +21,16 @@ public sealed class 持有面板 : 面板基类
     //     装具区    ：Pos X −30、Width −60
     //     仓库/搜索 ：Pos X −70、Width −20
     //
-    // ★ 这两个数**不是推导出来的**，是用户在编辑器里用矩形工具拖到"看着合适"之后报的实测值。
+    // ★ 这四个数是用户在编辑器里用矩形工具拖到"看着合适"之后报的**实测增量**，不是我推导的。
     //   之前那版改 `offsetMax`（语义 = "只动右边界"）在装具区上对、在仓库/搜索上**必然不对** ——
     //   这两件连**左边界也左移了 60**（不是单纯拉右边界）。所以这里直接改
     //   `anchoredPosition.x` / `sizeDelta.x` —— 就是 Inspector 上那两个数（Pos X / Width）。
-    [SerializeField] private Vector2 装具区让位 = new Vector2(-30f, -60f);   // (Pos X 增量, Width 增量)
-    [SerializeField] private Vector2 右区让位 = new Vector2(-70f, -20f);     // 仓库 / 搜索 共用
+    //   注释里给的"改前 → 改后"是用户当时报的绝对值，方便对账。
+    [Header("侧边栏让位（侧边栏弹出时右区怎么挪）")]
+    [SerializeField] private float 装具区位置增量 = -30f;   // 1190 → 1160
+    [SerializeField] private float 装具区宽度增量 = -60f;   //  740 → 680
+    [SerializeField] private float 右区位置增量 = -70f;     // -500 → -570（仓库 / 搜索 共用）
+    [SerializeField] private float 右区宽度增量 = -20f;     // 1000 →  980
 
     private sealed class 让位记录
     {
@@ -45,9 +49,9 @@ public sealed class 持有面板 : 面板基类
             if (件 == null) return;
             让位表.Add(new 让位记录 { 件 = 件, 基线 = new Vector2(件.anchoredPosition.x, 件.sizeDelta.x), 增量 = 增量 });
         }
-        加(装具区.实例 != null ? 装具区.实例.transform as RectTransform : null, 装具区让位);
-        加(仓库 != null ? 仓库.transform as RectTransform : null, 右区让位);
-        加(搜索 != null ? 搜索.transform as RectTransform : null, 右区让位);
+        加(装具区.实例 != null ? 装具区.实例.transform as RectTransform : null, new Vector2(装具区位置增量, 装具区宽度增量));
+        加(仓库 != null ? 仓库.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
+        加(搜索 != null ? 搜索.transform as RectTransform : null, new Vector2(右区位置增量, 右区宽度增量));
         // 一件都没拿到就**下次再试**（`装具区.实例` 这个静态单例可能还没准备好）——
         // 上一版在这里把空表钉死，表现是"让位完全不动、也没有任何日志"。
         if (让位表.Count == 0)
