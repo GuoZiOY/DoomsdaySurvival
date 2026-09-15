@@ -72,7 +72,7 @@ public static class 物品图标服务
 }
 ```
 
-面板调用改异步（`网格背包面板.创建物品`）：
+面板调用改异步（`物品网格面板.创建物品`）：
 ```csharp
 async void 挂图标(Image 内容图, string 图片引用)
 {
