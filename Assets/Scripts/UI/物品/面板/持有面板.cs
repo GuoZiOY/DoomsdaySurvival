@@ -16,6 +16,67 @@ public sealed class 持有面板 : 面板基类
     [SerializeField] private Button 返回按钮;    // 返回按钮（Inspector 暴露引用）：点击 = 回退——返回 上一面板
                                                 // （从 安全屋 储物箱「使用」打开 → 回 安全屋；F1 打开 → 回 F1 前 面板；主菜单 打开 → 回 主菜单）
 
+    // ================= 侧边栏让位（"UI 适应"· 由用户手测的数值驱动） =================
+    // 侧边栏弹出时盖住右区最右边一条 → 这两组各自"位置左移 + 收窄"：
+    //     装具区    ：Pos X −30、Width −60
+    //     仓库/搜索 ：Pos X −70、Width −20
+    //
+    // ★ 这两个数**不是推导出来的**，是用户在编辑器里用矩形工具拖到"看着合适"之后报的实测值。
+    //   之前那版改 `offsetMax`（语义 = "只动右边界"）在装具区上对、在仓库/搜索上**必然不对** ——
+    //   这两件连**左边界也左移了 60**（不是单纯拉右边界）。所以这里直接改
+    //   `anchoredPosition.x` / `sizeDelta.x` —— 就是 Inspector 上那两个数（Pos X / Width）。
+    [SerializeField] private Vector2 装具区让位 = new Vector2(-30f, -60f);   // (Pos X 增量, Width 增量)
+    [SerializeField] private Vector2 右区让位 = new Vector2(-70f, -20f);     // 仓库 / 搜索 共用
+
+    private sealed class 让位记录
+    {
+        public RectTransform 件;
+        public Vector2 基线;   // (Pos X, Width) —— 未让位时的值
+        public Vector2 增量;
+    }
+    private readonly System.Collections.Generic.List<让位记录> 让位表 = new System.Collections.Generic.List<让位记录>();
+    private bool 让位表已建, 已让位;
+
+    private void 建让位表()
+    {
+        if (让位表已建) return;
+        void 加(RectTransform 件, Vector2 增量)
+        {
+            if (件 == null) return;
+            让位表.Add(new 让位记录 { 件 = 件, 基线 = new Vector2(件.anchoredPosition.x, 件.sizeDelta.x), 增量 = 增量 });
+        }
+        加(装具区.实例 != null ? 装具区.实例.transform as RectTransform : null, 装具区让位);
+        加(仓库 != null ? 仓库.transform as RectTransform : null, 右区让位);
+        加(搜索 != null ? 搜索.transform as RectTransform : null, 右区让位);
+        // 一件都没拿到就**下次再试**（`装具区.实例` 这个静态单例可能还没准备好）——
+        // 上一版在这里把空表钉死，表现是"让位完全不动、也没有任何日志"。
+        if (让位表.Count == 0)
+        {
+            Debug.LogWarning("[持有面板] 侧边栏让位：装具区/仓库/搜索 一件都没拿到 —— 稍后会再试。");
+            return;
+        }
+        让位表已建 = true;
+        Debug.Log($"[持有面板] 侧边栏让位表建好：{让位表.Count} 件 —— " +
+                  string.Join("、", 让位表.ConvertAll(x => $"{x.件.name}({x.基线.x:0},{x.基线.y:0})")));
+    }
+
+    // 让位 / 复位（幂等）。只动 x 与宽度，**y 保留当前值**（免得踩到别的系统正在改的 y）。
+    private void 应用让位(bool 让位)
+    {
+        建让位表();
+        if (让位表.Count == 0 || 让位 == 已让位) return;
+        已让位 = 让位;
+        foreach (var 记 in 让位表)
+        {
+            if (记.件 == null) continue;
+            记.件.anchoredPosition = new Vector2(记.基线.x + (让位 ? 记.增量.x : 0f), 记.件.anchoredPosition.y);
+            记.件.sizeDelta = new Vector2(记.基线.y + (让位 ? 记.增量.y : 0f), 记.件.sizeDelta.y);
+        }
+        Debug.Log($"[持有面板] 侧边栏让位：{(让位 ? "开" : "关")}（{让位表.Count} 件）");
+    }
+
+    private void OnEnable() => 应用让位(侧边栏面板.实例 != null && 侧边栏面板.实例.可见);
+
     // 初始隐藏 由 场景 控制（持有面板 物体 场景 里 初始 inactive；面板管理器.显示 激活）。
     // 注意：不 在 Awake 里 SetActive(false)——物体 初始 inactive 时 Awake 延迟 到 首次 激活 才 执行，
     //       首次 打开（SetActive(true)）触发 Awake 又 关掉 = 第一次 打不开（重复一次 才 成功）。
@@ -26,6 +87,9 @@ public sealed class 持有面板 : 面板基类
             返回按钮.onClick.AddListener(() => 回退());
             音效管理器.实例?.注册按钮(返回按钮);
         }
+        // 侧边栏开合时跟着让位 / 复位（本面板初始 inactive → 那之前的广播收不到，
+        // 所以 `OnEnable` 里还会按当前状态对齐一次）
+        ServiceRegistry.Get<EventBus>()?.订阅<侧边栏显隐变化事件>(e => 应用让位(e.显示中));
     }
 
     public override void 显示面板(object 上下文 = null, bool 上下互切 = false, bool 返回方向 = false)
