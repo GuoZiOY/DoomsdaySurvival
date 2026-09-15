@@ -44,13 +44,21 @@ $码 = $LASTEXITCODE
 if ($码 -eq 0) { Write-Output "[编译校验] 游戏程序集 exit 0 ✅" } else { Write-Output "[编译校验] 游戏程序集 exit $码 ❌" }
 
 if ($含Editor) {
-    $editorRsp = Get-ChildItem $artifacts -Filter "Assembly-CSharp-Editor.rsp" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $editorRsp) { Write-Output "[编译校验] 没找到 Assembly-CSharp-Editor.rsp，跳过 Editor"; exit $码 }
+    # ★ 修（刀61）：Editor 的 rsp 在**另一个 dag 目录**里（`1900b0aE.dag`，运行时那个是 `1900b0aP.dag`），
+    #   而这里原来只在 $artifacts（= 运行时那个 dag）下找 → 永远找不到 → **静默跳过 Editor**，
+    #   于是"我编过 Editor 程序集了"这句话一直是假的（Editor 脚本从没被离线校验过）。
+    #   现在整个 artifacts 下递归找，并且**找不到要大声报**（不再静默跳过）。
+    $editorRsp = Get-ChildItem (Join-Path $根 "Library\Bee\artifacts") -Recurse -Filter "Assembly-CSharp-Editor.rsp" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $editorRsp) { Write-Output "[编译校验] ❌ 没找到 Assembly-CSharp-Editor.rsp —— Editor 脚本这次**没有被校验**（先在 Unity 里编译一次生成它）"; exit $码 }
     $参数2 = New-Object System.Collections.Generic.List[string]
     $参数2.Add("-target:library")
     $参数2.Add("-nologo")
     $参数2.Add("-out:$env:TEMP\编译校验-Editor.dll")
-    $参数2.AddRange([string[]](取选项 $editorRsp.FullName))
+    # ★ 修（刀61）：Unity 的 Editor rsp 里 `-r:` 指向的是**它上次编译**的 Assembly-CSharp.dll（旧的），
+    #   于是"刚加进运行时的新成员"在 Editor 这一遍里看不见 → 报一堆假错（CS1061 / CS0122）。
+    #   这里把那一条换成**本脚本刚编出来的**游戏程序集 → Editor 校验才真的在校验当前源码。
+    $参数2.AddRange([string[]](取选项 $editorRsp.FullName | Where-Object { $_ -notmatch 'Assembly-CSharp(\.ref)?\.dll' }))
+    $参数2.Add("-r:$env:TEMP\编译校验-游戏.dll")
     $参数2.AddRange([string[]](取源 (Join-Path $根 "Assets\Scripts") -排除Editor:$false | Where-Object { $_ -match '/Editor/' }))
     $rsp3 = Join-Path $env:TEMP "编译校验-Editor.rsp"
     $参数2 | Set-Content $rsp3 -Encoding utf8
