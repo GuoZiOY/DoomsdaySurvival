@@ -22,10 +22,11 @@ public sealed class HUD面板 : 面板基类
     [SerializeField] private TMP_Text 时间;
     [SerializeField] private TMP_Text 地点;
 
-    // 侧边栏开关：按钮必填（不拖就没有入口）；文字位可选 —— 拖了就在「隐藏边栏 / 显示边栏」之间切，
-    // 用图标的话留空即可（逻辑照跑，只是不写字）。
+    // 侧边栏开关：按钮必填（不拖就没有入口）；**两颗图**替换显示（照「暂停」按钮那套写法）——
+    // 侧边栏开着时显示"收起"图，收起时显示"呼出"图。
     [SerializeField] private Button 侧边栏开关;
-    [SerializeField] private TMP_Text 侧边栏开关文字;
+    [SerializeField] private Image 侧边栏开关图;
+    [SerializeField] private Sprite 侧边栏收起图标, 侧边栏呼出图标;
 
     // 关闭按钮：给"当前面板"用的统一出口（用户 2026-09-15 放到 HUD 上）。
     // **按需显隐**：当前面板声明 `可关闭`（= 它覆写了 `取消文本`，即它有真的退出口）时才显示；
@@ -92,12 +93,12 @@ public sealed class HUD面板 : 面板基类
         刷新侧边栏开关();
     }
 
-    // 开关按钮的文案（只写文字位；用图标的话把那个引用位留空即可）
+    // 开关按钮的**图**：侧边栏开着 → 显示「收起」图；收起 → 显示「呼出」图。
     private void 刷新侧边栏开关()
     {
-        if (侧边栏开关文字 == null) return;
+        if (侧边栏开关图 == null) return;
         var 栏 = 侧边栏面板.实例;
-        设文本(侧边栏开关文字, 栏 == null || 栏.显示中 ? "隐藏边栏" : "显示边栏");
+        侧边栏开关图.sprite = (栏 != null && 栏.显示中) ? 侧边栏收起图标 : 侧边栏呼出图标;
     }
 
     // 轮询兜底：任何状态变化（含无事件路径）都同步到 HUD
