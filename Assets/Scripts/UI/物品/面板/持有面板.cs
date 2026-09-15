@@ -52,8 +52,11 @@ public sealed class 持有面板 : 面板基类
     //   曾经在这里拿到 null，于是让位表里只有 2 件（仓库 + 搜索），**装具区的宽度永远不变**
     //   （实测日志：`侧边栏让位：开（2 件）`）。
     //   直接在本面板子树里找（`true` = 含未激活），绕开 Awake 顺序这个不确定性。
-    private 装具区 找装具区()
-        => 装具区.实例 != null ? 装具区.实例 : GetComponentInChildren<装具区>(true);
+    private RectTransform 找装具区()
+    {
+        var 具 = 装具区.实例 != null ? 装具区.实例 : GetComponentInChildren<装具区>(true);
+        return 具 != null ? 具.transform as RectTransform : null;
+    }
 
     private void 建让位表()
     {
