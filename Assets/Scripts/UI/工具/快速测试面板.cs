@@ -231,6 +231,13 @@ public sealed class 快速测试面板 : MonoBehaviour
                 ("重装护卫", () => 测试战斗("重装护卫")),
                 ("变异体Boss", () => 测试战斗("变异体Boss")),
             }),
+            // 存档（v52 刀64）：JsonUtility 是 Unity 专属的 —— 往返这半边只能在这里验
+            ("存档", new (string, UnityAction)[]
+            {
+                ("★ 存档往返自检", 存档往返自检),
+                ("打印槽位摘要", 打印存档槽位),
+                ("打印存档目录", 打印存档目录),
+            }),
         };
         (string, (string, UnityAction)[])[] 右分区 =
         {
@@ -1285,6 +1292,54 @@ public sealed class 快速测试面板 : MonoBehaviour
         事件()?.发布(new 伤病变化事件(伤病类型.骨折, 玩家.骨折, 0));
         事件()?.发布(new 伤病变化事件(伤病类型.发烧, 玩家.发烧, 0));
         日志("[测试] 已恢复生命与生存状态。");
+    }
+
+    // ================= 存档（v52 刀64） =================
+    // 为什么这两颗按钮必须在游戏里：`JsonUtility` 是 Unity 专属的 —— 离线验证器（Tools/存档验证）
+    // 编译不到它，所以"序列化出来的东西真能原样读回来"这半边**只能在这里验**。
+    // 按钮里跑的是真的 SaveService + 真的 JsonUtility + 真的原子写盘（不碰 0~3 号槽，用 _自检.json）。
+
+    // 存档往返自检：存 → 读 → 比指纹（内存 + 磁盘两段）
+    private void 存档往返自检()
+    {
+        var 存档 = ServiceRegistry.Get<SaveService>();
+        if (存档 == null) { 日志("[存档] 没有 SaveService（装配失败？）"); return; }
+        string 结论 = 存档.往返自检();
+        日志("[存档自检] " + 结论);
+        if (!结论.StartsWith("通过")) Debug.LogError("[存档自检] " + 结论);
+    }
+
+    // 打印槽位摘要（槽、有没有、角色、天数、位置、时间、版本、损坏原因）+ 存档目录路径
+    private void 打印存档槽位()
+    {
+        var 存档 = ServiceRegistry.Get<SaveService>();
+        if (存档 == null) { 日志("[存档] 没有 SaveService（装配失败？）"); return; }
+        Debug.Log($"[存档] 目录：{存档文件.根目录}");
+        foreach (var 摘 in 存档.列出())
+        {
+            string 行 = 摘.有档
+                ? $"{存档规格.槽名(摘.槽)}｜{摘.角色名}·{摘.职业}·Lv{摘.等级}·第{摘.游戏天数}天·{摘.位置}" +
+                  $"｜{存档文件.现实时间文本(摘.保存时间)}｜v{摘.版本}" + (摘.自动 ? "｜自动" : "")
+                : $"{存档规格.槽名(摘.槽)}｜空";
+            if (!string.IsNullOrEmpty(摘.损坏原因)) 行 += $"｜⚠ {摘.损坏原因}";
+            Debug.Log("[存档] " + 行);
+        }
+        日志($"[存档] 已打印 {存档规格.手动槽数 + 1} 个槽位摘要到控制台。");
+    }
+
+    // 存档目录里有什么（含 .bak / .tmp —— 排查"存了却没生效"时先看这个）
+    private void 打印存档目录()
+    {
+        存档文件.确保目录();
+        Debug.Log($"[存档] 目录：{存档文件.根目录}");
+        try
+        {
+            var 文件们 = new System.IO.DirectoryInfo(存档文件.根目录).GetFiles();
+            if (文件们.Length == 0) Debug.Log("[存档] （目录是空的）");
+            foreach (var f in 文件们) Debug.Log($"[存档]   {f.Name}  {f.Length} 字节  {f.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+        }
+        catch (System.Exception 异常) { Debug.LogError($"[存档] 列目录失败：{异常.Message}"); }
+        日志("[存档] 已把存档目录内容打印到控制台。");
     }
 
     // 测试组拖拽：拖动 按钮/面板 → 测试组 整体平滑跟随鼠标（画布局部坐标绝对跟踪，1:1 跟手、无抓取跳变）

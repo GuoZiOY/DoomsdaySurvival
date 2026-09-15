@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>存档验证</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>存档验证</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接链接 Assets 下的源文件：验的就是游戏里跑的那份代码，不复制副本（避免漂移）。
+         这是评估 06 §3 点名的"存档链路离线覆盖为零"的解法：
+         把能离线测的那一半（载荷 / 版本 / 迁移 / 指纹 / 整点结算）搬到了没有 UnityEngine 的那一半。 -->
+    <Compile Include="Program.cs" />
+    <!-- 最小桩：补上领域层里那两个**已知越层引用**所需的类型（不参与断言，见文件头注释） -->
+    <Compile Include="_桩_越层依赖.cs" />
+
+    <!-- 存档载荷本体（刀64）：版本检查 / 迁移链 / 指纹 / 槽位规格 -->
+    <Compile Include="..\..\Assets\Scripts\Domain\存档\存档模型.cs" />
+    <!-- ★ 整点结算：世界时间管理器.推进() 用的**就是**这一份（所以断言验的是真代码，不是副本） -->
+    <Compile Include="..\..\Assets\Scripts\Domain\时间\整点结算.cs" />
+
+    <!-- 玩家档案 与其依赖闭包（Domain 层是纯 C#，唯一吃 UnityEngine 的 品质工具 已排除且没人依赖它） -->
+    <Compile Include="..\..\Assets\Scripts\Domain\玩家\玩家档案.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\玩家\成长管理器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\玩家\生存管理器.cs" />
+    <!-- 注：`Domain/玩家/效果结算.cs` 与 `Domain/玩家/品质.cs` **故意不收**：
+         它们分别依赖 Core.EventBus / UnityEngine（Color），而 玩家档案 与其子管理器都不需要它们 ——
+         少收两个文件，离线工程就与 UnityEngine / EventBus 完全无关（这条边界本身就是"存档载荷是可离线测的"的证据）。 -->
+    <Compile Include="..\..\Assets\Scripts\Domain\玩家\变化原因.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\容器\持有管理器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\容器\装备管理器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\容器\容器服务.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\任务\任务管理器.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格服务.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\网格数据.cs" />
+    <Compile Include="..\..\Assets\Scripts\Domain\网格\迷雾位图.cs" />
+
+    <Compile Include="..\..\Assets\Scripts\Data\数据模型.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\数据解析.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\配件加成.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\配件槽.cs" />
+    <Compile Include="..\..\Assets\Scripts\Data\建筑外形.cs" />
+  </ItemGroup>
+</Project>

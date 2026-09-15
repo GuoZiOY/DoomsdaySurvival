@@ -36,6 +36,12 @@ using UnityEngine;
 
             ServiceRegistry.Register(new SaveService());
 
+            // ★ 刀64：v4 单键档（PlayerPrefs 键 last87days_save_v4）→ 存档 1 的一次性迁移。
+            //   放在装配期而不是"第一次打开存档面板"：老玩家一进游戏就该看见自己的档还在。
+            //   不覆盖已有的 存档 1；迁移完**保留旧键**作兜底（与 .bak 是同一套思路）。
+            //   幂等：槽1 一有文件就再也不动了。
+            ServiceRegistry.Get<SaveService>().迁移旧档();
+
             // 数据校验失败则阻止游戏进入（输出完整错误清单，不再装配业务服务）
             if (数据.校验错误.Count > 0)
             {

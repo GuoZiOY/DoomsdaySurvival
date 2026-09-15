@@ -23,7 +23,7 @@ public sealed class 主菜单面板 : 面板基类
     protected override void 刷新(object 上下文)
     {
         // 每次显示主菜单：刷新"继续"可用状态 + 设置按钮显隐
-        bool 有存档 = ServiceRegistry.Get<SaveService>()?.有存档() ?? false;
+        bool 有存档 = ServiceRegistry.Get<SaveService>()?.有任何可读存档() ?? false;
         if (继续按钮 != null) 继续按钮.interactable = 有存档;
         if (设置按钮 != null) 设置按钮.gameObject.SetActive(设置面板 != null);
     }
@@ -46,19 +46,18 @@ public sealed class 主菜单面板 : 面板基类
         }
     }
 
-    // 继续游戏：读档（无存档时按钮已禁用，这里兜底）
+    // 继续游戏：打开存档面板（读取模式）。★ 刀64：不再"直接读最近那一个档" ——
+    // 一个存档游戏必须让玩家看见有哪些档、各自是谁、什么时候存的。无档时按钮已禁用，这里兜底。
     private void 继续游戏()
     {
-        var 玩家 = ServiceRegistry.Get<PlayerService>();
-        if (!(ServiceRegistry.Get<SaveService>()?.有存档() ?? false))
+        var 存档 = ServiceRegistry.Get<SaveService>();
+        if (!(存档?.有任何可读存档() ?? false))
         {
             音效管理器.实例?.播放失败();
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "没有可继续的存档。"));
             return;
         }
-        玩家.读档();
-        // 读档后世界种子从档案里恢复 → 打开的还是**同一座废城**（不用再传"当前大节点"）
-        ServiceRegistry.Get<大世界探索服务>()?.打开默认世界();
+        存档面板.打开(true);
     }
 
     // 设置：打开全局设置面板

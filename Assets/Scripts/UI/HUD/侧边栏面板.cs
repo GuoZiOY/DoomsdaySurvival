@@ -64,7 +64,10 @@ public sealed class 侧边栏面板 : MonoBehaviour
         if (取消文字 != null) 取消文字.text = 当前?.取消文本 ?? "取消";
     }
 
-    // 存档：立即保存一次（PlayerPrefs 覆盖写入）；未开始冒险（当前节点为空）时禁止，避免存出坏档
+    // 存档：打开存档面板（选槽保存/读取/删除）。
+    // ★ 刀64：以前这里是"立刻覆盖写唯一那个键"—— 没有槽位、没有确认、没有读取入口。
+    //   现在交给 存档面板：4 个槽（自动 + 手动 3）、覆盖/删除二次确认、损坏档可见。
+    // 「战斗中禁存档」在代码层由 SaveService 调用侧的守卫 + 这里的按钮显隐两层保证（原先只有显隐这一层）。
     private void 存档()
     {
         var 玩家 = ServiceRegistry.Get<PlayerService>()?.档案;
@@ -74,8 +77,13 @@ public sealed class 侧边栏面板 : MonoBehaviour
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "尚未开始冒险，无可保存的进度。"));
             return;
         }
-        ServiceRegistry.Get<SaveService>()?.保存(玩家);
-        ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.系统, "已保存游戏。"));
+        if (ServiceRegistry.Get<BattleService>()?.战斗中 ?? false)
+        {
+            音效管理器.实例?.播放失败();
+            ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "战斗中不能存档（档案里不含战斗状态，存了会得到一个时间与状态不一致的档）。"));
+            return;
+        }
+        存档面板.打开(false);
     }
 
     // 暂停：Time.timeScale 0↔1（游戏世界冻结）；图标切换 暂停/继续

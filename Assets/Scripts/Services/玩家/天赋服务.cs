@@ -31,19 +31,13 @@ public sealed class 天赋服务
         return 档案.天赋.Contains(标识);
     }
 
-    // 记录天赋冷却（存 天赋冷却：标识 → 游戏分钟）
-    public void 记录冷却(string 标识)
-    {
-        if (档案.天赋冷却 == null) 档案.天赋冷却 = new System.Collections.Generic.Dictionary<string, float>();
-        档案.天赋冷却[标识] = 档案.游戏分钟数;
-    }
+    // 记录天赋冷却（存 天赋冷却：标识 → 游戏分钟）。★ 刀64：载体从 Dictionary 换成 List<天赋冷却条>
+    // —— 原 Dictionary 被 JsonUtility 静默丢弃，冷却根本没随过档，见 玩家档案.天赋冷却 的注释。
+    public void 记录冷却(string 标识) => 档案?.记天赋冷却(标识);
 
     // 冷却是否就绪（默认无冷却）
     public bool 冷却就绪(string 标识, float 冷却分钟)
-    {
-        if (档案.天赋冷却 == null || !档案.天赋冷却.TryGetValue(标识, out var 上次)) return true;
-        return 档案.游戏分钟数 - 上次 >= 冷却分钟;
-    }
+        => 档案 == null || 档案.天赋冷却就绪(标识, 冷却分钟);
 
     // ===== 致命伤害响应（钢铁意志 / 医者仁心） =====
     // public：战斗系统在 玩家倒下 时主动调用（发事件 + 检查存活）；EventBus 订阅也走此方法。

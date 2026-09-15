@@ -37,6 +37,14 @@ using System.Collections.Generic;
         public bool 已完成;
     }
 
+    // 天赋冷却记录（可序列化存档）——★ 刀64 新增的**载体**，见 玩家档案.天赋冷却 的注释。
+    [Serializable]
+    public class 天赋冷却条
+    {
+        public string 标识;
+        public float 上次游戏分钟;
+    }
+
     // 5 大核心属性类型（加点用）：体质/力量/智慧/敏捷/意志
     public enum 属性类型 { 体质, 力量, 智慧, 敏捷, 意志 }
 
@@ -121,7 +129,12 @@ using System.Collections.Generic;
         public string 职业 = "";                        // 职业标识（开局选择）
         public string 角色名 = "无名幸存者";            // 角色名（开局输入，默认无名）
         public List<string> 天赋 = new List<string>();  // 正负天赋选中的标识列表
-        public Dictionary<string, float> 天赋冷却 = new Dictionary<string, float>();   // 天赋标识 → 上次触发游戏分钟（机制冷却）
+        // 天赋标识 → 上次触发游戏分钟（机制冷却）。
+        // ★ 刀64：原来这里是 `Dictionary<string, float>`，注释还写着"随档保存"—— **但 JsonUtility 不支持 Dictionary**
+        //   （本文件 `迷雾记忆` 上面就写着这条），于是它每次存档都被**静默丢掉**：读档后 钢铁意志/医者仁心 的冷却清零，
+        //   而这两个的冷却分别是 10 游戏天 / 5 游戏天 → 存档-读档就能反复触发同一张免死牌。
+        //   换成 List<天赋冷却条> 才是真的随档（存取走 天赋冷却就绪 / 记天赋冷却）。
+        public List<天赋冷却条> 天赋冷却 = new List<天赋冷却条>();
 
         // —— 核心五维属性（基础 5 + 职业加成 + 自由点 + 天赋） ——
         public int 体质 = 5;
@@ -247,6 +260,38 @@ using System.Collections.Generic;
         public void 清空迷雾() => 迷雾记忆 = new string[0];
         public List<物品堆叠> 家具 = new List<物品堆叠>();   // 安全屋家具（物品堆叠 承载：标识 = 家具标识[含等级后缀]、数量恒 1、列/行/旋转 = 房间网格位置）
         public int 预知天气 = -1;   // 收音机 预知的 明日天气（-1 = 无预知，跨天随机）
+
+        // —— ★ 刀64：安全屋"已拆墙"记录 ——
+        // 元素格式 `"{列},{行}"`，**按拆除顺序**追加。
+        // 为什么必须进档：`安全屋管理器.拆除墙()` 是**就地改写** `安全屋户型.格所属块 / 格可用` 的，
+        // 而档案里原先只存了 `户型种子` —— 于是读档后墙全部复活，而 `家具` 是进档的：
+        // 会出现"家具落在已恢复的墙格里"（摆不下 / 卡住 / 拆不掉）这种坏档。重放按原顺序即可复现（拆除墙 幂等）。
+        public List<string> 已拆墙 = new List<string>();
+
+        // 天赋冷却：就绪？（无记录 = 就绪）
+        public bool 天赋冷却就绪(string 标识, float 冷却分钟)
+        {
+            var 条 = 找天赋冷却(标识);
+            return 条 == null || 游戏分钟数 - 条.上次游戏分钟 >= 冷却分钟;
+        }
+
+        // 天赋冷却：记下"刚刚触发过"（同一标识 覆盖，不重复追加）
+        public void 记天赋冷却(string 标识)
+        {
+            if (string.IsNullOrEmpty(标识)) return;
+            天赋冷却 ??= new List<天赋冷却条>();
+            var 条 = 找天赋冷却(标识);
+            if (条 == null) { 条 = new 天赋冷却条 { 标识 = 标识 }; 天赋冷却.Add(条); }
+            条.上次游戏分钟 = 游戏分钟数;
+        }
+
+        private 天赋冷却条 找天赋冷却(string 标识)
+        {
+            if (天赋冷却 == null || string.IsNullOrEmpty(标识)) return null;
+            foreach (var 条 in 天赋冷却)
+                if (条 != null && 条.标识 == 标识) return 条;
+            return null;
+        }
 
         // —— 安全屋家具 查询（每种家具唯一；未建 = null/0） ——
 
