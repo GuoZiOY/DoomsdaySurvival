@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 103}
   - component: {fileID: 104}
   m_Layer: 5
-  m_Name: "\u79CD\u690D\u7BB1\u9762\u677F"
+  m_Name: "\u6674\u6652\u67B6\u9762\u677F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -92,9 +92,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 100}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a4c2e19d7b8f4e6a9d1c3f5b8e2a7d4c, type: 3}
+  m_Script: {fileID: 11500000, guid: 0ab0e6221af84bfe8917b5c393b10d01, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: "Assembly-CSharp::\u79CD\u690D\u7BB1\u9762\u677F"
+  m_EditorClassIdentifier: "Assembly-CSharp::\u6674\u6652\u67B6\u9762\u677F"
   "\u9762\u677F\u6839": {fileID: 101}
   "\u6807\u9898\u6587\u672C": {fileID: 123}
   "\u5173\u95ED\u6309\u94AE": {fileID: 134}
@@ -151,8 +151,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: "Assembly-CSharp::\u5C31\u5730\u8F6C\u5316\u7F51\u683C"
   "\u7F51\u683C\u5BB9\u5668": {fileID: 111}
-  "\u56FA\u5B9A\u5217\u6570": 6
-  "\u56FA\u5B9A\u884C\u6570": 10
+  "\u56FA\u5B9A\u5217\u6570": 4
+  "\u56FA\u5B9A\u884C\u6570": 2
   "\u56FA\u5B9A\u5217\u6570\u6700\u5C0F": 1
   "\u56FA\u5B9A\u5217\u6570\u6700\u5927": 100
   "\u56FA\u5B9A\u884C\u6570\u6700\u5C0F": 1
