@@ -86,7 +86,7 @@ public sealed partial class BattleService
     private void 检查单位死亡(战斗单位 单位)
     {
         if (单位.存活) return;
-        // 玩家倒下：先发 致命伤害事件（天赋服务 检查 钢铁意志/医者仁心——免疫则保命继续）
+        // 玩家倒下：先发 致命伤害事件（天赋服务 检查 医者仁心——自救成功则保命继续）
         if (单位 == 玩家 && ServiceRegistry.已注册<天赋服务>())
         {
             ServiceRegistry.Get<天赋服务>().处理致命伤害(new 致命伤害事件(单位));
