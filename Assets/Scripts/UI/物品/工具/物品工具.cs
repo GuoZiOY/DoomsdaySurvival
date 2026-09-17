@@ -34,9 +34,17 @@ public static class 物品工具
             // ⚠ v51 刀15 修：这里原来是 `case "技能书":` —— 而"技能书"是 **书籍种类** 的取值，
             //   不是 `类型` 的取值（类型只有"书籍"）→ 这个 case 永不命中，技能书详情一直少一行。
             case "书籍":
-                if (物品.书籍种类 == "技能书"
-                    && !string.IsNullOrEmpty(物品.技能) && 数据.技能.TryGetValue(物品.技能, out var 技能))
-                    return $"可学习：{技能.名称}（消耗 {技能.消耗精力} 精力）";
+                if (物品.书籍种类 == "技能书")
+                {
+                    // 指南 用 技能池（池内全部列出）；老书 走单条 `技能` 回退
+                    var 池 = 物品.技能池 != null && 物品.技能池.Length > 0 ? 物品.技能池 : new[] { 物品.技能 };
+                    var 名 = new List<string>();
+                    foreach (var 标识 in 池)
+                        if (!string.IsNullOrEmpty(标识) && 数据.技能.TryGetValue(标识, out var 技)) 名.Add(技.名称);
+                    return 名.Count > 0 ? $"可学习：{string.Join(" / ", 名)}" : "";
+                }
+                if (物品.书籍种类 == "知识")
+                    return 物品.知识等级 != null && 物品.知识等级.Length > 0 ? $"知识书：共 {物品.知识等级.Length} 级（首次阅读解锁）" : "";
                 return "";   // 配方书 / 蓝图：详情由各自面板表达，这里不给数值行
             default:   // 武器/防具/饰品：本体加成 + 已装**配件**（配件是真实物品，效果查它的物品定义）
                 {

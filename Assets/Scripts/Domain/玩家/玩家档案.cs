@@ -124,6 +124,8 @@ using System.Collections.Generic;
         //   "武器/防具默认 15 耐久"的兜底里摘出来 —— 否则配件会凭空有耐久、忘了初始化就显示"损坏"）
         [NonSerialized] public Func<string, string> 物品类型解析;
         [NonSerialized] public Func<string, int> 弹匣容量解析;        // 刀44：标识（武器本体）-> 弹匣容量（0 = 无弹匣）
+        [NonSerialized] public Func<string, 技能数据> 技能解析;       // 被动技能：标识 -> 技能数据（战斗投影 判 主动/被动 + 被动增幅；PlayerService 接线）
+        [NonSerialized] public Func<string, 知识等级数据[]> 知识等级解析;   // 知识书：书籍标识 -> 知识等级表（装备管理器.知识加成 聚合属性加成用；PlayerService 接线）
 
         // —— 身份：职业与天赋 ——
         public string 职业 = "";                        // 职业标识（开局选择）
@@ -198,6 +200,7 @@ using System.Collections.Generic;
         // 战斗技能槽：固定 6 槽（战斗沙盒技能栏 用；存 已学技能 标识，null/空 = 空槽）。学习新技能自动填第一个空槽
         public List<string> 战斗技能槽 = new List<string>();
         public List<string> 已习得配方 = new List<string>();   // 书籍·配方书 永久习得 的 配方标识（随档存档；区别于 持有图纸 的 临时解锁）
+        public List<知识进度> 已掌握知识 = new List<知识进度>();   // 书籍·知识书（精通/制作）的等级进度（随档存档）：一本书一条，等级 1 起
         public List<任务进度> 任务 = new List<任务进度>();
         public List<日常任务> 日常 = new List<日常任务>();
         public int 日常生成日 = -1;
@@ -494,6 +497,21 @@ using System.Collections.Generic;
             已习得配方.Add(标识);
             return true;
         }
+
+        // ================= 知识书（精通 / 制作 的等级进度） =================
+        // 一本书 = 一条知识（标识 = 书籍标识）。等级 1 = 已解锁（首次读满授予），之后读满加经验、满阈值升级。
+
+        public const int 知识每级经验 = 100;   // 兜底：调用方给不出 `物品数据.知识门槛` 时用它的"每级递增 100"默认表
+                                              //（真正决定升级的是传进来的门槛数组，这里不再参与折算）
+
+        public 知识进度 查知识(string 标识) => 已掌握知识?.Find(k => k != null && k.标识 == 标识);
+        public bool 掌握知识(string 标识) => 查知识(标识) != null;
+        public int 知识等级(string 标识) => 查知识(标识)?.等级 ?? 0;
+
+        // 加知识经验（未解锁则先解锁为 1 级）；返回（旧等级, 新等级）——调用方按区间发奖励。
+        // 门槛数组由调用方（书籍服务 ← 物品数据）传入：每本书的升级曲线不同，Domain 不该自己去查数据。
+        public (int 旧, int 新) 加知识经验(string 标识, int 经验, int[] 门槛, int 等级上限)
+            => 成长管理.加知识经验(标识, 经验, 门槛, 等级上限);
 
         // ================= 任务（门面转发：任务管理器） =================
 

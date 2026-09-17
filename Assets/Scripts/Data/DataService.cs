@@ -338,7 +338,7 @@ using UnityEngine;
                 }
             }
 
-            // —— 书籍：配方书 配方池 引用 + 技能书 技能 引用 ——
+            // —— 书籍：配方书 配方池 引用 + 技能书 技能池/技能 引用 + 知识书 知识等级表 引用 ——
             foreach (var (标识, 物品) in 物品)
             {
                 if (物品.类型 != "书籍") continue;
@@ -346,8 +346,45 @@ using UnityEngine;
                     foreach (var 配方标识 in 物品.配方池)
                         if (!string.IsNullOrEmpty(配方标识) && !配方.ContainsKey(配方标识))
                             校验错误.Add($"书籍[{标识}] → 配方池[{配方标识}] 不存在");
-                if (物品.书籍种类 == "技能书" && !string.IsNullOrEmpty(物品.技能) && !技能.ContainsKey(物品.技能))
-                    校验错误.Add($"书籍[{标识}] → 技能[{物品.技能}] 不存在");
+                if (物品.书籍种类 == "技能书")
+                {
+                    if (!string.IsNullOrEmpty(物品.技能) && !技能.ContainsKey(物品.技能))
+                        校验错误.Add($"书籍[{标识}] → 技能[{物品.技能}] 不存在");
+                    if (物品.技能池 != null)
+                        foreach (var 技能标识 in 物品.技能池)
+                            if (!string.IsNullOrEmpty(技能标识) && !技能.ContainsKey(技能标识))
+                                校验错误.Add($"书籍[{标识}] → 技能池[{技能标识}] 不存在");
+                    if ((物品.技能池 == null || 物品.技能池.Length == 0) && string.IsNullOrEmpty(物品.技能))
+                        校验错误.Add($"书籍[{标识}] 是技能书，但 技能池 与 技能 都为空（没有任何可学的技能）");
+                }
+                if (物品.书籍种类 == "知识")
+                {
+                    if (物品.知识等级 == null || 物品.知识等级.Length == 0)
+                        校验错误.Add($"书籍[{标识}] 是知识书，但 知识等级 表为空");
+                    else
+                        for (int i = 0; i < 物品.知识等级.Length; i++)
+                        {
+                            var 行 = 物品.知识等级[i];
+                            if (行 == null) { 校验错误.Add($"书籍[{标识}] 知识等级[{i}] 为空项"); continue; }
+                            if (行.级 != i + 1)
+                                校验错误.Add($"书籍[{标识}] 知识等级[{i}].级={行.级} 非法（应连续从 1 开始）");
+                            if (行.解锁配方 != null)
+                                foreach (var 配方标识 in 行.解锁配方)
+                                    if (!string.IsNullOrEmpty(配方标识) && !配方.ContainsKey(配方标识))
+                                        校验错误.Add($"书籍[{标识}] 知识等级[{行.级}] → 解锁配方[{配方标识}] 不存在");
+                            if (行.解锁技能 != null)
+                                foreach (var 技能标识 in 行.解锁技能)
+                                    if (!string.IsNullOrEmpty(技能标识) && !技能.ContainsKey(技能标识))
+                                        校验错误.Add($"书籍[{标识}] 知识等级[{行.级}] → 解锁技能[{技能标识}] 不存在");
+                            if (!string.IsNullOrEmpty(行.加成属性))
+                            {
+                                bool 合法 = false;
+                                foreach (var 名 in System.Enum.GetNames(typeof(加成类型))) if (名 == 行.加成属性) { 合法 = true; break; }
+                                if (!合法)
+                                    校验错误.Add($"书籍[{标识}] 知识等级[{行.级}] → 加成属性[{行.加成属性}] 非法（须是 加成类型 枚举名）");
+                            }
+                        }
+                }
             }
 
             // —— 区域（旧"深度分层闯关"的事件表校验已随 探索服务/探索面板 一起删除）——

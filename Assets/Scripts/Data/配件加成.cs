@@ -47,13 +47,14 @@ public static class 配件加成
             case 加成类型.速度: return "速度";
             case 加成类型.潜行: return "潜行";
             case 加成类型.弹匣容量: return "弹匣容量";
+            case 加成类型.医疗: return "医疗效果";
             default: return "加成";
         }
     }
 
     // 是不是百分比类（UI 显示时加 %）
     public static bool 是百分比(加成类型 类)
-        => 类 == 加成类型.暴击 || 类 == 加成类型.命中 || 类 == 加成类型.闪避 || 类 == 加成类型.抗性;
+        => 类 == 加成类型.暴击 || 类 == 加成类型.命中 || 类 == 加成类型.闪避 || 类 == 加成类型.抗性 || 类 == 加成类型.医疗;
 
     // 列出这个物品能提供的加成（详情/提示用）：零值不列
     public static System.Collections.Generic.List<(加成类型 类, int 值)> 全部(物品数据 物)
