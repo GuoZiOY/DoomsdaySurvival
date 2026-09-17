@@ -130,6 +130,7 @@ using UnityEngine;
             {
                 "物品/防具/items_防具_头部", "物品/防具/items_防具_胸部", "物品/防具/items_防具_腿部", "物品/防具/items_防具_脚部",
                 "物品/防具/items_防具_手部", "物品/防具/items_防具_弹挂", "物品/防具/items_防具_腰封", "物品/防具/items_防具_背包",
+                "物品/防具/items_防具_副手",   // 盾（盾精通的装备位；副手以前 0 件物品，所以这一行是新增的）
             };
             foreach (var 文件 in 防具文件) 加载(文件, 物品, (物品根 根) => 根.物品);
             加载("物品/items_饮食", 物品, (物品根 根) => 根.物品);
@@ -805,8 +806,34 @@ using UnityEngine;
             foreach (var (标识, 职) in 职业)
             {
                 string 名 = $"职业[{标识}]";
-                if (!string.IsNullOrEmpty(职.初始技能) && !技能.ContainsKey(职.初始技能))
-                    校验警告.Add($"{名} → 初始技能[{职.初始技能}] 不在 skills.json：这个职业开局学不到它");
+                // 初始技能（本批起是**多条**）：坏引用 = 这个职业开局少一招（`PlayerService.学初始技能` 会报日志）
+                if (职.初始技能 != null)
+                    foreach (var 技能标识 in 职.初始技能)
+                        if (!string.IsNullOrEmpty(技能标识) && !技能.ContainsKey(技能标识))
+                            校验警告.Add($"{名} → 初始技能[{技能标识}] 不在 skills.json：这个职业连着一条都学不到");
+                // 初始知识（写的是**知识书**的物品标识）：必须存在、且确实是"知识"书（否则 `学初始知识` 发不下去）
+                if (职.初始知识 != null)
+                    foreach (var 书标识 in 职.初始知识)
+                    {
+                        if (string.IsNullOrEmpty(书标识)) continue;
+                        if (!物品.TryGetValue(书标识, out var 书)) { 校验警告.Add($"{名} → 初始知识[{书标识}] 不在 items：这条知识发不下去"); continue; }
+                        if (书.书籍种类 != "知识" || 书.知识等级 == null || 书.知识等级.Length == 0)
+                            校验警告.Add($"{名} → 初始知识[{书标识}] 不是知识书（书籍种类[{书.书籍种类}]）：发不下去");
+                    }
+                // 初始配方：必须真的在配方表里（否则 已习得配方 里会多一条永远做不出来的东西）
+                if (职.初始配方 != null)
+                    foreach (var 配方标识 in 职.初始配方)
+                        if (!string.IsNullOrEmpty(配方标识) && !配方.ContainsKey(配方标识))
+                            校验警告.Add($"{名} → 初始配方[{配方标识}] 不在配方表里：记上了也做不出来");
+                // 随机书级别：写了级别就得真有该级别的书（否则开局静默少一本书）
+                foreach (var (级别, 种类) in new[] { (职.随机配方书级别, "配方书"), (职.随机技能书级别, "技能书") })
+                    if (!string.IsNullOrEmpty(级别))
+                    {
+                        bool 有 = false;
+                        foreach (var (_, 物) in 物品)
+                            if (物 != null && 物.类型 == "书籍" && 物.书籍种类 == 种类 && 物.书籍级别 == 级别) { 有 = true; break; }
+                        if (!有) 校验警告.Add($"{名} → 随机{种类}级别[{级别}]：数据里一本都没有，开局会少发一本");
+                    }
                 if (!string.IsNullOrEmpty(职.天赋) && !天赋.ContainsKey(职.天赋))
                     校验警告.Add($"{名} → 天赋[{职.天赋}] 不在 天赋.json：会被塞进 档案.天赋 但永远不生效");
                 if (职.初始装备 == null) continue;

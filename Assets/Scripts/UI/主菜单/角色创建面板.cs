@@ -204,7 +204,7 @@ public sealed class 角色创建面板 : 面板基类
     {
         if (职业详情 == null) return;
         if (!数据.职业.TryGetValue(选中职业, out var 职业)) { 设文本(职业详情, "请选择你的身份……"); return; }
-        string 技能 = 数据.技能.TryGetValue(职业.初始技能, out var 技) ? 技.名称 : 职业.初始技能;
+        string 技能 = 技能行(职业);
         string 装备 = "";
         if (职业.初始装备 != null)
             foreach (var 项 in 职业.初始装备)
@@ -212,8 +212,32 @@ public sealed class 角色创建面板 : 面板基类
                 string 名 = 数据.物品.TryGetValue(项.标识, out var 物) ? 物.标识 : 项.标识;
                 装备 += 名 + " ";
             }
-        // 职业描述不含五维分布（五维看中栏属性列表）
-        设文本(职业详情, $"{职业.名称}\n{职业.描述}\n技能：{技能}\n装备：{装备}");
+        // 职业描述不含五维分布（五维看中栏属性列表）；
+        // 知识/配方 只有真的配了才多一行（退役军人的枪械精通、厨师的 13 条灶台配方 —— 选职业时该看得见）
+        string 学问 = 知识行(职业);
+        设文本(职业详情, $"{职业.名称}\n{职业.描述}\n技能：{技能}\n{学问}装备：{装备}");
+    }
+
+    // 初始技能（本批起是**多条**：冲刺/后撤 + 职业专属）：全列出来（查不到名字就退回标识）
+    private string 技能行(职业数据 职业)
+    {
+        if (职业.初始技能 == null || 职业.初始技能.Length == 0) return "——";
+        var 名 = new List<string>();
+        foreach (var 标识 in 职业.初始技能)
+        {
+            if (string.IsNullOrEmpty(标识)) continue;
+            名.Add(数据.技能.TryGetValue(标识, out var 技) && !string.IsNullOrEmpty(技.名称) ? 技.名称 : 标识);
+        }
+        return 名.Count == 0 ? "——" : string.Join("、", 名);
+    }
+
+    // 初始知识 / 初始配方（没有就不占行）：知识写的是知识书名，配方只报条数（13 条全列会撑爆这一格）
+    private string 知识行(职业数据 职业)
+    {
+        string 文本 = "";
+        if (职业.初始知识 != null && 职业.初始知识.Length > 0) 文本 += "知识：" + string.Join("、", 职业.初始知识) + "\n";
+        if (职业.初始配方 != null && 职业.初始配方.Length > 0) 文本 += $"配方：{职业.初始配方.Length} 条\n";
+        return 文本;
     }
 
     // ===== 中栏：属性（静态行，值 = 职业分布 + 自由加点） =====

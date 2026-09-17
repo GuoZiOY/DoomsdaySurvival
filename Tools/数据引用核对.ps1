@@ -279,8 +279,13 @@ $script:悬空 = 0
 if ($职业) {
     foreach ($z in $职业.职业) {
         if (-not $z.标识) { 报错 "职业 缺少 标识"; continue }
-        if ($z.初始技能 -and -not $技能集.Contains([string]$z.初始技能)) {
-            报错 ("职业[{0}] 初始技能[{1}] 不在 skills.json（这个职业开局学不到它）" -f $z.标识, $z.初始技能); $script:悬空++
+        # 初始技能：本批起是**多条**（冲刺/后撤 默认两招 + 职业专属）→ 逐条查
+        if ($z.初始技能) {
+            foreach ($技 in @($z.初始技能)) {
+                if ($技 -and -not $技能集.Contains([string]$技)) {
+                    报错 ("职业[{0}] 初始技能[{1}] 不在 skills.json（这个职业开局学不到它）" -f $z.标识, $技); $script:悬空++
+                }
+            }
         }
         if ($z.天赋 -and -not $天赋集.Contains([string]$z.天赋)) {
             报错 ("职业[{0}] 天赋[{1}] 不在 天赋.json（会塞进 档案.天赋 但永不生效）" -f $z.标识, $z.天赋); $script:悬空++
