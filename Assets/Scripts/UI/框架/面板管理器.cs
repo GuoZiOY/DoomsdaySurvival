@@ -40,19 +40,51 @@ public sealed class 面板管理器 : MonoBehaviour
     private 区域面板 自动区域;
     private 大世界面板 自动大世界;
     private 角色面板 自动角色;
+    private GameObject 角色面板实例;   // 上面那个面板所在的物体：复用判断与销毁后的重挂都靠它
+    private const string 角色面板预制体路径 = "Prefab/角色面板";   // Assets/Resources/Prefab/角色面板.prefab
 
     // ★ 角色面板也走这套兜底（此前只有 房间/区域/大世界 有）：
-    //   重写后的 角色面板 是**代码自建布局**（场景里只需要有一个挂本组件的空物体，不需要任何 Inspector 接线），
-    //   但 角色 引用位在场景里是 `fileID: 0`（未接）→ 没有兜底时 `显示(角色)` 就是空操作，
-    //   表现正是下面这段注释记的那个坑："按了键完全没反应、Console 无日志"。
+    //   但它的兜底**不能**是 建面板<角色面板>()：建面板 只 `new GameObject + AddComponent`
+    //   —— 一个没有任何子节点的空壳，而 角色面板.cs 现在是**预制体驱动**（运行时不再自建任何节点，
+    //   见那个文件头⑤）→ 于是 `自找()` 全找不着，Console 报"结构不完整，缺引用"，
+    //   按 C 出来的就是一块空白板子。所以这条路改成**实例化它在 Resources 里的预制体**。
+    //   触发场景：场景里没有面板实例、`角色` 引用位是 `fileID: 0`（未接）——
+    //   没有兜底时 `显示(角色)` 是空操作，表现是下面注释记的那个坑："按了键完全没反应、Console 无日志"。
     private 角色面板 取角色面板()
     {
         if (角色 != null) return 角色;
-        if (自动角色 == null)
+        // 复用：已实例化过就直接给 —— 语义与 建面板 的"非空即复用"一致；`== null` 对已销毁的
+        //   Unity 对象也为真（伪 null）→ 实例被销毁 / 换场景清掉后，这里会重新实例化一个。
+        if (自动角色 != null) return 自动角色;
+
+        var 预制体 = Resources.Load<GameObject>(角色面板预制体路径);
+        if (预制体 == null)
         {
             自动角色 = 建面板<角色面板>("角色面板（自动建）");
-            Debug.LogWarning("[面板管理器] 角色 引用位没接 —— 已自动建一个 角色面板（能玩；要美观请手动搭好并拖引用位）。");
+            Debug.LogWarning($"[面板管理器] 没找到 Resources/{角色面板预制体路径}，只能建一个空壳：" +
+                             "面板会缺节点并报「结构不完整，缺引用」，按 C 出来是块空白板子。" +
+                             "请把预制体放进 Resources/Prefab/，或在场景里放好实例并把 角色 引用位接上。");
+            return 自动角色;
         }
+
+        // 父物体与铺满方式**照抄 建面板<T>()**（本管理器所在的 Canvas 下、同级、四边贴满）：
+        //   预制体根自己也是 0,0/1,1 + offset 0，这里再写一遍是为了让"兜底建出来的面板"与手动搭的
+        //   面板处在同一层、同一套尺寸口径 —— 免得预制体哪天被人改成定点尺寸就飘到屏幕外。
+        var 父 = transform.parent != null ? transform.parent : transform;
+        角色面板实例 = Instantiate(预制体, 父, false);
+        var 矩形 = (RectTransform)角色面板实例.transform;
+        矩形.anchorMin = Vector2.zero;
+        矩形.anchorMax = Vector2.one;
+        矩形.offsetMin = Vector2.zero;
+        矩形.offsetMax = Vector2.zero;
+        自动角色 = 角色面板实例.GetComponent<角色面板>();
+        // ★ 必须登记进 `可切换面板`：`显示面板类型<角色面板>()` 是按这份清单找目标的，
+        //   找不到才走 面板零接线兜底<T>()；不登记就有"清单里没有 + 兜底那条路"对不上的风险
+        //   —— 正是刀77 踩过的坑：C 按下去**静默失效**。
+        可切换面板.Add(自动角色);
+        角色面板实例.SetActive(false);   // 与 建面板 一致：建完先藏起来，由 显示() 决定何时亮
+        Debug.LogWarning("[面板管理器] 角色 引用位没接 —— 已按 Resources/" + 角色面板预制体路径 +
+                         " 实例化一个 角色面板（含全部节点）。要少这条日志，请在场景里放好实例并接上 角色 引用位。");
         return 自动角色;
     }
 
