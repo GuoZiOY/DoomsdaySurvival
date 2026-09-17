@@ -1,129 +1,141 @@
-using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 角色面板：全局面板。一屏四栏 = **一块浮在安全屋画面上的"幸存者档案板"**
-//   （板内：顶部身份条 + 顶部横排四个大字 Tab + 内容区；本批属性栏填真实内容，其余三栏到栏目标题为止）。
+// 角色面板：全局面板。一屏**三栏** = 一块浮在安全屋画面上的"幸存者档案板"
+//   （板内：顶部身份条 + 顶部横排三个大字 Tab + 内容区；三个栏页的内容各自在子面板里）。
 //
-// ★ 本文件是**第三次改写**，三代口径别再来回翻 git：
-//     ① 刀78（`git show 9ca19a2`）：代码自建 + "不铺满屏 / 组件放大 / 暖调近黑 + 唯一暗锈红" —— 用户认了这个观感；
-//     ② 刀79（HEAD 7f05606）：整批拆掉自建，改成"用户自己搭 + Inspector 接线"；用户随后改主意；
-//     ③ 本批：**自建回来**（`Awake` 里把节点树建出来），但 12 个结构引用**保留为可选覆盖** ——
-//        非空 = 用他拖进来的那个物体，为空 = 自动建并把建出来的物体**回填到那个字段**（Play 里在 Inspector 能直接看到）。
-//        → 场景里什么都不用搭就能开面板（`面板管理器.取角色面板()` 的兜底又能用了），想接手某一块就把那个物体拖进对应字段。
-//   ⚠ 文件名与 `.cs.meta` 没动 —— 场景/预制体引用靠 meta 里的 GUID，改名或删文件会让引用变 Missing Script。
-//   ⚠ 本文件是**唯一**的布局来源：场景里若还留着旧的手搭树（例如 属性子面板 那套），它们与本组件互不认识 ——
-//     本组件只往"内容区"里加自己那套行，不会去动别人的节点。
+// ★ 本文件是**第四次改写**，三代口径别再来回翻 git：
+//     ① 刀78：代码自建 + "不铺满屏 / 组件放大 / 暖调近黑 + 唯一暗锈红" —— 用户认了这个观感；
+//     ② 刀79：整批拆掉自建，改成"用户自己搭 + Inspector 接线"；用户随后改主意；
+//     ③ 刀80：自建回来，但 12 个结构引用保留为可选覆盖；
+//     ④ 本批（刀81）：**"皮肤"这个概念整个删掉**（`角色面板皮肤.cs` 连 meta 一起没了）+
+//        四栏压成**三栏**（属性 / 技能 / 知识 —— 天赋内容太少，用户当场拍板并进 属性页 当第 4 个小段）。
+//        → 配色/字号/间距不再有一个共用参数类，而是**内联在本面板自己的 [SerializeField] 字段里**
+//          （子面板各自内联自己那一份；同一个颜色在几个文件里各写一遍是有意的取舍 ——
+//           换来的是"没有皮肤这个中间层、每个面板自己说了算"，用户明确不要抽象层）。
+//
+// 本文件只管三件事：**壳（遮罩/板子/身份条/Tab/分隔线）+ 内容区 + 切栏分发**。
+//   三个栏页的真实内容全部在子面板里（`属性子面板` / `技能子面板` / `知识子面板`），
+//   它们**各自 MonoBehaviour、互不引用**；本面板与它们之间只有一个约定：
+//   **`内容区` 由本面板注入（`设内容区`），子面板拿到之后自己建/刷自己的节点。**
 //
 // 建出来的节点树（Play 里对着 Hierarchy 核；缩进 = 父子）：
 //   角色面板（本组件，满屏 —— `面板管理器` 建/摆面板的前提）
 //     ├─ 点击遮罩            满屏透明 Image（raycastTarget = true：**吃掉板子外面的点击**；垫在最底层）
-//     ├─ 遮罩层              满屏 Image（皮肤.遮罩 = 65% 黑，raycastTarget = false：只负责把画面压暗）→ 遮罩
-//     └─ 板子                Image（皮肤.板底；居中定尺）→ 板子
-//          ├─ 上/下/左/右边框  Image ×4（皮肤.边框，2px，实心矩形不是 Outline）
-//          ├─ 身份条          Image（皮肤.内容底）→ 身份条
+//     ├─ 遮罩层              满屏 Image（65% 黑，raycastTarget = false：只负责把画面压暗）→ 遮罩
+//     └─ 板子                Image（板底；居中定尺）→ 板子
+//          ├─ 上/下/左/右边框  Image ×4（边框色，2px，实心矩形不是 Outline）
+//          ├─ 身份条          Image（内容底）→ 身份条
 //          │    ├─ 身份文本    TMP（"幸存者 · 职业"）→ 身份文本
 //          │    ├─ 等级文本    TMP（"Lv.N"）→ 等级文本
-//          │    ├─ 经验格父    Rect → 经验格父（下面铺 N 个 经验格，N = 板宽塞得下几格）
-//          │    └─ 身份条强调线 Image（皮肤.强调 2px：**全屏第一处强调色**，整块板子靠它立住）
-//          ├─ 属性/技能/知识/天赋 Button（底图 + 标签 TMP + 下划线 Image）→ Tab按钮/Tab标签/Tab下划线
-//          ├─ 分隔线          Image（皮肤.边框 2px，左右缩 皮肤.页边距）→ 分隔线
-//          └─ 内容区          Image（皮肤.内容底）→ 内容区
+//          │    ├─ 经验格父    Rect → 经验格父（下面铺 10 个 经验格，10×10、间隔 2）
+//          │    └─ 身份条强调线 Image（强调 2px：**全屏第一处强调色**，整块板子靠它立住）
+//          ├─ 属性/技能/知识 Button（底图 + 标签 TMP + 下划线 Image）→ Tab按钮/Tab标签/Tab下划线
+//          ├─ 分隔线          Image（边框色 2px，左右缩 页边距）→ 分隔线
+//          └─ 内容区          Image（内容底）→ 内容区
 //               ├─ 栏目标题    TMP（随 Tab 变）→ 栏目标题
-//               ├─ 标题下划线  Image（皮肤.强调 2px，宽 = 标题文字宽）
-//               └─ 内容行      Rect（属性栏专用：三列 = 五维 | 派生 | 生存状态，每列一个小标题 + 行内文本行）
+//               ├─ 标题下划线  Image（强调 2px，宽 = 标题文字宽）
+//               └─ 三个子面板   （`属性子面板` / `技能子面板` / `知识子面板` 各挂一个子物体；切栏 = SetActive）
 //
-// 口径（外观，本批点名要的"好看点"）：
-//   · **不铺满屏**：板子 = min(屏宽×板宽比例, 板宽上限) × min(屏高×板高比例, 板高上限)，屏幕居中；
-//     四边 2px 边框；板外 65% 黑遮罩（不挡点击）+ 满屏透明图（挡点击）；
-//   · 板内留白：页边距 40 用在外圈（身份条 / Tab 行 / 分隔线 / 内容区的左右与底部），身份条高 88；
-//     文字与行再缩 段距 20（**不贴边**，且身份行与内容标题在同一条竖线上）；
-//   · Tab：四个横排大字（字号_Tab）+ 段距 间距；选中 = 正文色 + 2px 强调下划线，未选 = 次要色 + 下划线隐藏；
-//     悬停只换底（皮肤.悬停底）；**无动画**（fadeDuration = 0）、无缩放反馈；
-//   · 行：行内文本（名 + 值同一行，值紧跟名）+ 靠 行高 留白分层 —— **没有**左侧色条、**没有**数值右对齐到天边、**行间不画线**；
-//   · 没有圆角 / 阴影 / 发光 / 渐变 / emoji / 入场动画 / 琥珀色（口径见 `角色面板皮肤` 的文件头）。
+// 口径（外观）：
+//   · **不铺满屏**：板子 = min(屏宽×0.84, 1180) × min(屏高×0.88, 760)，屏幕居中；四边 2px 边框；
+//     板外 65% 黑遮罩（不挡点击）+ 满屏透明图（挡点击）；
+//   · 板内留白：页边距 40 用在外圈，身份条高 88，段距 20 用在"段与段之间"；
+//   · Tab：三个横排大字（24），间距 = 段距；选中 = 正文色 + 2px 强调下划线，未选 = 次要色 + 下划线隐藏；
+//     悬停只换底（悬停底）；**无动画**（fadeDuration = 0）、无缩放反馈；
+//   · 行：行内文本（名 + 值同一行，值紧跟名）+ 靠留白分层 —— **没有**左侧色条、**没有**数值右对齐到天边、**行间不画线**；
+//   · 没有圆角 / 阴影 / 发光 / 渐变 / emoji / 入场动画 / 琥珀色。
 //
 // 开合沿用 `面板管理器` 的既有约定，不自造一套：
 //   · 打开 = `打开角色面板事件`（或 C 键）→ `面板管理器.显示(角色)`；
-//   · 关闭 = HUD 上那颗统一关闭按钮 → 调本面板的 `回退()`（`面板基类.可关闭` 的判据就是"覆写了 取消文本"）；
-//   · 项目**没有全局 Esc 回退键**（用户 2026-09-15 拍板），所以这里也不绑 Esc；
-//   · 板外那层透明图**只吃点击、不关面板**（关闭只有一个入口 = HUD 那颗按钮，不在这里另开一条路）。
+//   · 关闭 = HUD 上那颗统一关闭按钮 → 调本面板的 `回退()`；
+//   · 项目**没有全局 Esc 回退键**，所以这里也不绑 Esc；
+//   · 板外那层透明图**只吃点击、不关面板**（关闭只有一个入口 = HUD 那颗按钮）。
 public sealed class 角色面板 : 面板基类
 {
-    // 四个栏目（顺序 = 顶部 Tab 从左到右，也就是下面三个数组的下标 0..3）。
-    // **没有"装备"栏** —— 装备归 `持有面板`，这里不重复一份。
+    // 三个栏目（顺序 = 顶部 Tab 从左到右，也就是下面三个数组与 `子面板` 的下标 0..2）。
+    // **没有"装备"栏**（装备归 `持有面板`，这里不重复一份）；
+    // **没有"天赋"栏**（天赋内容太少，用户拍板并进 属性页 当第 4 个小段，见 `属性子面板`）。
     // Tab 标签文字与栏目标题都由代码按这张表写 → 想改字改这里，**别在 Inspector 里改**（切栏时会被覆盖）。
-    private static readonly string[] 栏目表 = { "属性", "技能", "知识", "天赋" };
+    private static readonly string[] 栏目表 = { "属性", "技能", "知识" };
 
-    // ================= Inspector：12 个结构引用（**可选覆盖**） =================
+    // ================= Inspector：结构引用（**可选覆盖**） =================
     // 口径：**非空 = 用你拖的那个物体；为空 = 自动建一个并回填到这个字段**（Play 里在 Inspector 看得到）。
-    //   所以"一个都不接"是默认状态、也是最常用的状态（`面板管理器` 的兜底就走这条路径）。
-    // 一条要守住的约定：**摆位/配色永远由本组件按 皮肤 写**（拖进来的物体是"换一个物体承载"，不是"位置归你"），
+    //   所以"一个都不接"是默认状态、也是最常用的状态（`面板管理器` 的零接线兜底就走这条路径）。
+    // 一条要守住的约定：**摆位/配色永远由本组件按下面那些内联字段写**（拖进来的物体是"换一个物体承载"，不是"位置归你"），
     //   否则同一套口径会因为接没接线裂成两套；你手调的位置会在下一次 顶层尺寸变化（改分辨率/切栏）时被覆盖。
-    // 反过来：本组件**只销毁自己建的节点**（`自建节点` 这份账点上记着的那些）—— 你的物体一个都不会被干掉；
-    //   经验格父 里你自己摆的格子，本组件当成"你摆了几格就点几格"。
+    // 反过来：本组件**只销毁自己建的节点**（`自建节点` 这份账上记着的那些）—— 你的物体一个都不会被干掉。
     [Header("结构引用（可选覆盖：拖了 = 用你的；留空 = 自动建并回填）")]
-    [SerializeField] private Image 遮罩;                 // 满屏暗色层（颜色 = 皮肤.遮罩；raycastTarget 由本组件写成 false，吃点击的是另一张透明图）
+    [SerializeField] private Image 遮罩;                 // 满屏暗色层（颜色 = 遮罩色；raycastTarget 由本组件写成 false，吃点击的是另一张透明图）
     [SerializeField] private RectTransform 板子;          // 档案板根（板底 Image 挂在它自己身上）
-    [SerializeField] private RectTransform 身份条;        // 板内顶部那条（底 = 皮肤.内容底）
+    [SerializeField] private RectTransform 身份条;        // 板内顶部那条（底 = 内容底色）
     [SerializeField] private TMP_Text 身份文本;          // "幸存者 · 职业"
     [SerializeField] private TMP_Text 等级文本;          // "Lv.N"
-    [SerializeField] private RectTransform 经验格父;      // 经验格的父节点：留空则自动建；自建时格子由本组件铺
-    [SerializeField] private Button[] Tab按钮 = new Button[4];     // 顶部四个 Tab 的按钮（下标 = 栏目顺序）
-    [SerializeField] private TMP_Text[] Tab标签 = new TMP_Text[4]; // 四个 Tab 的文字（选中/未选中就改它的颜色）
-    [SerializeField] private Image[] Tab下划线 = new Image[4];      // 四个 Tab 的下划线（只显示选中那条）
-    [SerializeField] private Image 分隔线;               // Tab 行下方那条 2px 线（皮肤.边框）
-    [SerializeField] private TMP_Text 栏目标题;          // 内容区顶部的"属性/技能/知识/天赋"（随 Tab 变）
-    [SerializeField] private RectTransform 内容区;        // 分隔线以下的整块（底 = 皮肤.内容底）
+    [SerializeField] private RectTransform 经验格父;      // 经验格的父节点：留空则自动建；自建时格子由本组件铺（固定 10 格）
+    [SerializeField] private Button[] Tab按钮 = new Button[3];     // 顶部三个 Tab 的按钮（下标 = 栏目顺序）
+    [SerializeField] private TMP_Text[] Tab标签 = new TMP_Text[3]; // 三个 Tab 的文字（选中/未选中就改它的颜色）
+    [SerializeField] private Image[] Tab下划线 = new Image[3];      // 三个 Tab 的下划线（只显示选中那条）
+    [SerializeField] private Image 分隔线;               // Tab 行下方那条 2px 线（边框色）
+    [SerializeField] private TMP_Text 栏目标题;          // 内容区顶部的"属性/技能/知识"（随 Tab 变）
+    [SerializeField] private RectTransform 内容区;        // 分隔线以下的整块（底 = 内容底色；也是三个子面板的父节点）
+
+    // 三个子面板：**可选覆盖** —— 拖了 = 用你挂的那个；留空 = 在 `内容区` 下自动建子物体挂组件并回填。
+    // 本组件只做两件事：把 `内容区` 注入进去（`设内容区`）+ 切栏时 SetActive 对应的那个。
+    // 子面板内部怎么排、有哪些行，本组件一概不管（互不引用的意思就是：这里连它们的字段都读不到）。
+    [Header("子面板（可选覆盖：拖了 = 用你的；留空 = 在 内容区 下自动建）")]
+    [SerializeField] private 属性子面板 属性页;
+    [SerializeField] private 技能子面板 技能页;
+    [SerializeField] private 知识子面板 知识页;
 
     // 本组件建过的节点**账本**（不是给你调的字段，是"哪些节点是我建的"这份账）：
     //   为什么必须有它：`重建布局()` / `Awake` 要"清掉自己建的那一套、绝不动你拖进来的"，
-    //   而 12 个引用位里分不出谁建的 —— 唯一可靠的办法就是建的时候就记下来。
+    //   而上面那些引用位里分不出谁建的 —— 唯一可靠的办法就是建的时候就记下来。
     //   为什么序列化：预制体烘好、读档之后这份账还在。不序列化的话，装了预制体的场景里 `Awake` 会再建一套
-    //   → 两套边框、两套内容行（第一次踩的就是这个坑）。
+    //   → 两套边框、两套内容（第一次踩的就是这个坑）。
     [SerializeField] private List<GameObject> 自建节点 = new List<GameObject>();
 
-    // ================= Inspector：皮肤参数 =================
-    // 颜色/字号/尺寸都从它读，本文件**不写死任何数字**（皮肤是唯一口径：同一个颜色只在一个地方定义）。
-    [SerializeField] private 角色面板皮肤 皮肤 = new 角色面板皮肤();
+    // ================= Inspector：本面板自己的颜色/字号/间距（内联，没有"皮肤"这个中间层） =================
+    [Header("颜色（十六进制见注释；强调色只有一个）")]
+    [SerializeField] private Color 板底色 = new Color(0.0706f, 0.0627f, 0.0549f, 1f);   // #12100E 板子最外层的底
+    [SerializeField] private Color 内容底色 = new Color(0.1020f, 0.0941f, 0.0824f, 1f); // #1A1815 身份条/内容区的底（比板底亮一档，边框线才分得开）
+    [SerializeField] private Color 边框色 = new Color(0.2275f, 0.2118f, 0.1882f, 1f);   // #3A3630 四边 2px 边框 + Tab 行下方的分隔线
+    [SerializeField] private Color 正文色 = new Color(0.8941f, 0.8745f, 0.8392f, 1f);   // #E4DFD6 主文字 / 选中的 Tab
+    [SerializeField] private Color 次要色 = new Color(0.5412f, 0.5137f, 0.4706f, 1f);   // #8A8378 未选中的 Tab / 等级文本
+    [SerializeField] private Color 强调色 = new Color(0.7059f, 0.3333f, 0.2353f, 1f);   // #B4553C 全屏唯一强调色：选中 Tab 的下划线 + 已点亮的经验格
+    [SerializeField] private Color 悬停底 = new Color(0.1490f, 0.1333f, 0.1255f, 1f);   // #262220 Tab 悬停/按下时的底
+    [SerializeField] private Color 禁选底色 = new Color(0.2275f, 0.2118f, 0.1882f, 1f); // #3A3630 未点亮的经验格（= 边框色，空槽也看得见）
+    [SerializeField] private Color 遮罩色 = new Color(0f, 0f, 0f, 0.65f);               // #000000 α0.65 压在安全屋画面上的暗色层
+
+    [Header("字号 / 间距 / 尺寸")]
+    [SerializeField] private int 字号_标题 = 30;      // 身份行"幸存者 · 职业"
+    [SerializeField] private int 字号_栏目标题 = 24;  // 内容区顶部栏目标题
+    [SerializeField] private int 字号_Tab = 24;       // 顶部三个大字 Tab
+    [SerializeField] private int 字号_等级 = 20;      // 身份条右边 "Lv.N"
+    [SerializeField] private float 页边距 = 40f;      // 板内四边留白
+    [SerializeField] private float 段距 = 20f;        // 段与段之间（身份条→Tab、Tab→分隔线、Tab 与 Tab 之间）
+    [SerializeField] private float 身份条高 = 88f;
+    [SerializeField] private float 边框粗 = 2f;
+    [SerializeField] private float 板宽比例 = 0.84f, 板宽上限 = 1180f;
+    [SerializeField] private float 板高比例 = 0.88f, 板高上限 = 760f;
+
+    [Header("经验格（固定 10 格 · 10×10 · 间隔 2）")]
+    [SerializeField] private int 经验格数 = 10;
+    [SerializeField] private float 进度格宽 = 10f, 进度格高 = 10f, 进度格间隔 = 2f;
 
     // ================= 本组件自建的节点（不在覆盖清单里，不给 Inspector 位） =================
     private RectTransform 点击遮罩;      // 满屏透明 + raycastTarget = true：板外点击的兜底
     private Image 身份条强调线;           // 身份条下沿那条 2px 强调线
     private Image 标题下划线;             // 栏目标题下那条 2px 强调短线
-    private RectTransform 内容行容器;     // 属性栏的三列内容的父节点
-    private readonly List<Image> 经验格 = new List<Image>();          // 经验条的格子（从左到右，按比例点亮前 N 格）
-    private readonly List<行槽> 行槽表 = new List<行槽>();            // 属性栏的列（行多的段再对半分两列）
-    private readonly List<属性行件> 全部行 = new List<属性行件>();
-    private bool 经验格自建;   // 经验格父 是本组件建的（→ 格子随板宽重铺）；你拖进来的那个不重铺、子物体一个不动
+    private readonly List<Image> 经验格 = new List<Image>();   // 经验条的格子（从左到右，按比例点亮前 N 格）
+    private bool 经验格自建;   // 经验格父 是本组件建的（→ 格子由本组件铺）；你拖进来的那个不铺、子物体一个不动
     private int 当前栏;
     private bool 已建;         // 节点树建完前不响应"根矩形尺寸变化"（那时连板子都还没有）
 
-    // 属性栏的一行：名 + 值（同一行；值是紧跟名字的文本，**不右对齐到天边**），带一条显隐判据（伤病那几行按闹不闹病显隐）
-    private sealed class 属性行件
-    {
-        public RectTransform 矩形;
-        public TMP_Text 名称;
-        public TMP_Text 值;
-        public Func<玩家档案, string> 取值;
-        public Func<玩家档案, bool> 可见;   // null = 恒显示
-    }
-
-    // 一列行：行按"第几个可见的行"自上而下摆成 行高 的条带（藏起来的行不占位，下面的行顶上来，不留洞）
-    private sealed class 行槽
-    {
-        public RectTransform 容器;
-        public readonly List<属性行件> 行 = new List<属性行件>();
-    }
-
     void Awake()
     {
-        // 皮肤是普通可序列化类（不是 UnityEngine.Object）：字段初始化器已给默认值，
-        // 但**旧场景里存过的组件**可能带着一个 null（这个字段是后加的）→ 后面几十处都要读它，在这里兜一次。
-        if (皮肤 == null) 皮肤 = new 角色面板皮肤();
-        // 同理：旧场景可能把这三个数组存成空数组/短数组 → 按下标回填会越界崩，先补齐长度。
+        // 旧场景可能把这三个数组存成空数组/短数组 → 按下标回填会越界崩，先补齐长度。
         备数组(ref Tab按钮);
         备数组(ref Tab标签);
         备数组(ref Tab下划线);
@@ -131,8 +143,8 @@ public sealed class 角色面板 : 面板基类
         建节点树();
         接Tab();
 
-        // 刷新口径：属性变化（加点/装备变化都会发）+ 生命/精力变化（生存状态那几行）+ 经验变化（身份条的经验格）。
-        // 四个栏页的内容各自订阅自己关心的事件，本面板只负责"框"、顶部那一条、以及属性栏那几张表。
+        // 刷新口径：属性变化（加点/装备变化都会发）+ 生命/精力变化（身份条与属性页的生存段）+ 经验变化（身份条的经验格）。
+        // 三个栏页的内容各自订阅自己关心的事件，本面板只负责"框"与顶部那一条。
         // `已注册` 再取：`ServiceRegistry.Get` 在未注册时是**抛异常**的，而本组件的 Awake 有可能早于 面板管理器.Awake
         //   （脚本执行顺序不保证）→ 直接取会让整个组件炸在这里。
         var 事件 = ServiceRegistry.已注册<EventBus>() ? ServiceRegistry.Get<EventBus>() : null;
@@ -148,20 +160,19 @@ public sealed class 角色面板 : 面板基类
     }
 
     // ================= 公开入口：重建布局（编辑器里与运行时都能调，不依赖 Play 模式） =================
-    // 给"一键生成 .prefab"那类编辑器脚本用（生成预制体的菜单项由下一批做，它只认这个入口）：
-    //   清掉本组件建过的节点 → 重新建整棵树 → 把 12 个引用回填好 → 强制算一次文字宽再重摆 Tab/标题/行。
+    // 给"一键生成 .prefab"那类编辑器脚本用（`末日/角色/一键生成面板预制体` 只认这个入口）：
+    //   清掉本组件建过的节点 → 重新建整棵树 → 把引用回填好 → 强制算一次文字宽再重摆 Tab/标题/经验格。
     // **幂等**：连调两次不会堆出两套。保证方式 = 本组件建的每个节点都记在 `自建节点` 里，
-    //   建树的第一步（清掉自建）先把账本上的节点全部销毁，再按"12 个引用位里还剩什么"重建 ——
+    //   建树的第一步（清掉自建）先把账本上的节点全部销毁，再按"引用位里还剩什么"重建 ——
     //   剩下的只可能是你手动拖进来的，那些一个都不动。
     // 编辑器里调用需要的前置条件（三条都会影响"建出来好不好看"，但一条都不影响"建不建得出来"）：
     //   ① 本组件所在物体**处于激活状态**：TMP 的 `Awake` 没跑过就量不出文字宽（Tab/标题会退回兜底宽度）；
     //   ② **最好挂在 Canvas 下**：量不到屏宽时板子退回"板宽上限 × 板高上限"（1180×760），经验格也按那个宽度铺；
     //      运行时第一次布局回调（`OnRectTransformDimensionsChange`）会按真实屏幕改回来；
-    //   ③ 编辑器里没跑 `GameBootstrap.装配()` → 取不到 `PlayerService`，属性栏的行文本是空的（**不报错**）；
+    //   ③ 编辑器里没跑 `GameBootstrap.装配()` → 取不到 `PlayerService`，身份行/各栏内容为空（**不报错**）；
     //      Play 里 `Awake` 会刷一遍 → 预制体不需要手填任何数字、也不需要存数据。
     public void 重建布局()
     {
-        if (皮肤 == null) 皮肤 = new 角色面板皮肤();
         备数组(ref Tab按钮);
         备数组(ref Tab标签);
         备数组(ref Tab下划线);
@@ -174,17 +185,14 @@ public sealed class 角色面板 : 面板基类
     }
 
     // 强制让 TMP 算一遍文字宽（`preferredWidth` 平时要等布局系统调用才算得出来，刚建出来的文本那一刻是 0），
-    // 再按算出来的宽度重摆 Tab 行、标题下划线、行名 —— 不补这一步，编辑器里建出来的下划线/行名会按兜底宽度摆。
+    // 再按算出来的宽度重摆 Tab 行与标题下划线 —— 不补这一步，编辑器里建出来的下划线会按兜底宽度摆。
     private void 强制排版()
     {
         for (int i = 0; i < 栏目表.Length; i++)
             if (标签(i) != null) 标签(i).ForceMeshUpdate(true);   // ignoreActiveState：物体没激活也算（否则直接 no-op）
         if (栏目标题 != null) 栏目标题.ForceMeshUpdate(true);
-        foreach (var 行件 in 全部行)
-            if (行件.名称 != null) 行件.名称.ForceMeshUpdate(true);
         摆Tab();
         摆标题();
-        摆内容行();
     }
 
     protected override void 刷新(object 上下文)
@@ -193,9 +201,21 @@ public sealed class 角色面板 : 面板基类
         if (玩家 == null) return;
         面板基类.设文本(身份文本, 身份行(玩家));
         面板基类.设文本(等级文本, $"Lv.{玩家.等级}");
+        建经验格();      // 板宽变了/第一次进来 → 需要时补格子
         刷经验格(玩家);
-        // 属性行只在属性栏真的显示时填：命中率要投影一个 `战斗单位`，别在别的栏白算一遍。
-        if (当前栏 == 0) 刷属性行(玩家);
+        // 再让三个栏页各自刷一遍：它们订阅不到"本面板订阅的那几条事件"里的一部分
+        //   （最典型的是 书籍服务 加知识经验 —— 那条路**不发任何事件**，见 `成长管理器.加知识经验`）。
+        //   不在这里转一下，就会出现"面板开着读完一本书、知识页的等级/进度还是旧的，切一下栏才变"。
+        //   代价：三条栏页各刷一次。都是原地改文本，量级与"切一次栏"相同（见各自 刷新 的注释）。
+        刷三个栏页();
+    }
+
+    // 让三个栏页各自刷新。判空安全：Tab 只接了俩、子面板还没搭 —— 都属于"搭一半"，不许因此报错。
+    private void 刷三个栏页()
+    {
+        属性页?.刷新();
+        技能页?.刷新();
+        知识页?.刷新();
     }
 
     // 取当前档案。**先问"注册了没有"再取**：`ServiceRegistry.Get` 未注册时是抛异常的，
@@ -208,7 +228,7 @@ public sealed class 角色面板 : 面板基类
     private void 建节点树()
     {
         // 第一步：把本组件上一次建的那一套收回去（自己建的先销毁，你拖进来的原样复用 —— 见 清掉自建）。
-        // 这一步让"建树"变成**幂等**的：预制体里已经烘了一套、或者 重建布局() 连调两次，都不会堆出两套边框/两套内容行。
+        // 这一步让"建树"变成**幂等**的：预制体里已经烘了一套、或者 重建布局() 连调两次，都不会堆出两套边框/两套内容。
         清掉自建();
 
         var 根 = (RectTransform)transform;
@@ -220,37 +240,37 @@ public sealed class 角色面板 : 面板基类
         点击遮罩.SetAsFirstSibling();
 
         // ② 65% 黑：只负责把安全屋画面压暗。点了要能穿到下面那张透明图上 → raycastTarget = false。
-        if (遮罩 == null) 遮罩 = 满屏图("遮罩层", 根, 皮肤.遮罩, false).GetComponent<Image>();
-        遮罩.color = 皮肤.遮罩;
+        if (遮罩 == null) 遮罩 = 满屏图("遮罩层", 根, 遮罩色, false).GetComponent<Image>();
+        遮罩.color = 遮罩色;
         遮罩.raycastTarget = false;
 
         // ③ 板子：居中定尺（尺寸在 板子尺寸 里按屏算）。不挂 LayoutGroup ——
-        //    里面三块各自锚定到按 皮肤 算出的位置，布局组能做的（拉伸/换行）恰好是这里不想要的。
-        if (板子 == null) 板子 = 满屏图("板子", 根, 皮肤.板底, false);
+        //    里面几块各自锚定到按尺寸算出的位置，布局组能做的（拉伸/换行）恰好是这里不想要的。
+        if (板子 == null) 板子 = 满屏图("板子", 根, 板底色, false);
         定锚(板子, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
         板子.anchoredPosition = Vector2.zero;
-        补底(板子, 皮肤.板底);
+        补底(板子, 板底色);
         建边框(板子);
 
         // ④ 身份条：板内顶部那条带（左右与顶部都缩 页边距）。
-        if (身份条 == null) 身份条 = 满屏图("身份条", 板子, 皮肤.内容底, false);
+        if (身份条 == null) 身份条 = 满屏图("身份条", 板子, 内容底色, false);
         定锚(身份条, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f));
-        身份条.offsetMin = new Vector2(皮肤.页边距, -皮肤.页边距 - 皮肤.身份条高);
-        身份条.offsetMax = new Vector2(-皮肤.页边距, -皮肤.页边距);
-        补底(身份条, 皮肤.内容底);
+        身份条.offsetMin = new Vector2(页边距, -页边距 - 身份条高);
+        身份条.offsetMax = new Vector2(-页边距, -页边距);
+        补底(身份条, 内容底色);
 
         // 身份条**下沿**那条 2px 强调线：这是全屏唯一强调色的第一个落点，整块板子靠它立住。
-        身份条强调线 = 贴边条("身份条强调线", 身份条, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 皮肤.边框粗), 皮肤.强调).GetComponent<Image>();
+        身份条强调线 = 贴边条("身份条强调线", 身份条, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 边框粗), 强调色).GetComponent<Image>();
 
         // 文字：身份行（左）+ 等级（右）都贴身份条**上沿**；高度给"字号 + 8"（TMP 行高略大于字号，贴字号高会切掉字底）。
-        if (身份文本 == null) 身份文本 = 文本("身份文本", 身份条, 皮肤.字号_标题, 皮肤.正文, TextAlignmentOptions.Left);
-        顶内(身份文本.rectTransform, 内边, 内边, 皮肤.字号_标题 + 8f);
-        设文本样式(身份文本, 皮肤.字号_标题, 皮肤.正文);
-        if (等级文本 == null) 等级文本 = 文本("等级文本", 身份条, 皮肤.字号_等级, 皮肤.次要, TextAlignmentOptions.Right);
-        顶内(等级文本.rectTransform, 内边, 内边, 皮肤.字号_等级 + 8f);
-        设文本样式(等级文本, 皮肤.字号_等级, 皮肤.次要);
+        if (身份文本 == null) 身份文本 = 文本("身份文本", 身份条, 字号_标题, 正文色, TextAlignmentOptions.Left);
+        顶内(身份文本.rectTransform, 内边, 内边, 字号_标题 + 8f);
+        设文本样式(身份文本, 字号_标题, 正文色);
+        if (等级文本 == null) 等级文本 = 文本("等级文本", 身份条, 字号_等级, 次要色, TextAlignmentOptions.Right);
+        顶内(等级文本.rectTransform, 内边, 内边, 字号_等级 + 8f);
+        设文本样式(等级文本, 字号_等级, 次要色);
 
-        // ⑤ 经验格父：贴身份条**下沿**（左右各缩 内边），高度 = 进度格高。格子本身在 建经验格 里铺。
+        // ⑤ 经验格父：贴身份条**下沿**（左右各缩 内边），高度 = 进度格高。格子本身在 建经验格 里铺（固定 10 格）。
         if (经验格父 == null)
         {
             经验格父 = 新矩形("经验格父", 身份条);
@@ -258,34 +278,34 @@ public sealed class 角色面板 : 面板基类
         }
         定锚(经验格父, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f));
         经验格父.offsetMin = new Vector2(内边, 内边);
-        经验格父.offsetMax = new Vector2(-内边, 内边 + 皮肤.进度格高);
+        经验格父.offsetMax = new Vector2(-内边, 内边 + 进度格高);
 
-        // ⑥ 四个 Tab：底图 + 标签 + 2px 下划线；尺寸与位置在 摆Tab 里按标签宽度算。
+        // ⑥ 三个 Tab：底图 + 标签 + 2px 下划线；尺寸与位置在 摆Tab 里按标签宽度算。
         for (int i = 0; i < 栏目表.Length; i++) 备Tab(i);
 
         // ⑦ Tab 行下方那条 2px 分隔线（**整板宽**、左右缩 页边距，不随 Tab 文字长度）。
-        if (分隔线 == null) 分隔线 = 贴边条("分隔线", 板子, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 皮肤.边框粗), 皮肤.边框).GetComponent<Image>();
+        if (分隔线 == null) 分隔线 = 贴边条("分隔线", 板子, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 边框粗), 边框色).GetComponent<Image>();
         定锚(分隔线.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f));
-        分隔线.rectTransform.offsetMin = new Vector2(皮肤.页边距, -内容区顶);
-        分隔线.rectTransform.offsetMax = new Vector2(-皮肤.页边距, -分隔线顶);
-        分隔线.color = 皮肤.边框;
+        分隔线.rectTransform.offsetMin = new Vector2(页边距, -内容区顶);
+        分隔线.rectTransform.offsetMax = new Vector2(-页边距, -分隔线顶);
+        分隔线.color = 边框色;
 
         // ⑧ 内容区：**占满分隔线以下的剩余高度**（上面锚在分隔线下沿、下面锚在板子下沿的页边距上）。
-        if (内容区 == null) 内容区 = 满屏图("内容区", 板子, 皮肤.内容底, false);
+        if (内容区 == null) 内容区 = 满屏图("内容区", 板子, 内容底色, false);
         定锚(内容区, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f));
-        内容区.offsetMin = new Vector2(皮肤.页边距, 皮肤.页边距);
-        内容区.offsetMax = new Vector2(-皮肤.页边距, -内容区顶);
-        补底(内容区, 皮肤.内容底);
+        内容区.offsetMin = new Vector2(页边距, 页边距);
+        内容区.offsetMax = new Vector2(-页边距, -内容区顶);
+        补底(内容区, 内容底色);
 
         // 内容区顶部：栏目标题 + 它下面那条 2px 强调短线（宽 = 标题文字宽，在 摆标题 里算）。
-        if (栏目标题 == null) 栏目标题 = 文本("栏目标题", 内容区, 皮肤.字号_栏目标题, 皮肤.正文, TextAlignmentOptions.Left);
+        if (栏目标题 == null) 栏目标题 = 文本("栏目标题", 内容区, 字号_栏目标题, 正文色, TextAlignmentOptions.Left);
         顶内(栏目标题.rectTransform, 内边, 内边, 标题带高);
-        设文本样式(栏目标题, 皮肤.字号_栏目标题, 皮肤.正文);
+        设文本样式(栏目标题, 字号_栏目标题, 正文色);
         面板基类.设文本(栏目标题, 栏目表[0]);
-        标题下划线 = 贴边条("标题下划线", 内容区, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, 皮肤.边框粗), 皮肤.强调).GetComponent<Image>();
+        标题下划线 = 贴边条("标题下划线", 内容区, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, 边框粗), 强调色).GetComponent<Image>();
 
-        // ⑨ 属性栏的真实内容（第一个 Tab，默认就显示）
-        建属性内容();
+        // ⑨ 三个栏页的子面板：缺哪个装哪个（`内容区` 交给它们自己用，本面板只做注入与显隐）
+        建子面板();
 
         已建 = true;
         顶层尺寸变化();   // 建完再校正一次：Awake 跑在第一帧布局前，那一刻根矩形的宽高可能还是 0
@@ -293,7 +313,7 @@ public sealed class 角色面板 : 面板基类
 
     // 四边 2px 边框：四条实心矩形，**不用 Outline 组件**
     //   （Outline 是按 1px 偏移画四份，线宽随缩放糊，也保证不了恒为 2px）。
-    // 板底(皮肤.板底) 与 身份条/内容区(皮肤.内容底) 不同色 → 边框落在两者之间正好看得见。
+    // 板底 与 身份条/内容区 不同色 → 边框落在两者之间正好看得见。
     //
     // ⚠ 写法是"**拉伸锚 + sizeDelta**"：上/下边框左右拉伸、只给 2px 高；左/右边框上下拉伸、只给 2px 宽。
     //   千万不要改回"角锚点 + offsetMin/offsetMax"那种写法（刀78 与上一个工作区版本就是这么写的，四条框**全是废的**）：
@@ -302,7 +322,7 @@ public sealed class 角色面板 : 面板基类
     //   编译器和运行时都不会报错（只能靠眼睛或读这段注释发现）。拉伸锚没有这个歧义：方向由锚点定，粗细由 sizeDelta 定。
     private void 建边框(RectTransform 板)
     {
-        float 框 = 皮肤.边框粗;
+        float 框 = 边框粗;
         边框条(板, "上边框", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 框));
         边框条(板, "下边框", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 框));
         边框条(板, "左边框", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(框, 0f));
@@ -317,7 +337,7 @@ public sealed class 角色面板 : 面板基类
         矩形.anchoredPosition = Vector2.zero;
         矩形.sizeDelta = 尺寸;
         var 图 = 矩形.gameObject.AddComponent<Image>();
-        图.color = 皮肤.边框;
+        图.color = 边框色;
         图.raycastTarget = false;
     }
 
@@ -341,31 +361,31 @@ public sealed class 角色面板 : 面板基类
         }
 
         var 按钮矩形 = (RectTransform)Tab按钮[序].transform;
-        if (取(Tab标签, 序) == null) Tab标签[序] = 文本("标签", 按钮矩形, 皮肤.字号_Tab, 皮肤.次要, TextAlignmentOptions.Left);
+        if (取(Tab标签, 序) == null) Tab标签[序] = 文本("标签", 按钮矩形, 字号_Tab, 次要色, TextAlignmentOptions.Left);
         else if (新建按钮) 标签(序).transform.SetParent(按钮矩形, false);
         定锚(标签(序).rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f));
         标签(序).rectTransform.anchoredPosition = Vector2.zero;
         标签(序).rectTransform.sizeDelta = new Vector2(10f, 0f);   // 宽度在 摆Tab 里按 preferredWidth 定
 
         // 选中下划线：**2px 强调色**，宽度 = 标签宽（所以"下划线认得字"，而不是跨满整个 Tab 按钮）
-        if (取(Tab下划线, 序) == null) Tab下划线[序] = 贴边条("下划线", 按钮矩形, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(10f, 皮肤.边框粗), 皮肤.强调).GetComponent<Image>();
+        if (取(Tab下划线, 序) == null) Tab下划线[序] = 贴边条("下划线", 按钮矩形, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(10f, 边框粗), 强调色).GetComponent<Image>();
         else if (新建按钮) Tab下划线[序].transform.SetParent(按钮矩形, false);
         定锚(下划线(序).rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f));
         下划线(序).rectTransform.anchoredPosition = Vector2.zero;
-        下划线(序).color = 皮肤.强调;
+        下划线(序).color = 强调色;
         面板基类.设文本(标签(序), 栏目表[序]);   // 先填上：preferredWidth 要靠它算（见 摆Tab）
     }
 
-    // 接 Tab 的点击与悬停色。悬停色写在这里（而不是让你在 Button 的 Colors 里填）：皮肤要当唯一口径，四个 Tab 才不会各写各的。
+    // 接 Tab 的点击与悬停色。悬停色写在这里（而不是让你在 Button 的 Colors 里填）：口径要唯一，三个 Tab 才不会各写各的。
     // 代价：**别在 Button 的 Colors 上手改**（进 Play 会被这里覆盖）。
     private void 接Tab()
     {
         for (int i = 0; i < 栏目表.Length; i++)
         {
-            int 序 = i;   // 闭包捕获：循环变量必须另存一份，否则四个按钮全会切到最后一栏
+            int 序 = i;   // 闭包捕获：循环变量必须另存一份，否则三个按钮全会切到最后一栏
             var 钮 = 按钮(i);
             if (钮 == null) continue;
-            // 先清掉旧监听：本组件接管这四个 Tab 的点击；不清的话，对"你拖进来的"按钮再接管一次（重建布局 时）
+            // 先清掉旧监听：本组件接管这三个 Tab 的点击；不清的话，对"你拖进来的"按钮再接管一次（重建布局 时）
             //   就会一次点击切两次栏（自建的按钮不存在这个问题 —— 它们每次重建都是新物体）。
             钮.onClick.RemoveAllListeners();
             钮.transition = Selectable.Transition.ColorTint;
@@ -373,14 +393,66 @@ public sealed class 角色面板 : 面板基类
             钮.colors = new ColorBlock
             {
                 normalColor = 透明,               // 常态：不靠底色块区分（靠文字色 + 下划线）
-                highlightedColor = 皮肤.悬停底,    // 悬停 = 只换底，与选中态（本组件直接写文字色）不冲突
-                pressedColor = 皮肤.悬停底,
+                highlightedColor = 悬停底,         // 悬停 = 只换底，与选中态（本组件直接写文字色）不冲突
+                pressedColor = 悬停底,
                 selectedColor = 透明,
-                disabledColor = 皮肤.禁选底,
+                disabledColor = 禁选底色,
                 colorMultiplier = 1f,
                 fadeDuration = 0f,                // 无过渡动画（用户明令：无任何动画，也**不做缩放反馈**）
             };
             钮.onClick.AddListener(() => 切换栏(序));
+        }
+    }
+
+    // ================= 三个子面板（`内容区` 的注入 + 切栏时的显隐） =================
+
+    // 缺哪个装哪个。装的动作 = 在 `内容区` 下建一个子物体、挂上那个组件、记进账本、回填字段、注入 内容区。
+    // 拖了的那三个（不为 null）**一律不动** —— 它们不在账本上，清掉自建 时不会被销毁。
+    private void 建子面板()
+    {
+        if (内容区 == null) return;
+        装子面板(0, ref 属性页);
+        装子面板(1, ref 技能页);
+        装子面板(2, ref 知识页);
+    }
+
+    private void 装子面板<T>(int 序, ref T 字段) where T : Component
+    {
+        if (字段 == null)
+        {
+            var 物体 = new GameObject(栏目表[序] + "页", typeof(RectTransform));
+            物体.transform.SetParent(内容区, false);
+            自建节点.Add(物体);            // 先记账：随后那一步（注入）若抛了，清掉自建 也收得回这个半成品
+            字段 = 物体.AddComponent<T>();
+            var 矩形 = (RectTransform)物体.transform;
+            定锚(矩形, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f));
+            矩形.offsetMin = Vector2.zero;
+            矩形.offsetMax = Vector2.zero;
+        }
+        else
+        {
+            // 你拖进来的物体：只保证它挂在 `内容区` 下（位置归本组件按上面那套锚点写），并确保它在账本上 ——
+            //   记账不会让它被误删（清掉自建 只销毁"本组件建的"；你拖的那个由本组件接管摆位，属于"我来管"，
+            //   但**不销毁用户资产**这条更硬 → 这里不给它记账，只改父级与锚点）。
+            字段.transform.SetParent(内容区, false);
+            var 矩形 = (RectTransform)字段.transform;
+            定锚(矩形, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f));
+            矩形.offsetMin = Vector2.zero;
+            矩形.offsetMax = Vector2.zero;
+        }
+        注入内容区(序, 字段);
+    }
+
+    // 把 `内容区` 注入子面板（三者接口同名但类型不同 → 只能按具体类型分发，`where T : Component` 那层拿不到方法）。
+    // ⚠ 这里用 `as` 而不是 `(T)` 强转：泛型位传进来的实际类型是确定的（只在这三行调用），
+    //   但 `as` 让"以后误传别的组件"变成一次静默跳过，而不是运行期炸在面板打开的那一帧。
+    private void 注入内容区<T>(int 序, T 子面板)
+    {
+        switch (序)
+        {
+            case 0: (属性页 as 属性子面板)?.设内容区(内容区); break;
+            case 1: (技能页 as 技能子面板)?.设内容区(内容区); break;
+            case 2: (知识页 as 知识子面板)?.设内容区(内容区); break;
         }
     }
 
@@ -394,8 +466,7 @@ public sealed class 角色面板 : 面板基类
         if (!string.IsNullOrEmpty(玩家.职业))
         {
             var 数据 = ServiceRegistry.已注册<DataService>() ? ServiceRegistry.Get<DataService>() : null;
-            职业 = 数据 != null && 数据.职业 != null && 数据.职业.TryGetValue(玩家.职业, out var 定义) && 定义 != null
-                && !string.IsNullOrEmpty(定义.名称)
+            职业 = 数据 != null && 数据.职业 != null && 数据.职业.TryGetValue(玩家.职业, out var 定义) && 定义 != null                && !string.IsNullOrEmpty(定义.名称)
                 ? 定义.名称
                 : 玩家.职业;
         }
@@ -403,29 +474,16 @@ public sealed class 角色面板 : 面板基类
     }
 
     // 经验条：**一格一格地点亮**，不做连续填充（比例 = 经验 / 升级所需经验，CeilToInt(比例×格数) 亮前 N 格）。
-    // 格数：
-    //   · 父是本组件建的 → 格数 = 板宽塞得下几格：(条宽 + 间隔) / (格宽 + 间隔) 取整；条变宽时多出来的格**真的存在**；
-    //   · 父是你拖的 → 里面摆了几格就点几格（本组件不动你的子物体）。
+    // 格数固定 = 经验格数（10）：这是"分段经验格"，不随板宽变（板宽变了格子会被拉宽，段数不变）。
     private void 建经验格()
     {
         if (经验格父 == null) return;
         if (!经验格自建)
         {
             if (经验格父.childCount > 0) { 收你的经验格(); return; }
-            经验格自建 = true;   // 你只是拖了个空容器 → 替你把格子铺出来（之后按自建重铺）
+            经验格自建 = true;   // 你只是拖了个空容器 → 替你把格子铺出来（之后按自建铺）
         }
-        float 条宽 = 经验格父.rect.width;
-        // 编辑器里（未运行）量不到屏宽 → 容器宽也是 0：这时按板子当前宽度折一个出来。
-        // 为什么值得这么绕：一键生成预制体时也要把格子铺出来（否则预制体里那条进度是空的，看着像没建好）。
-        if (条宽 <= 1f && 板子 != null) 条宽 = Mathf.Max(0f, 板子.sizeDelta.x - 皮肤.页边距 * 2f - 内边 * 2f);
-        if (条宽 <= 1f) return;   // 连板子宽度都还没有（第一帧布局前）→ 等下一次尺寸回调
-        int 格数 = Mathf.FloorToInt((条宽 + 皮肤.进度格间隔) / (皮肤.进度格宽 + 皮肤.进度格间隔));
-        if (格数 <= 0) return;
-        // 格数没变 → 位置与尺寸全按皮肤常量算，还是对的 → 直接复用。
-        // 为什么值得提前返回：顶层尺寸变化 会被布局系统反复调用，每次销毁+新建几十个物体是白扔垃圾。
-        //（皮肤里的格子尺寸改了要重铺格子 → 走 重建布局()：它会把格子清空重铺）
-        if (经验格.Count == 格数) return;
-
+        if (经验格.Count == 经验格数) return;   // 格数没变 → 位置与尺寸全按这些字段算，还是对的 → 直接复用
         for (int i = 0; i < 经验格.Count; i++)
         {
             var 旧 = 经验格[i];
@@ -434,14 +492,14 @@ public sealed class 角色面板 : 面板基类
             销毁(旧.gameObject);
         }
         经验格.Clear();
-        for (int i = 0; i < 格数; i++)
+        for (int i = 0; i < 经验格数; i++)
         {
             var 格 = 新矩形("经验格", 经验格父);
             定锚(格, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0f));
-            格.anchoredPosition = new Vector2(i * (皮肤.进度格宽 + 皮肤.进度格间隔), 0f);
-            格.sizeDelta = new Vector2(皮肤.进度格宽, 0f);
+            格.anchoredPosition = new Vector2(i * (进度格宽 + 进度格间隔), 0f);
+            格.sizeDelta = new Vector2(进度格宽, 0f);
             var 图 = 格.gameObject.AddComponent<Image>();
-            图.color = 皮肤.禁选底;   // 先按"空槽"画；点亮比例由 刷经验格 写
+            图.color = 禁选底色;   // 先按"空槽"画；点亮比例由 刷经验格 写
             图.raycastTarget = false;
             经验格.Add(图);
         }
@@ -465,184 +523,14 @@ public sealed class 角色面板 : 面板基类
         {
             var 格 = 经验格[i];
             if (格 == null) continue;   // 子物体只是个分组/占位（没挂 Image）→ 跳过，不算错
-            格.color = i < 亮 ? 皮肤.强调 : 皮肤.禁选底;
+            格.color = i < 亮 ? 强调色 : 禁选底色;
         }
     }
 
-    // ================= 属性栏的真实内容 =================
-    // 数据来源照项目既有写法：UI 层直接读 `PlayerService.档案`（`属性子面板` 就是这么拿的）；
-    //   属性/生命/精力/经验变化事件已在订阅链上 → 面板会跟着刷新。
-    // 排法：三列并排（五维 | 派生 | 生存状态），每列顶部一个小标题，下面是"名 + 值"的行内文本行。
-    // 为什么不是上下三段叠着排：行高 皮肤.行高(48) × 20 行 ≈ 960px，而内容区可用高度只有 ~440px
-    //   （板高上限 760 减掉身份条 / Tab 行 / 标题 / 留白）→ 单列一定溢出到板外。
-    //   三列并排 + 行多的段对半分两列，是"保住 行高 48 且一屏不滚动"的唯一排法。
-    private void 建属性内容()
-    {
-        if (内容区 == null) return;
-        内容行容器 = 新矩形("内容行", 内容区);
-        定锚(内容行容器, Vector2.zero, Vector2.one, new Vector2(0.5f, 1f));
-        内容行容器.offsetMin = new Vector2(内边, 内边);
-        内容行容器.offsetMax = new Vector2(-内边, -行区顶);   // 上沿 = 标题 + 强调短线 + 段距
+    // ================= 栏切换（= SetActive + 注入，让子面板自己刷） =================
 
-        var 五维 = 建列("五维", 0f, 1f / 3f, 1);
-        var 派生 = 建列("派生", 1f / 3f, 2f / 3f, 2);
-        var 生存 = 建列("生存状态", 2f / 3f, 1f, 2);
-
-        // —— 五维：**只显示数值，不加加点按钮**（加点那套属于 `属性子面板`，本批不做）——
-        // 显示名 = `玩家档案` 的字段名，一一对应（用户要核属性名，所以每行都点明是哪个字段）：
-        建行(五维[0], "力量", 玩家 => $"{玩家.力量}");               // 玩家档案.力量
-        建行(五维[0], "体质", 玩家 => $"{玩家.体质}");               // 玩家档案.体质
-        建行(五维[0], "敏捷", 玩家 => $"{玩家.敏捷}");               // 玩家档案.敏捷
-        建行(五维[0], "智慧", 玩家 => $"{玩家.智慧}");               // 玩家档案.智慧
-        建行(五维[0], "意志", 玩家 => $"{玩家.意志}");               // 玩家档案.意志
-
-        // —— 派生（9 项，对半分成两列）——
-        建行(派生[0], "近战伤害", 玩家 => $"{玩家.近战伤害}");        // 玩家档案.近战伤害
-        建行(派生[0], "枪械伤害", 玩家 => $"{玩家.枪械伤害}");        // 玩家档案.枪械伤害
-        建行(派生[0], "防御", 玩家 => $"{玩家.总防御}");             // 玩家档案.总防御（显示名叫"防御"）
-        建行(派生[0], "暴击率", 玩家 => $"{百分(玩家.暴击概率)}");    // 玩家档案.暴击概率（0~1）
-        建行(派生[0], "命中率", 玩家 => $"{百分(命中率(玩家))}");     // 战斗单位.命中率（玩家档案 上没有这一项，见 命中率）
-        建行(派生[1], "闪避率", 玩家 => $"{百分(玩家.闪避概率)}");    // 玩家档案.闪避概率（0~1）
-        建行(派生[1], "生命上限", 玩家 => $"{玩家.最大生命}");       // 玩家档案.最大生命
-        建行(派生[1], "精力上限", 玩家 => $"{玩家.最大行动点}");     // 玩家档案.最大行动点（"精力"是它的 UI 叫法，见 精力变化事件）
-        建行(派生[1], "负重", 玩家 => $"{玩家.负重上限}");           // 玩家档案.负重上限（显示名叫"负重"）
-
-        // —— 生存状态（有几项显示几项；全部读 `玩家档案` 上真实存在的属性）——
-        建行(生存[0], "生命", 玩家 => $"{玩家.生命} / {玩家.最大生命}");        // 玩家档案.生命 / 最大生命
-        建行(生存[0], "精力", 玩家 => $"{玩家.行动点} / {玩家.最大行动点}");    // 玩家档案.行动点（"精力"是 UI 叫法）
-        建行(生存[0], "饱食", 玩家 => $"{Mathf.RoundToInt(玩家.饱食度)}");      // 玩家档案.饱食度（0~100）
-        建行(生存[0], "水分", 玩家 => $"{Mathf.RoundToInt(玩家.水分度)}");      // 玩家档案.水分度（0~100）
-        建行(生存[0], "疲劳", 玩家 => $"{玩家.疲劳}");                        // 玩家档案.疲劳（伤病 6 种之一，这里单独占一行）
-        // 伤病：`伤病类型` 共 6 种（疲劳/中毒/感冒/流血/骨折/发烧），疲劳 已经在上面单独占了一行 → 这里列**其余 5 种**，
-        //   各自只在真的 ≥1 时才占一行。行名直接用枚举名（`伤病类型` 的成员名就是中文显示名），
-        //   数值走 `玩家档案.伤病值(类型)` 这条既有入口。
-        伤病行(生存[1], 伤病类型.中毒);
-        伤病行(生存[1], 伤病类型.感冒);
-        伤病行(生存[1], 伤病类型.流血);
-        伤病行(生存[1], 伤病类型.骨折);
-        伤病行(生存[1], 伤病类型.发烧);
-        // 一条病都没有 → 显示一行"伤病 无"（否则这一列空着，看着像坏了）
-        建行(生存[1], "伤病", 玩家 => "无", 玩家 => !闹病(玩家));
-    }
-
-    private void 伤病行(行槽 槽, 伤病类型 类型)
-    {
-        var 病 = 类型;   // 闭包捕获（在 lambda 里直接用 类型 也行，但显式存一份更不容易看错）
-        建行(槽, 病.ToString(), 玩家 => $"{玩家.伤病值(病)}", 玩家 => 玩家.伤病值(病) > 0);
-    }
-
-    private static bool 闹病(玩家档案 玩家)
-        => 玩家.伤病值(伤病类型.中毒) > 0 || 玩家.伤病值(伤病类型.感冒) > 0 || 玩家.伤病值(伤病类型.流血) > 0
-        || 玩家.伤病值(伤病类型.骨折) > 0 || 玩家.伤病值(伤病类型.发烧) > 0;
-
-    // 命中率：`玩家档案` 上**没有**这一项 —— 它只活在战斗单位上（基础 95% + 命中副属性，上限 99%，见 `战斗单位.命中率公式`）。
-    // 这里**不照抄那条公式**（副本一定会漂移），而是取战斗投影里那一份权威值：`从玩家投影` 是公开的静态工厂。
-    private static float 命中率(玩家档案 玩家) => 战斗单位.从玩家投影(玩家).命中率;
-
-    private static string 百分(float 比例) => $"{Mathf.RoundToInt(比例 * 100f)}%";
-
-    // 建一列：列宽 = 内容行宽的 [左比例, 右比例]，列顶是段小标题，下面是 子列数 个行槽（1 = 不再细分）。
-    private List<行槽> 建列(string 段名, float 左比例, float 右比例, int 子列数)
-    {
-        var 列 = 新矩形("列·" + 段名, 内容行容器);
-        定锚(列, new Vector2(左比例, 0f), new Vector2(右比例, 1f), new Vector2(0f, 0.5f));
-        列.offsetMin = Vector2.zero;
-        列.offsetMax = Vector2.zero;
-
-        var 小标题 = 文本(段名, 列, 皮肤.字号_小字, 皮肤.次要, TextAlignmentOptions.Left);
-        定锚(小标题.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f));
-        小标题.rectTransform.offsetMin = new Vector2(0f, -段标题带高);
-        小标题.rectTransform.offsetMax = Vector2.zero;
-
-        var 槽 = new List<行槽>();
-        for (int i = 0; i < 子列数; i++) 槽.Add(建行槽(列, i / (float)子列数, (i + 1) / (float)子列数));
-        return 槽;
-    }
-
-    private 行槽 建行槽(RectTransform 父, float 左比例, float 右比例)
-    {
-        var 容器 = 新矩形("行", 父);
-        定锚(容器, new Vector2(左比例, 0f), new Vector2(右比例, 1f), new Vector2(0f, 0.5f));
-        容器.offsetMin = Vector2.zero;
-        容器.offsetMax = Vector2.zero;
-        var 槽 = new 行槽 { 容器 = 容器 };
-        行槽表.Add(槽);
-        return 槽;
-    }
-
-    // 建一行"名 + 值"：值是紧跟名字的文本（**不右对齐到天边**）；行与行靠 行高 留白分层，**行间不画线**。
-    // 名用 皮肤.次要（暗）、值用 皮肤.正文（亮）—— 一行读下来就是"标签 → 数"，不靠色条/图标区分。
-    private 属性行件 建行(行槽 槽, string 名, Func<玩家档案, string> 取值, Func<玩家档案, bool> 可见 = null)
-    {
-        var 矩形 = 新矩形(名, 槽.容器);
-        var 名称 = 文本("名", 矩形, 皮肤.字号_正文, 皮肤.次要, TextAlignmentOptions.MidlineLeft);
-        定锚(名称.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f));
-        名称.rectTransform.sizeDelta = new Vector2(皮肤.字号_正文 * 4f, 0f);   // 先给"最长 4 个汉字"的兜底，摆内容行 时按 preferredWidth 校正
-        名称.rectTransform.anchoredPosition = Vector2.zero;
-        var 值 = 文本("值", 矩形, 皮肤.字号_正文, 皮肤.正文, TextAlignmentOptions.MidlineLeft);
-        定锚(值.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0f, 0.5f));
-        值.rectTransform.offsetMin = new Vector2(皮肤.字号_正文 * 4f + 皮肤.段距 * 0.5f, 0f);
-        值.rectTransform.offsetMax = Vector2.zero;
-
-        var 行件 = new 属性行件 { 矩形 = 矩形, 名称 = 名称, 值 = 值, 取值 = 取值, 可见 = 可见 };
-        槽.行.Add(行件);
-        全部行.Add(行件);
-        return 行件;
-    }
-
-    // 属性行的值 + 显隐（伤病那几行按闹不闹病显隐）。只在属性栏显示时调用。
-    private void 刷属性行(玩家档案 玩家)
-    {
-        if (玩家 == null) return;
-        foreach (var 行件 in 全部行)
-        {
-            if (行件.矩形 == null) continue;
-            bool 显 = 行件.可见 == null || 行件.可见(玩家);
-            行件.矩形.gameObject.SetActive(显);
-            if (显) 面板基类.设文本(行件.值, 行件.取值(玩家));
-        }
-        摆内容行();
-    }
-
-    // 摆行：**行高 皮肤.行高** 的条带自上而下排，只排当前可见的行（藏起来的行不占位）。
-    // 名宽取所有行里的最大值（最宽的是 4 个汉字的"近战伤害"）→ 值从同一条竖线起：
-    //   像一张小表，又不至于把数值甩到整块板的右边缘（用户明令去掉的那种"仪表盘"味）。
-    private void 摆内容行()
-    {
-        if (内容行容器 == null) return;
-        float 名宽 = 0f;
-        foreach (var 行件 in 全部行)
-            if (行件.名称 != null && 行件.名称.preferredWidth > 名宽) 名宽 = 行件.名称.preferredWidth;
-        if (名宽 <= 1f) 名宽 = 皮肤.字号_正文 * 4f;   // TMP 还没量出文字（极端情况）→ 用"最长 4 个汉字"兜底
-        float 值左 = 名宽 + 皮肤.段距 * 0.5f;
-        foreach (var 行件 in 全部行)
-            if (行件.值 != null) 行件.值.rectTransform.offsetMin = new Vector2(值左, 0f);
-
-        float 行顶 = 段标题带高 + 皮肤.段距 * 0.5f;   // 小标题 → 第一行
-        foreach (var 槽 in 行槽表)
-        {
-            float 各顶 = 行顶;
-            foreach (var 行件 in 槽.行)
-            {
-                if (行件.矩形 == null || !行件.矩形.gameObject.activeSelf) continue;
-                设行带(行件.矩形, 各顶);
-                各顶 += 皮肤.行高;
-            }
-        }
-    }
-
-    // 一行 = 所在列里的一条横带：左右铺满列宽，自上而下从 顶 开始、高 行高
-    private void 设行带(RectTransform 行, float 顶)
-    {
-        定锚(行, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f));
-        行.offsetMin = new Vector2(0f, -顶 - 皮肤.行高);
-        行.offsetMax = new Vector2(0f, -顶);
-    }
-
-    // ================= 栏切换 =================
-
-    // 切栏：只改文字色/下划线显隐 + 内容区标题 + 属性栏内容的显隐（点选，无动画，无缩放反馈）。
-    // 每处都判空：四个 Tab 只接了两个、栏目标题还没搭 —— 都属于"搭一半"，不许因此报错。
+    // 切栏：只改文字色/下划线显隐 + 内容区标题 + 三个子面板的显隐（点选，无动画，无缩放反馈）。
+    // 每处都判空：三个 Tab 只接了俩、栏目标题还没搭 —— 都属于"搭一半"，不许因此报错。
     private void 切换栏(int 序)
     {
         当前栏 = Mathf.Clamp(序, 0, 栏目表.Length - 1);
@@ -651,15 +539,30 @@ public sealed class 角色面板 : 面板基类
             bool 选中 = i == 当前栏;
             var 文字 = 标签(i);
             面板基类.设文本(文字, 栏目表[i]);   // Tab 文字由代码写（口径见 栏目表），保证与下标的栏名一致
-            if (文字 != null) 文字.color = 选中 ? 皮肤.正文 : 皮肤.次要;
+            if (文字 != null) 文字.color = 选中 ? 正文色 : 次要色;
             var 线 = 下划线(i);
-            if (线 != null) 线.gameObject.SetActive(选中);   // 只有选中那条下划线显示（下划线认得字，宽度在 摆Tab 里给）
+            if (线 != null) 线.gameObject.SetActive(选中);   // 只有选中那条下划线显示
         }
         面板基类.设文本(栏目标题, 栏目表[当前栏]);
         摆标题();   // 标题文字换长度（"属性"→"知识"）→ 那条 2px 短线要跟着重摆
-        // 本批只有属性栏有内容（其余三栏到栏目标题为止）：内容行只在属性栏显示。
-        if (内容行容器 != null) 内容行容器.gameObject.SetActive(当前栏 == 0);
-        if (当前栏 == 0) 刷属性行(当前档案());
+
+        // 切栏 = 让当前那个子面板显示、另外两个收起，然后**让当前这个自己刷一次**。
+        // 为什么刷一次而不是等它自己的事件：切过去的那一刻它可能刚被 SetActive(true)，
+        //   而"上次变化事件"已经过去了（事件不会为"你刚打开这一页"重发）。
+        显隐子面板(0, 属性页);
+        显隐子面板(1, 技能页);
+        显隐子面板(2, 知识页);
+        switch (当前栏)
+        {
+            case 0: 属性页?.刷新(); break;
+            case 1: 技能页?.刷新(); break;
+            case 2: 知识页?.刷新(); break;
+        }
+    }
+
+    private void 显隐子面板<T>(int 序, T 子面板) where T : Component
+    {
+        if (子面板 != null) 子面板.gameObject.SetActive(序 == 当前栏);
     }
 
     // ================= 出口协议（沿用 面板管理器 / HUD 关闭按钮 的既有约定） =================
@@ -702,6 +605,10 @@ public sealed class 角色面板 : 面板基类
         if (是我的(分隔线)) 分隔线 = null;
         if (是我的(栏目标题)) 栏目标题 = null;
         if (是我的(内容区)) 内容区 = null;
+        // 三个子面板：只清"我建的那三个"（拖进来的不在账上，原样留着继续用）
+        if (是我的(属性页)) 属性页 = null;
+        if (是我的(技能页)) 技能页 = null;
+        if (是我的(知识页)) 知识页 = null;
         for (int i = 0; i < 栏目表.Length; i++)
         {
             if (是我的(取(Tab按钮, i))) Tab按钮[i] = null;
@@ -711,12 +618,9 @@ public sealed class 角色面板 : 面板基类
 
         自建节点.Clear();
 
-        // 缓存跟着清：节点已经销毁，列表里再留着就是一堆假引用（内容行/经验格都是挂在那些节点下面的）
+        // 缓存跟着清：节点已经销毁，列表里再留着就是一堆假引用（经验格都是挂在那些节点下面的）
         经验格.Clear();
         经验格自建 = false;
-        行槽表.Clear();
-        全部行.Clear();
-        内容行容器 = null;
         身份条强调线 = null;
         标题下划线 = null;
         点击遮罩 = null;
@@ -761,7 +665,7 @@ public sealed class 角色面板 : 面板基类
         Destroy(物体);
     }
 
-    // ================= 尺寸计算（板子不铺满屏 / Tab 与经验格随板宽重算） =================
+    // ================= 尺寸计算（板子不铺满屏 / Tab 随板宽重算） =================
 
     // 根矩形尺寸变化时重算（Awake 跑在第一帧布局之前，那一刻根矩形的宽高可能还是 0 → 算出来的板子是假的）。
     // 不做每帧轮询：只有真的变了才进来。
@@ -776,9 +680,7 @@ public sealed class 角色面板 : 面板基类
         板子尺寸();
         摆Tab();
         摆标题();
-        建经验格();
         刷新(null);   // 条宽/格数都变了 → 重新点亮一次（读当前档案；还没开档就什么都不做）
-        // 内容行不用重摆：它们全靠锚点+比例（三列 / 两个子列 / 左右铺满），板子一变自己就跟着变。
     }
 
     // 板子尺寸：宽 = min(屏宽 × 板宽比例, 板宽上限)，高 = min(屏高 × 板高比例, 板高上限)，屏幕居中（锚点/轴心都是 0.5）。
@@ -796,38 +698,44 @@ public sealed class 角色面板 : 面板基类
             //   ① 运行时第一帧布局前（马上会收到尺寸回调，这里的结果只是过渡值）；
             //   ② 编辑器里（未运行）一键生成预制体 —— 那个时刻根本没有"屏幕"，给上限尺寸才看得见东西。
             // 取上限而不是"保持原样"：早先版本保持原样时，编辑器里建出来的板子是 0×0（保存进预制体就是一块看不见的板）。
-            板子.sizeDelta = new Vector2(皮肤.板宽上限, 皮肤.板高上限);
+            板子.sizeDelta = new Vector2(板宽上限, 板高上限);
             return;
         }
         板子.sizeDelta = new Vector2(
-            Mathf.Min(屏宽 * 皮肤.板宽比例, 皮肤.板宽上限),
-            Mathf.Min(屏高 * 皮肤.板高比例, 皮肤.板高上限));
+            Mathf.Min(屏宽 * 板宽比例, 板宽上限),
+            Mathf.Min(屏高 * 板高比例, 板高上限));
     }
 
-    // Tab 行：从左到右顺着摆，间距 = 皮肤.段距；宽度取标签的 preferredWidth（所以下划线正好压在字下面）。
+    // Tab 行：从左到右顺着摆，间距 = 段距；宽度取标签的 preferredWidth（所以下划线正好压在字下面）。
     // 每次重摆都先按当前字号重算一遍 preferredWidth：换分辨率/换字号后不会用旧值。
     // 为什么不用 HorizontalLayoutGroup：Tab 宽度要等于各自标签的宽度（下划线才贴得住字），而布局组的宽度
     //   要等一帧才算出来 —— 这里直接读 preferredWidth，摆完立刻能看见正确结果，不留一帧的错位。
     private void 摆Tab()
     {
         if (板子 == null) return;
-        float x = 皮肤.页边距;
+        float x = 页边距;
         for (int i = 0; i < 栏目表.Length; i++)
         {
             var 钮 = 按钮(i);
             if (钮 == null) continue;
             var 文字 = 标签(i);
-            if (文字 != null) 文字.fontSize = 皮肤.字号_Tab;   // 触发 preferredWidth 按当前字号重算
+            if (文字 != null) 文字.fontSize = 字号_Tab;   // 触发 preferredWidth 按当前字号重算
             float 文字宽 = 文字 != null ? 文字.preferredWidth : 0f;
-            if (文字宽 <= 1f) 文字宽 = 皮肤.字号_Tab * 2f;     // TMP 还没量出文字（极端情况）→ 给一个点得到的宽度
+            if (文字宽 <= 1f) 文字宽 = 字号_Tab * 2f;     // TMP 还没量出文字（极端情况）→ 给一个点得到的宽度
             var 矩形 = (RectTransform)钮.transform;
             定锚(矩形, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
-            矩形.sizeDelta = new Vector2(文字宽, 皮肤.字号_Tab);
+            // 高度给 字号 + 8：下划线要落在字的下方（按字号高摆的话会压住字底）
+            矩形.sizeDelta = new Vector2(文字宽, 字号_Tab + 8f);
             矩形.anchoredPosition = new Vector2(x, -Tab行顶);
-            if (文字 != null) 文字.rectTransform.sizeDelta = new Vector2(文字宽, 0f);
+            if (文字 != null)
+            {
+                文字.rectTransform.sizeDelta = new Vector2(文字宽, 0f);
+                文字.rectTransform.anchoredPosition = Vector2.zero;
+            }
+            // 下划线贴按钮**下沿**（按钮高 = 字号 + 8，所以它落在文字基线之下一点，是"下划线"不是"删除线"）
             var 线 = 下划线(i);
-            if (线 != null) 线.rectTransform.sizeDelta = new Vector2(文字宽, 皮肤.边框粗);
-            x += 文字宽 + 皮肤.段距;
+            if (线 != null) 线.rectTransform.sizeDelta = new Vector2(文字宽, 边框粗);
+            x += 文字宽 + 段距;
         }
     }
 
@@ -835,25 +743,23 @@ public sealed class 角色面板 : 面板基类
     private void 摆标题()
     {
         if (栏目标题 == null || 标题下划线 == null) return;
-        栏目标题.fontSize = 皮肤.字号_栏目标题;
+        栏目标题.fontSize = 字号_栏目标题;
         float 宽 = 栏目标题.preferredWidth;
-        if (宽 <= 1f) 宽 = 皮肤.字号_栏目标题 * 2f;
+        if (宽 <= 1f) 宽 = 字号_栏目标题 * 2f;
         定锚(标题下划线.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
         标题下划线.rectTransform.anchoredPosition = new Vector2(内边, -标题下划线顶);
-        标题下划线.rectTransform.sizeDelta = new Vector2(宽, 皮肤.边框粗);
+        标题下划线.rectTransform.sizeDelta = new Vector2(宽, 边框粗);
     }
 
     // ================= 留白口径（一处定义，摆位处都读它） =================
 
-    private float 内边 => 皮肤.段距;                       // 板内第二层留白：文字/行 离 身份条/内容区 的边还有 20px（**不贴边**）
-    private float 标题带高 => 皮肤.字号_栏目标题 + 8f;      // 栏目标题那一行的带高（TMP 行高略大于字号，留 8）
-    private float 标题下划线顶 => 标题带高 + 12f;           // 标题下 12px 才画那条强调短线（靠留白分层，不贴字）
-    private float 行区顶 => 标题下划线顶 + 皮肤.边框粗 + 皮肤.段距;   // 内容行从"标题 + 短线 + 段距"之后开始
-    private float 段标题带高 => 皮肤.字号_小字 + 8f;        // 属性栏里小标题（五维/派生/生存状态）的带高
-    private float Tab行顶 => 皮肤.页边距 + 皮肤.身份条高 + 皮肤.段距;   // 从板子上沿往下量
-    private float Tab行底 => Tab行顶 + 皮肤.字号_Tab;
-    private float 分隔线顶 => Tab行底 + 皮肤.段距;           // 分隔线上沿（下沿 = 它 + 边框粗）
-    private float 内容区顶 => 分隔线顶 + 皮肤.边框粗;
+    private float 内边 => 段距;                       // 板内第二层留白：文字/行 离 身份条/内容区 的边还有 20px（**不贴边**）
+    private float 标题带高 => 字号_栏目标题 + 8f;      // 栏目标题那一行的带高（TMP 行高略大于字号，留 8）
+    private float 标题下划线顶 => 标题带高 + 12f;       // 标题下 12px 才画那条强调短线（靠留白分层，不贴字）
+    private float Tab行顶 => 页边距 + 身份条高 + 段距;   // 从板子上沿往下量
+    private float Tab行底 => Tab行顶 + 字号_Tab + 8f;    // 与 摆Tab 里那个"字号 + 8"是同一个数（两边必须一致）
+    private float 分隔线顶 => Tab行底 + 段距;           // 分隔线上沿（下沿 = 它 + 边框粗）
+    private float 内容区顶 => 分隔线顶 + 边框粗;
 
     // ================= 建节点的几个小工具（全是判空安全的小工具，只建本组件自己的节点） =================
 
@@ -866,8 +772,8 @@ public sealed class 角色面板 : 面板基类
     private static T 取<T>(T[] 数组, int 序) where T : class
         => 数组 != null && 序 >= 0 && 序 < 数组.Length ? 数组[序] : null;
 
-    // 旧场景可能把数组存成空数组/短数组 → 先补到 4 个（否则按下标赋值就崩）。
-    // ⚠ 短数组里**已有的引用要带过来**：直接 `数组 = new T[4]` 会把"只拖了两个 Tab"的那两个引用丢掉
+    // 旧场景可能把数组存成空数组/短数组 → 先补到 3 个（否则按下标赋值就崩）。
+    // ⚠ 短数组里**已有的引用要带过来**：直接 `数组 = new T[3]` 会把"只拖了两个 Tab"的那两个引用丢掉
     //   （它们在 Inspector 里看着还在，实际已经被本组件换掉了 —— 面板上就是那两个 Tab 消失）。
     private static void 备数组<T>(ref T[] 数组) where T : class
     {
@@ -940,7 +846,7 @@ public sealed class 角色面板 : 面板基类
         图.raycastTarget = false;
     }
 
-    // 写文本的字号与颜色（皮肤里的字号口径就靠它落地；文本没接就跳过）
+    // 写文本的字号与颜色（内联口径就靠它落地；文本没接就跳过）
     private static void 设文本样式(TMP_Text 文本, int 字号, Color 色)
     {
         if (文本 == null) return;
