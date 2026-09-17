@@ -11,6 +11,11 @@ using UnityEngine.InputSystem;
 //   要恢复全局回退，就在本文件的 Update 里加一个键（照下面 F1 的检测写法），转调 `当前显示面板.回退()`。
 // 测试功能（加物品/加容器/清空/随机穿戴/仓库/进房间）由 快速测试面板 按钮提供。
 // F1 = 打开/关闭 持有面板（保留为常用快捷键）。
+// C  = 打开/关闭 角色面板（用户 2026-09-17 选的入口）。为什么走这条路：侧边栏那颗「角色」按钮
+//      2026-09-15 被用户删掉了（见 侧边栏面板 文件头），于是 `打开角色面板事件` **零发布方**、
+//      角色面板不可达；按键入口的优点是**零 Unity 工作**（不用搭按钮、不用接线）。
+//      C 在本项目**未被占用**（已占用的是 F1 持有 / F2~F8 流场调试 / R 旋转 / Esc·Tab·Enter·Space·数字键 战斗内），
+//      所以直接用 C。
 // 兼容新旧两套输入系统：按项目激活的输入处理自动选用 Keyboard/Mouse.current 或 Input.GetKeyDown。
 // 挂载：与 面板管理器 同物体（UI管理器），或任意常驻物体。
 public sealed class 玩家输入系统 : MonoBehaviour
@@ -33,7 +38,9 @@ public sealed class 玩家输入系统 : MonoBehaviour
         //   ★ v51 刀17 已根治：战斗时钟搬到 `世界时间管理器.驱动.Update`（面板隐藏也照打），
         //   这条守卫留着作为第二道闸 —— 战斗里本来也不该开背包（会与战斗面板叠在一起）。
         if (ServiceRegistry.Get<BattleService>()?.战斗中 == true) return;
+        // 注：这条守卫**顺带**管住了 C —— 战斗里按 C 不开角色面板（与"战斗里不切面板"的既有约定一致）。
         if (检测按下(KeyCode.F1)) 打开背包面板();
+        if (检测按下(KeyCode.C)) 切换角色面板();
         // 左键 = 确认：由各 UI 按钮的 onClick 原生处理，这里不拦截
         // 右键 = 物品操作菜单：由 物品网格面板 的物品点击组件处理（此处不再做全局回退）
     }
@@ -46,6 +53,8 @@ public sealed class 玩家输入系统 : MonoBehaviour
         if (Keyboard.current != null)
         {
             if (键 == KeyCode.F1 && Keyboard.current.f1Key.wasPressedThisFrame) 按下 = true;
+            // 新输入系统下**每个键都要显式列一行**（上面是按 KeyCode 走旧路径，这里没有 KeyCode→Key 的通用映射）
+            else if (键 == KeyCode.C && Keyboard.current.cKey.wasPressedThisFrame) 按下 = true;
         }
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -72,5 +81,21 @@ public sealed class 玩家输入系统 : MonoBehaviour
         面板.显示面板类型<持有面板>();
         if (面板.当前显示面板 is not 持有面板)
             Debug.LogWarning("[测试] 持有面板未接线到 面板管理器.背包 引用位。");
+    }
+
+    // C：打开/关闭 角色面板 —— 与 切换持有面板 同一套写法（拆静态、自己解析 面板管理器.实例）。
+    // 开关语义**不自造**：开着 → `返回上一面板()`（与 角色面板.回退() / HUD 关闭按钮 走的是同一条路）；
+    // 没开 → 打开它。面板本身此刻不动：`面板管理器.显示()` 会把"上一个面板"记下来，返回时正好回到原处。
+    public static void 切换角色面板()
+    {
+        var 面板 = 面板管理器.实例;
+        if (面板 == null)
+        {
+            Debug.LogWarning("[测试] 场景缺少 面板管理器。");
+            return;
+        }
+        if (面板.当前显示面板 is 角色面板) { 面板.返回上一面板(); return; }   // 再按一次 → 关闭（返回上一面板）
+        // 注：**不能**先在这里碰 取角色面板()（那是 面板管理器 的私有方法）——直接让它自己兜底即可。
+        面板.显示面板类型<角色面板>();
     }
 }
