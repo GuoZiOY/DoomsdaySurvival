@@ -112,17 +112,63 @@ public sealed class 成长管理器
         return true;
     }
 
+    // 战斗技能槽的槽数是**固定 6**：战斗投影（战斗单位.cs 读 玩家.战斗技能槽）按它截取可用技能，
+    // 存档（存档模型.cs 的 "技槽"）也按它整表写。所以这里用一个常量收口，避免三处各写一个 6 各自漂移。
+    public const int 技能槽数 = 6;
+
     // 战斗技能槽：固定 6 槽，自动填第一个空槽（已在槽/槽满 则不动）
     public void 填入技能槽(string 标识)
     {
         if (string.IsNullOrEmpty(标识)) return;
         玩家.战斗技能槽 ??= new System.Collections.Generic.List<string>();
         if (玩家.战斗技能槽.Contains(标识)) return;
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 技能槽数; i++)
         {
             while (玩家.战斗技能槽.Count <= i) 玩家.战斗技能槽.Add(null);
             if (string.IsNullOrEmpty(玩家.战斗技能槽[i])) { 玩家.战斗技能槽[i] = 标识; return; }
         }
+    }
+
+    // 切换入槽：把 已掌握 的技能放进指定槽（角色面板 技能页 拖拽/点选换槽 的唯一写入口）。
+    // 为什么需要它：原来的唯一写入路径是 填入技能槽（"填第一个空槽"）—— 槽一旦填满就再也换不动，
+    //   玩家没有任何办法把学过的技能重新排序或替换掉一个不想要的。
+    // 返回是否成功；失败一律不改档案（槽索引越界 / 标识为空 / 没掌握 都算失败——"没学过"不该能上战斗技能栏）。
+    public bool 切换入槽(int 槽索引, string 技能标识)
+    {
+        if (槽索引 < 0 || 槽索引 >= 技能槽数) return false;
+        if (string.IsNullOrEmpty(技能标识)) return false;
+        if (!掌握技能(技能标识)) return false;
+        玩家.战斗技能槽 ??= new System.Collections.Generic.List<string>();
+        补齐技能槽();
+        // 同一个技能不该占两格：它已在别的槽里 → 两槽**对调**（不是把旧槽清空 —— 那会让玩家白丢一个槽）。
+        for (int i = 0; i < 技能槽数; i++)
+        {
+            if (i == 槽索引) continue;
+            if (玩家.战斗技能槽[i] != 技能标识) continue;
+            string 换出 = 玩家.战斗技能槽[槽索引];
+            玩家.战斗技能槽[i] = 换出;
+            玩家.战斗技能槽[槽索引] = 技能标识;
+            return true;
+        }
+        玩家.战斗技能槽[槽索引] = 技能标识;
+        return true;
+    }
+
+    // 卸下槽：把槽清空（写空串而不是 RemoveAt —— 槽位必须恒为 6，长度一变，战斗投影与存档的
+    // 索引↔槽位对应就全错位了）。返回是否成功；越界 = false。
+    public bool 卸下槽(int 槽索引)
+    {
+        if (槽索引 < 0 || 槽索引 >= 技能槽数) return false;
+        玩家.战斗技能槽 ??= new System.Collections.Generic.List<string>();
+        补齐技能槽();
+        玩家.战斗技能槽[槽索引] = "";
+        return true;
+    }
+
+    // 把 战斗技能槽 补齐到 技能槽数（旧档里它可能是空表/短表）——只补，不截断
+    private void 补齐技能槽()
+    {
+        while (玩家.战斗技能槽.Count < 技能槽数) 玩家.战斗技能槽.Add("");
     }
 
     public int 记录熟练度(string 标识, int 点数, int 每级阈值)
