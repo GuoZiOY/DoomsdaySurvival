@@ -49,10 +49,10 @@ public readonly struct 状态变化事件
     public readonly 战斗单位 单位;
     public readonly string Buff标识;
     public readonly int 层数;
-    public readonly int 剩余回合;
+    public readonly float 剩余秒;   // buff 总时长（现实秒；即时制改口径，原字段是 剩余回合）
     public readonly bool 移除;
-    public 状态变化事件(战斗单位 单位, string Buff标识, int 层数, int 剩余回合, bool 移除)
-    { this.单位 = 单位; this.Buff标识 = Buff标识; this.层数 = 层数; this.剩余回合 = 剩余回合; this.移除 = 移除; }
+    public 状态变化事件(战斗单位 单位, string Buff标识, int 层数, float 剩余秒, bool 移除)
+    { this.单位 = 单位; this.Buff标识 = Buff标识; this.层数 = 层数; this.剩余秒 = 剩余秒; this.移除 = 移除; }
 }
 
 // 目标变化事件：单位死亡（面板移除卡牌/剔除目标）

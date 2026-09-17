@@ -69,6 +69,10 @@ public sealed partial class BattleService
     {
         var 期望 = 技能.目标枚举;
         if (期望 == 目标类型.自己) return 目标 == 施法者;
+        // 「我方最残血」= **自动选人**：唯一合法目标就是血最少的存活友方。
+        //   写在服务层（不写 UI）的理由与 可释放技能 同：能选谁只有一份判据，
+        //   UI 拿 技能可选目标 渲染高亮，就不会出现"面板说能选、按下去却打别人"。
+        if (期望 == 目标类型.我方最残血) return 目标 == 最残血友方(施法者);
         bool 敌方类 = 期望 == 目标类型.敌方单体 || 期望 == 目标类型.敌方全体 || 期望 == 目标类型.敌方两名;
         if (敌方类 && 目标.是否我方) return false;
         if (!敌方类 && !目标.是否我方) return false;
@@ -76,6 +80,17 @@ public sealed partial class BattleService
         if (距 == 0) return true;   // 自己恒可（治疗自己等）
         int 距离 = 技能.攻击距离 > 0 ? 技能.攻击距离 : 1;
         return 距 <= 距离;   // 轨道：节点差 ≤ 攻击距离 即可（无障碍，无需视线）
+    }
+
+    // 血最少的存活友方（「我方最残血」自动选人用；写法与 敌人AI.选友方 的"治疗选最残血"同一口径 ——
+    //   这里不排序，直接扫一遍取最小，避免为一次选人复制整个列表）
+    private 战斗单位 最残血友方(战斗单位 施法者)
+    {
+        var 友方 = 施法者.是否我方 ? 我方 : 敌方;
+        战斗单位 最残 = null;
+        foreach (var 单位 in 友方)
+            if (单位.存活 && (最残 == null || 单位.生命 < 最残.生命)) 最残 = 单位;
+        return 最残;
     }
 
     // 道具目标合法性：按 使用效果 判定阵营（恢复/增益 = 我方，缺省=恢复；减益 = 敌方）+ 距离（节点差 ≤ 1 贴脸可用）
@@ -106,7 +121,7 @@ public sealed partial class BattleService
                 if (!string.IsNullOrEmpty(物品.挂载Buff) && 数据.Buffs.TryGetValue(物品.挂载Buff, out var buff))
                 {
                     目标.添加Buff(buff);
-                    事件.发布(new 状态变化事件(目标, buff.标识, 1, buff.持续回合, false));
+                    事件.发布(new 状态变化事件(目标, buff.标识, 1, buff.持续秒, false));
                     发消息($"{名(目标)} 获得「{buff.名称}」！");
                 }
                 break;

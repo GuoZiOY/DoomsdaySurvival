@@ -45,7 +45,7 @@ public sealed partial class BattleService
     //   再加一套并行计时会出现"读条和换弹同时在涨"的怪状态。
     private float 换弹剩余秒;
     private string 换弹槽位;               // 正在换弹的武器槽（主手/副手）
-    private const float 换弹秒 = 1.5f;
+    private const float 换弹秒 = 1.5f;     // 无加成 基准（被动「疾风装填」走 换弹用时() 缩短）
 
     // —— 战斗状态 ——
     public bool 战斗中 { get; private set; }
@@ -56,7 +56,11 @@ public sealed partial class BattleService
 
     // —— 战斗沙盒（即时制 + 节点式轨道） ——
     public int 棋盘宽 { get; private set; } = 12;   // 轨道节点数（横向战线：0 ~ 棋盘宽-1）；节点间前后移动，无行维度
-    public float 战斗分钟 { get; private set; }   // 本回合已累计分钟（满 60 结算一轮）
+    public float 战斗分钟 { get; private set; }   // 本轮已累计分钟（满 一轮分钟 结算一轮）
+    // ★ 即时制改口径：**一轮 = 一次出手间隔 = 5 现实秒**（每现实秒游戏分钟 = 1 → 5 游戏分钟）。
+    //   原来一轮 = 60 游戏分钟（= 60 现实秒）；buff 时长与持续伤害都改按这个 5 秒节拍走，
+    //   数据里的 `持续秒`（原 回合数 × 5）才对得上 —— 见 buffs.json 与 战斗单位.推进Buff。
+    private const float 一轮分钟 = 5f;
     public string 当前战斗棋盘 => 当前棋盘标识;      // 本次战斗实际使用的棋盘（遭遇来源传入后可用于自检/调试）
     public const float 每现实秒游戏分钟 = 1f;      // 战斗时间流速：1 现实秒 = 1 游戏分钟（2 倍正常流速，可调）
 
