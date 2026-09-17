@@ -30,7 +30,8 @@ public static class 生成角色面板预制体
     // 也就是 1180×760 —— 与"编辑器里量不到屏宽"时的兜底尺寸一致，生成出来的板子在哪条路径上都是同一个大小。
     private static readonly Vector2 参考分辨率 = new Vector2(1920f, 1080f);
 
-    [MenuItem("工具/生成角色面板预制体", false, 10)]
+    // 菜单归到项目自己的 `末日/` 根下（与 末日/房间/… 同一套），不要放 Unity 默认的 `工具/`。
+    [MenuItem("末日/角色/一键生成面板预制体", false, 10)]
     public static void 生成()
     {
         bool 已有 = AssetDatabase.LoadAssetAtPath<GameObject>(预制体路径) != null;
