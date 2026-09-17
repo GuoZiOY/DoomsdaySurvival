@@ -15,7 +15,7 @@ using UnityEngine.UI;
 //     本文件不写任何配色、字号、尺寸、进度数值；状态表达只用 `SetActive` 与 `Button.interactable`。
 //
 // 三个区 + 日志反馈（结构由用户在场景里搭，本组件只接线，**不建节点**）：
-//   ① 身份条   ：`角色名文本` + `等级文本`（"Lv.N"）+ `经验文本` + `经验滑条`（0→1）
+//   ① 身份条   ：`角色名文本` + `职业文本` + `等级文本`（"Lv.N"）+ `经验文本` + `经验滑条`（0→1）
 //   ② 五维区   ：小标题 + `剩余点数文本` + **5 行**（行内：名 / 值 / 加按钮）
 //   ③ 延伸属性区：**14 行只读行**（从 `属性行模板` 克隆；行内：名 / 值）
 //   ④ 反馈**不走本页的 UI 文本**（用户 2026-09-17 拍板：删掉「提示文本」，改日志提示）：
@@ -51,8 +51,9 @@ public sealed class 属性子面板 : MonoBehaviour
         public Button 加按钮;    // `[+]`：只有五维行有（延伸行只读，模板里带了也会被隐藏）
     }
 
-    // —— 身份条（用户 2026-09-17：角色的名字 / 等级 / 经验 也放进属性页）——
+    // —— 身份条（用户 2026-09-17：角色的名字 / 职业 / 等级 / 经验 也放进属性页）——
     [SerializeField] private TMP_Text 角色名文本;   // `玩家档案.角色名`
+    [SerializeField] private TMP_Text 职业文本;     // 职业显示名（`DataService.职业[标识].名称`；取不到退回标识，未选职业留空）
     [SerializeField] private TMP_Text 等级文本;     // "Lv.N"（照旧角色面板那条口径）
     [SerializeField] private TMP_Text 经验文本;     // "当前经验 / 升级所需"（与本页其它"当前 / 上限"同款）
     [SerializeField] private Slider 经验滑条;       // 经验进度 **0→1**：min/max 在预制体里设 0/1，代码只写 `.value`
@@ -139,12 +140,13 @@ public sealed class 属性子面板 : MonoBehaviour
         刷延伸(玩家);
     }
 
-    // 身份条：名字 / 等级 / 经验。
+    // 身份条：名字 / 职业 / 等级 / 经验。
     // 等级与经验只在**升级/得经验**时变，所以订阅里的 `经验变化事件` 就是这一块的刷新信号
     //   （换角色/读档由壳打开这一页 → `OnEnable` 兜住）。
     private void 刷身份(玩家档案 玩家)
     {
         面板基类.设文本(角色名文本, 玩家.角色名);
+        面板基类.设文本(职业文本, 职业显示名(玩家));
         面板基类.设文本(等级文本, $"Lv.{玩家.等级}");   // "Lv.N"：照旧角色面板那条口径
         // 升级所需经验 = 等级 × 25（`成长管理器.升级所需经验`，`玩家档案` 上门面转发）。
         // `Max(1, …)` 只为除零兜底（正常值 ≥ 25；读档清理过，等级 ≥ 1）。
@@ -153,6 +155,20 @@ public sealed class 属性子面板 : MonoBehaviour
         // 滑条走"比值 0→1"这条既有口径（`净水器面板` / `书籍面板` 同款）：**只写 value**；
         //   min/max（0/1）与"不可拖动"都在预制体里配 —— 本组件不碰外观，也不改场景调好的交互设置。
         if (经验滑条 != null) 经验滑条.value = Mathf.Clamp01(玩家.经验 / (float)需要);
+    }
+
+    // 职业的**显示名**：优先数据表里的 `职业数据.名称`（`DataService.职业`：标识 → 定义），
+    //   取不到（数据缺失/旧档里的标识已被改掉）就退回**标识本身** —— 宁可显示"消防员"这种标识，
+    //   也不要静默空白让人以为职业丢了。还没选职业（`玩家.职业` 空，未开局）就留空。
+    // 口径照旧角色面板的 `身份行()`（那边是"幸存者 · 职业"，本页只取职业那一段）。
+    private static string 职业显示名(玩家档案 玩家)
+    {
+        if (string.IsNullOrEmpty(玩家.职业)) return "";
+        var 数据 = ServiceRegistry.已注册<DataService>() ? ServiceRegistry.Get<DataService>() : null;
+        return 数据 != null && 数据.职业 != null && 数据.职业.TryGetValue(玩家.职业, out var 定义)
+               && 定义 != null && !string.IsNullOrEmpty(定义.名称)
+            ? 定义.名称
+            : 玩家.职业;
     }
 
     // 五维：行名 = `属性类型` 的成员名（枚举成员名就是中文显示名 —— 改枚举名即改行名，不会各写一份漂掉）；
@@ -305,6 +321,7 @@ public sealed class 属性子面板 : MonoBehaviour
     private void 自找()
     {
         if (角色名文本 == null) 角色名文本 = 子文本(transform, "角色名");
+        if (职业文本 == null) 职业文本 = 子文本(transform, "职业");
         if (等级文本 == null) 等级文本 = 子文本(transform, "等级");
         if (经验文本 == null) 经验文本 = 子文本(transform, "经验");     // 与下面的「经验滑条」节点名不同，不会互撞
         if (经验滑条 == null) 经验滑条 = 找节点(transform, "经验滑条")?.GetComponent<Slider>();
@@ -333,6 +350,7 @@ public sealed class 属性子面板 : MonoBehaviour
     {
         var 缺 = new List<string>();
         if (角色名文本 == null) 缺.Add("角色名文本（节点名「角色名」）");
+        if (职业文本 == null) 缺.Add("职业文本（节点名「职业」）");
         if (等级文本 == null) 缺.Add("等级文本（节点名「等级」）");
         if (经验文本 == null) 缺.Add("经验文本（节点名「经验」）");
         if (经验滑条 == null) 缺.Add("经验滑条（节点名「经验滑条」）");
