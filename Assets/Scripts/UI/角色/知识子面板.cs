@@ -1,23 +1,55 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 知识子面板：角色面板 [知识] 栏页的内容（由 `角色面板` 注入 `内容区`；本组件**不被壳读任何字段**）。
+// 知识行引用：一条知识的引用组（**Inspector 里接**；没接 → 按名字兜底；名字也没有 → 补建空节点）。
+//   `底`       = 行自己的 Image（只当 Button 的 targetGraphic 用，代码不改它的颜色）；
+//   `按钮`     = 行自己的 Button（点它 = 选中这条知识）；
+//   `名称`     = 上行（书名）；
+//   `说明`     = 下行（"未入门 共 10 级…" / "3 / 10 级　还差 2 本《X》"）；
+//   `进度`     = 这条知识的**进度子物体**：代码只写 `Image.fillAmount`（= 已解锁级数 / 总级数），
+//                不写颜色、不写字号；填充色 / 底色 / 圆角 / 长度全在预制体里调；
+//   `选中高亮` = **预制体里预置的高亮子物体**：只在"这一条是当前选中"时 `SetActive(true)`。
+[Serializable]
+public class 知识行引用
+{
+    public Image 底;
+    public Button 按钮;
+    public TMP_Text 名称;
+    public TMP_Text 说明;
+    public RectTransform 进度;
+    public GameObject 选中高亮;
+}
+
+// 逐级行引用：逐级表里的一行（只有两个文本）。
+//   `符`   = √ 已解锁 / → 下一级 / · 未解锁；
+//   `文本` = "N 级　<该级内容>"。
+[Serializable]
+public class 逐级行引用
+{
+    public TMP_Text 符;
+    public TMP_Text 文本;
+}
+
+// 知识子面板：角色面板 [知识] 栏页的内容（由 `角色面板` 注入 `内容区`）。
 //
 // 左 = **11 条知识**（一本书 = 一条知识，标识 = 书籍标识；数据源 = `DataService.物品` 里 `书籍种类=="知识"` 的那些）：
-//   每条两行 —— 上行 = 名称（品质色）；下行（小字）= `3 / 10 级　还差 2 本《X》`。
+//   每条两行 —— 上行 = 名称；下行 = `3 / 10 级　还差 2 本《X》`（外加一条 `进度`）。
 //   未掌握的**也列**（"未入门　共 10 级　怎么获得：搜刮 / 图书馆"）—— 那是"还没解锁的东西"的说明书，藏起来反而看不见目标。
 // 右 = 点某一行之后显示那条知识的**逐级表**（√ 已解锁 / → 下一级 / · 未解锁），每级一行。
 //
-// ★ 本批（刀82）口径：**骨架 100% 读预制体，本组件只建"条数随数据变的东西"**。
-//   现成的（只按名字找出来用，不新建、不改位置/尺寸/字号）：
-//     · `知识页内容`（本页的根）
-//     · `知识列`（左列容器）+ **11 条 `知识` 行**（每行 `名称` + `说明`，行本身就带 Image + Button）
-//     · `逐级表` + `逐级表/小标题` + **10 条 `逐级` 行**（每行 `符` + `文本`）
-//   运行时只补"数据比烘好的多"的那种行 —— 而且是 `Instantiate` **预制体里那一行**，
-//   所以样式/悬停色/尺寸自动跟预制体走，不是又一份"代码里的样式"。
-//   ⚠ 名字就是契约：路径写死在 `绑定位()` 里；在 Unity 里重命名节点要同步改那里（缺了会打 LogError，不静默）。
+// ★ 本批口径（用户点名的两条，都要守）：
+//   ① **外观 0 行代码**：颜色、字号、尺寸一律归预制体（在 Unity 里调）。
+//      状态差异只用两样：文字内容本身 + **结构手段**（`SetActive` 预置高亮子物体 / `Image.fillAmount`）。
+//      原来的 `正文色/次要色/强调色/恢复色/选中底` 字段、以及每一处 `Image` / `TMP_Text` 的颜色写入
+//      **全部删掉** —— 代码里再也读不到一个颜色数值。品质色也不再由代码写进富文本（那是"代码写外貌"）。
+//      逐级行的三态（已解锁 / 下一级 / 未解锁）在预制体里只有一颗 `符` 文本，装不下三种颜色 →
+//      按用户给的口径退化成"**只写文字与符（√ / → / ·）、不写颜色**"。
+//   ② **引用优先**：11 条知识行（含行内 `名称/说明/进度`）、`知识列` / `逐级表` / `逐级小标题`、
+//      10 条逐级行、两个行模板都在 Inspector 里接；引用为空才按名字找（名字只是兜底），
+//      名字也没有就**补建一个不带样式的空节点**（挂对父、名字对、组件齐）—— 绝不"只报缺引用让用户去搭"。
 //
 // 经验口径（读 `玩家档案` + 书的 `知识门槛` / `知识等级` / `知识经验`）：
 //   · `知识门槛[级-1]` = **升到该级所需的累计经验**（不是每级增量，见 `物品数据.知识门槛` 的注释）；
@@ -31,6 +63,7 @@ public sealed class 知识子面板 : MonoBehaviour
 
     // 逐级表的三态符号。**不用 emoji**（用户明令），也不用 TMP 里可能缺字形的箭头/勾形图标 ——
     //   这三个都取自 GB2312 符号区（中文字体一定有），且 `→` 在本项目别处的界面文案里已经在用。
+    //   ★ 三态的差异**只靠这三个符号**：颜色归预制体，代码不写任何颜色数值。
     private const string 符已解锁 = "√";
     private const string 符下一级 = "→";
     private const string 符未解锁 = "·";
@@ -38,13 +71,22 @@ public sealed class 知识子面板 : MonoBehaviour
     // ================= 注入：`内容区` 由 角色面板 给（预制体里已接好） =================
     [SerializeField] private RectTransform 内容区;
 
-    // ================= 颜色（**只有"随状态变"的才在代码里**） =================
-    //   行底（常态）/ 悬停底 / 选中态之外的静态色一律**归预制体**（代码不碰 → 在 Unity 里调得动）。
-    [SerializeField] private Color 正文色 = new Color(0.8941f, 0.8745f, 0.8392f, 1f);   // #E4DFD6 名称兜底色（无品质档时）
-    [SerializeField] private Color 次要色 = new Color(0.5412f, 0.5137f, 0.4706f, 1f);   // #8A8378 行下行 / 未解锁
-    [SerializeField] private Color 强调色 = new Color(0.7059f, 0.3333f, 0.2353f, 1f);   // #B4553C 下一级（唯一强调色）
-    [SerializeField] private Color 恢复色 = new Color(0.4314f, 0.5608f, 0.3843f, 1f);   // #6E8F62 已解锁 / 已满级
-    [SerializeField] private Color 选中底 = new Color(0.2118f, 0.1529f, 0.1137f, 1f);   // #36271D 选中/待看的那一行
+    // ================= 引用（Inspector 里接；空 → 按名字找 → 还没有就补建空节点） =================
+    [SerializeField] private RectTransform 知识页内容;      // 本页的根（预制体里：`内容区/知识页内容`）
+    // ★ 下标 0..10 ↔ **排序后的知识书列表**的第 0..10 条。
+    //   顺序来源 = `知识书()`：`物品` 里 `书籍种类=="知识"` 且 `知识等级` 非空的书，
+    //   **按 `标识` 字典序**（`string.CompareOrdinal`）排 —— 顺序稳定，换存档/换机器都一样。
+    //   `知识行[0]` 就是排第一的那本书，与它在预制体里的兄弟次序**无关**。
+    //   数据比 11 条多 → 多出来的行 `Instantiate(知识行模板)`。
+    [SerializeField] private 知识行引用[] 知识行;
+    [SerializeField] private RectTransform 知识列;          // 左列容器（名字兜底：`知识列`）
+    [SerializeField] private RectTransform 逐级表;          // 右表容器（名字兜底：`逐级表`）
+    [SerializeField] private TMP_Text 逐级小标题;           // 右表小标题（名字兜底：`逐级表/小标题`）
+    // ★ 下标 0..9 ↔ **第 1..10 级**：`逐级行[0]` = 第 1 级，`逐级行[9]` = 第 10 级。
+    //   级号以数据里的 `知识等级[i].级` 为准（缺省 = 下标 + 1），本数组只是"第 i 级显示在哪个节点"。
+    [SerializeField] private 逐级行引用[] 逐级行;
+    [SerializeField] private RectTransform 逐级行模板;      // 逐级行模板（数据比烘好的多时 Instantiate 它）
+    [SerializeField] private RectTransform 知识行模板;      // 知识行模板（数据比烘好的多时 Instantiate 它）
 
     private readonly List<知识行件> 左行 = new List<知识行件>();
     private readonly List<逐级行件> 右行 = new List<逐级行件>();
@@ -52,19 +94,19 @@ public sealed class 知识子面板 : MonoBehaviour
     private readonly List<string> 缺的节点 = new List<string>();
     private readonly List<GameObject> 补的行 = new List<GameObject>();   // 只有"数据比烘好的多"时才用得上
 
-    private RectTransform 画布, 左列, 右表;
-    private TMP_Text 右标题;
+    private RectTransform 画布;
     private string 选中标识;
     private bool 已绑;
 
-    // 左列一行：行底（挂在行自己身上）+ 名称 + 说明
+    // 左列一行：矩形 + 按钮 + 名称 + 说明 + 进度图（null = 预制体里还没有"进度"节点 → 那就只写文字）+ 选中高亮
     private sealed class 知识行件
     {
         public RectTransform 矩形;
-        public Image 底;
-        public Color 常态底;      // 预制体里烘的那个行底（取消选中要还原成它）
+        public Button 按钮;
         public TMP_Text 名称;
         public TMP_Text 说明;
+        public Image 进度图;
+        public GameObject 选中高亮;
     }
 
     // 右列一行：三态符号 + `N 级　<该级内容>`
@@ -91,9 +133,9 @@ public sealed class 知识子面板 : MonoBehaviour
     // 切栏把它点亮 → 自己刷一次（这样"切过去看到旧数据"这件事不可能发生）
     private void OnEnable() { 刷新(); }
 
-    // ================= 绑定位（只找、不建骨架） =================
+    // ================= 绑位（引用优先 → 名字兜底 → 补建空节点） =================
 
-    private void 绑定位()
+    private void 绑位()
     {
         if (已绑) return;
         已绑 = true;
@@ -104,65 +146,24 @@ public sealed class 知识子面板 : MonoBehaviour
         缺的节点.Clear();
         选中标识 = null;
 
-        画布 = 子矩形(内容区, "知识页内容");
+        画布 = 知识页内容 != null ? 知识页内容 : 找或建矩形(内容区, "知识页内容");
         if (画布 == null) { 缺("知识页内容"); 报缺(); return; }
-        左列 = 子矩形(画布, "知识列");
-        右表 = 子矩形(画布, "逐级表");
-        if (左列 == null) 缺("知识列");
-        if (右表 == null) { 缺("逐级表"); 报缺(); return; }
-        右标题 = 子文本(右表, "小标题");
-        if (右标题 == null) 缺("小标题");
+        知识页内容 = 画布;
 
-        // 左列：所有叫 `知识` 的子节点，**按它们在预制体里的先后**（= 烘好的行序）当第 0..N 行
-        if (左列 != null)
-            for (int i = 0; i < 左列.childCount; i++)
-            {
-                var 子 = 左列.GetChild(i) as RectTransform;
-                if (子 != null && 子.name == "知识") 左行.Add(绑左行(子));
-            }
-        if (左行.Count == 0) 缺("知识列/知识");
-        // 右列：`小标题` 之后的所有 `逐级` 行
-        for (int i = 0; i < 右表.childCount; i++)
-        {
-            var 子 = 右表.GetChild(i) as RectTransform;
-            if (子 != null && 子.name == "逐级") 右行.Add(绑右行(子));
-        }
-        if (右行.Count == 0) 缺("逐级表/逐级");
+        知识列 = 知识列 != null ? 知识列 : 找或建矩形(画布, "知识列");
+        逐级表 = 逐级表 != null ? 逐级表 : 找或建矩形(画布, "逐级表");
+        if (知识列 == null) 缺("知识列");
+        if (逐级表 == null) { 缺("逐级表"); 报缺(); return; }
+        逐级小标题 = 取或建文本(逐级小标题, 逐级表, "小标题");
         报缺();
     }
-
-    private 知识行件 绑左行(RectTransform 矩形)
-    {
-        var 底 = 矩形.GetComponent<Image>();
-        var 件 = new 知识行件
-        {
-            矩形 = 矩形,
-            底 = 底,
-            常态底 = 底 != null ? 底.color : 正文色,   // 记住**预制体里调的**行底，取消选中时还原它
-            名称 = 子文本(矩形, "名称"),
-            说明 = 子文本(矩形, "说明"),
-        };
-        if (件.说明 == null) 缺("知识/说明");
-        // 点击：只接事件（悬停色/过渡沿用预制体里烘好的 ColorBlock）
-        int 序 = 左行.Count;
-        var 钮 = 矩形.GetComponent<Button>();
-        if (钮 != null)
-        {
-            钮.onClick.RemoveAllListeners();
-            钮.onClick.AddListener(() => 点知识(序));
-        }
-        return 件;
-    }
-
-    private 逐级行件 绑右行(RectTransform 矩形)
-        => new 逐级行件 { 矩形 = 矩形, 符 = 子文本(矩形, "符"), 文本 = 子文本(矩形, "文本") };
 
     // ================= 刷新 =================
 
     public void 刷新()
     {
-        绑定位();
-        if (画布 == null || 左列 == null || 右表 == null) return;
+        绑位();
+        if (画布 == null || 知识列 == null || 逐级表 == null) return;
         var 玩家 = 当前档案();
         if (玩家 == null) return;
         var 数据 = ServiceRegistry.已注册<DataService>() ? ServiceRegistry.Get<DataService>() : null;
@@ -211,22 +212,78 @@ public sealed class 知识子面板 : MonoBehaviour
 
     // ================= 左列：11 条知识 =================
 
-    // 行数不够才补 —— **补出来的行是 `Instantiate` 预制体里最后那一行**（样式/悬停色全跟着预制体走），
-    //   位置就排在它下面一行（行高 = 那一行的 rect.height，不在这里写死任何数字）。
-    //   ⚠ 正常情况下 11 条数据 ↔ 11 条烘好的行，这里一次都不会进。
+    // 左列要显示 `需要` 行：
+    //   · 先把"引用数组里接了的 / 预制体里已经烘好的 `知识` 行"全部绑上（多出来的靠 SetActive 收起）；
+    //   · 还不够 → `Instantiate(知识行模板)`；模板没接也没找到 → 克隆最后一个现成行（样式仍跟预制体走）；
+    //     一个现成行都没有 → 补建一个不带样式的空行（组件齐）。
     private void 备左行(int 需要)
     {
-        while (左行.Count < 需要 && 左行.Count > 0)
+        int 预置 = 名字行数(知识列, "知识");
+        int 引用数 = 知识行 != null ? 知识行.Length : 0;
+        int 目标 = Mathf.Max(需要, Mathf.Max(预置, 引用数));
+        while (左行.Count < 目标)
         {
-            var 源 = 左行[左行.Count - 1].矩形;
-            if (源 == null) return;
-            var 物 = Instantiate(源.gameObject, 左列, false);
-            物.name = "知识";
-            补的行.Add(物);
-            var 矩形 = (RectTransform)物.transform;
-            矩形.anchoredPosition = new Vector2(源.anchoredPosition.x, 源.anchoredPosition.y - 源.rect.height);
-            左行.Add(绑左行(矩形));
+            int 序 = 左行.Count;
+            var 引 = 知识行 != null && 序 < 知识行.Length ? 知识行[序] : null;
+            var 矩形 = 矩形of(引);                                   // ① 引用优先
+            if (矩形 == null && 序 < 预置) 矩形 = 名字行(知识列, "知识", 序);   // ② 名字兜底（第 序 个 `知识`）
+            if (矩形 == null)                                        // ③ 运行时新增（数据比烘好的多）
+            {
+                矩形 = 造左行(序);
+                if (矩形 == null) return;
+                摆下一行(矩形, 序 > 0 ? 左行[序 - 1].矩形 : null);
+            }
+            左行.Add(绑左行(序, 矩形, 引));
         }
+    }
+
+    private RectTransform 造左行(int 序)
+    {
+        var 模板 = 找知识行模板();
+        if (模板 != null) return 克隆(模板, 知识列, "知识");
+        缺("知识行模板");
+        var 源 = 序 > 0 ? 左行[序 - 1].矩形 : null;   // 退化①：克隆最后一个现成行（样式跟预制体一致）
+        if (源 != null) return 克隆(源, 知识列, "知识");
+        return 新矩形("知识", 知识列);                 // 退化②：补建不带样式的空行
+    }
+
+    // 知识行模板：Inspector 引用优先 → 名字 `知识行`（在 `知识页内容` 下或 `知识列` 下）
+    private RectTransform 找知识行模板()
+    {
+        if (知识行模板 != null) return 知识行模板;
+        var 现成 = 子矩形(画布, "知识行");
+        if (现成 != null) return 现成;
+        return 子矩形(知识列, "知识行");
+    }
+
+    private 知识行件 绑左行(int 序, RectTransform 矩形, 知识行引用 引)
+    {
+        if (引 == null) 引 = new 知识行引用();
+        if (知识行 != null && 序 < 知识行.Length && 知识行[序] == null) 知识行[序] = 引;
+
+        // 组件齐：行身上该有 Image（接射线）与 Button（点选）
+        if (引.底 == null) 引.底 = 矩形.GetComponent<Image>();
+        if (引.按钮 == null) 引.按钮 = 矩形.GetComponent<Button>();
+
+        var 件 = new 知识行件
+        {
+            矩形 = 矩形,
+            按钮 = 引.按钮,
+            名称 = 取或建文本(引.名称, 矩形, "名称"),
+            说明 = 取或建文本(引.说明, 矩形, "说明"),
+            进度图 = 绑进度(引.进度, 矩形),
+            选中高亮 = 引.选中高亮 != null ? 引.选中高亮 : 子物体(矩形, "选中高亮"),
+        };
+
+        // 点击：只接事件（悬停 / 过渡沿用预制体里烘好的那一套，本组件不碰）
+        if (件.按钮 != null)
+        {
+            if (件.按钮.targetGraphic == null && 引.底 != null) 件.按钮.targetGraphic = 引.底;
+            件.按钮.onClick.RemoveAllListeners();
+            int 序号 = 序;   // 闭包要捕获"本行的下标"，别用循环变量
+            件.按钮.onClick.AddListener(() => 点知识(序号));
+        }
+        return 件;
     }
 
     private void 刷左行(知识行件 行, 物品数据 书, 玩家档案 玩家)
@@ -236,14 +293,17 @@ public sealed class 知识子面板 : MonoBehaviour
         int 级内经验 = 玩家.查知识(书.标识)?.经验 ?? 0;
         bool 已掌握 = 级 > 0;
 
-        面板基类.设文本(行.名称, $"<color=#{ColorUtility.ToHtmlStringRGB(品质工具.颜色(书.品质档))}>{书.标识}</color>");
-        if (行.底 != null) 行.底.color = 书.标识 == 选中标识 ? 选中底 : 常态行底(行);
+        // 名称：纯文本（品质色不再由代码写进富文本 —— 本批口径①：代码不写外貌）
+        面板基类.设文本(行.名称, 书.标识);
+        // 选中 → 亮预制体里的 `选中高亮` 子物体（结构手段，代码不碰颜色）
+        if (行.选中高亮 != null) 行.选中高亮.SetActive(书.标识 == 选中标识);
+        // 进度 → 只写 `fillAmount`（已解锁级数 / 总级数）；预制体里没有 `进度` 节点就只写文字
+        if (行.进度图 != null) 行.进度图.fillAmount = 总级 > 0 ? Mathf.Clamp01(级 / (float)总级) : 0f;
         if (行.说明 == null) return;
 
         if (!已掌握)
         {
             面板基类.设文本(行.说明, $"未入门　共 {总级} 级　{获得提示}");
-            行.说明.color = 次要色;
             return;
         }
 
@@ -251,7 +311,6 @@ public sealed class 知识子面板 : MonoBehaviour
         if (下一门槛 < 0)
         {
             面板基类.设文本(行.说明, $"{级} / {总级} 级　已满级");
-            行.说明.color = 恢复色;
             return;
         }
 
@@ -261,10 +320,30 @@ public sealed class 知识子面板 : MonoBehaviour
         面板基类.设文本(行.说明, 本数 <= 0
             ? $"{级} / {总级} 级　再读一本即可升级"
             : $"{级} / {总级} 级　还差 {本数} 本《{书.标识}》");
-        行.说明.color = 次要色;
     }
 
-    private static Color 常态行底(知识行件 行) => 行.常态底;
+    // 进度：**选的是"写 `Image.fillAmount`"**（不是切"亮/暗"子物体的 SetActive）。
+    //   为什么选它：预制体里没有"亮/暗两套子物体"，而 fillAmount 只改一个数值 ——
+    //   填充色 / 底色 / 圆角 / 长度全留在预制体里，符合"外观归预制体"。
+    //   代价：`进度` 那个节点得是 Image 且 **类型 = Filled、填充方式 = Horizontal**，否则填不动
+    //   （补建的兜底节点会顺手把这两项设上；预制体里请自己设，加张精灵图才看得见）。
+    private Image 绑进度(RectTransform 现成, RectTransform 行矩形)
+    {
+        var 节点 = 现成 != null ? 现成 : 子矩形(行矩形, "进度");
+        if (节点 == null)
+        {
+            缺("知识行/进度（预制体里给每条知识行加一个进度子物体）");
+            节点 = 新矩形("进度", 行矩形);
+            if (节点 == null) return null;
+            摆进度(节点);   // 只在"补建"时摆位；预制体里预置的节点一概不碰
+        }
+        var 图 = 节点.GetComponent<Image>();
+        if (图 == null) 图 = 节点.gameObject.AddComponent<Image>();
+        // 这两项是"让 fillAmount 生效"的功能参数（不是颜色/字号/尺寸），对外观无话可说
+        图.type = Image.Type.Filled;
+        图.fillMethod = Image.FillMethod.Horizontal;
+        return 图;
+    }
 
     // 升到"下一级"所需的**累计**经验；-1 = 已经满级（没有下一级）
     private static int 下一级门槛(物品数据 书, 玩家档案 玩家, int 级)
@@ -302,16 +381,16 @@ public sealed class 知识子面板 : MonoBehaviour
 
         if (书 == null)
         {
-            面板基类.设文本(右标题, "逐级表");
+            面板基类.设文本(逐级小标题, "逐级表");
             备右行(1);
-            刷右行(0, "", "点左边一条知识，这里显示它每一级解锁什么。", 次要色, true);
+            刷右行(0, "", "点左边一条知识，这里显示它每一级解锁什么。", true);
             for (int i = 1; i < 右行.Count; i++) 显右行(i, false);
             return;
         }
 
         int 总级 = 书.知识等级.Length;
         int 当前 = 玩家.知识等级(书.标识);
-        面板基类.设文本(右标题, $"《{书.标识}》逐级表　{当前} / {总级}");
+        面板基类.设文本(逐级小标题, $"《{书.标识}》逐级表　{当前} / {总级}");
         备右行(总级);
 
         for (int i = 0; i < 右行.Count; i++)
@@ -320,17 +399,67 @@ public sealed class 知识子面板 : MonoBehaviour
             var 等级行 = 书.知识等级[i];
             int 级 = 等级行 != null && 等级行.级 > 0 ? 等级行.级 : i + 1;
 
-            // √ 已解锁（级 <= 当前） / → 下一级（级 == 当前 + 1） / · 未解锁
-            string 符;
-            Color 色;
-            if (级 <= 当前) { 符 = 符已解锁; 色 = 恢复色; }
-            else if (级 == 当前 + 1) { 符 = 符下一级; 色 = 强调色; }
-            else { 符 = 符未解锁; 色 = 次要色; }
-            刷右行(i, 符, $"{级} 级　{等级内容(数据, 等级行)}", 色, true);
+            // 三态 = √ 已解锁（级 <= 当前） / → 下一级（级 == 当前 + 1） / · 未解锁。
+            //   ★ 只写字与符、不写颜色：预制体里一行只有一颗 `符` 文本，一个节点装不下三种颜色，
+            //     而"加三个高亮子物体"预制体里也没有 —— 按用户口径退化成"符号区分"。
+            刷右行(i, 级 <= 当前 ? 符已解锁 : (级 == 当前 + 1 ? 符下一级 : 符未解锁),
+                   $"{级} 级　{等级内容(数据, 等级行)}", true);
         }
     }
 
-    private void 刷右行(int 序, string 符, string 文本, Color 色, bool 显示)
+    // 逐级行要显示 `需要` 行：引用数组里的先绑、预制体里的 `逐级` 行也全绑（多的靠 SetActive 收起），
+    //   不够再 `Instantiate(逐级行模板)`（模板没接 → 克隆最后一个现成行 → 补建空节点）。
+    //   ★ 下标 0..9 ↔ 第 1..10 级。
+    private void 备右行(int 需要)
+    {
+        int 预置 = 名字行数(逐级表, "逐级");
+        int 引用数 = 逐级行 != null ? 逐级行.Length : 0;
+        int 目标 = Mathf.Max(需要, Mathf.Max(预置, 引用数));
+        while (右行.Count < 目标)
+        {
+            int 序 = 右行.Count;
+            var 引 = 逐级行 != null && 序 < 逐级行.Length ? 逐级行[序] : null;
+            var 矩形 = 矩形of(引);
+            if (矩形 == null && 序 < 预置) 矩形 = 名字行(逐级表, "逐级", 序);
+            if (矩形 == null)
+            {
+                矩形 = 造右行(序);
+                if (矩形 == null) return;
+                摆下一行(矩形, 序 > 0 ? 右行[序 - 1].矩形 : null);
+            }
+            右行.Add(绑右行(矩形, 引));
+        }
+    }
+
+    private RectTransform 造右行(int 序)
+    {
+        var 模板 = 找逐级行模板();
+        if (模板 != null) return 克隆(模板, 逐级表, "逐级");
+        缺("逐级行模板");
+        var 源 = 序 > 0 ? 右行[序 - 1].矩形 : null;
+        if (源 != null) return 克隆(源, 逐级表, "逐级");
+        return 新矩形("逐级", 逐级表);
+    }
+
+    // 逐级行模板：Inspector 引用优先 → 名字 `逐级行`（在 `逐级表` 下）
+    private RectTransform 找逐级行模板()
+    {
+        if (逐级行模板 != null) return 逐级行模板;
+        return 子矩形(逐级表, "逐级行");
+    }
+
+    private 逐级行件 绑右行(RectTransform 矩形, 逐级行引用 引)
+    {
+        if (引 == null) 引 = new 逐级行引用();
+        return new 逐级行件
+        {
+            矩形 = 矩形,
+            符 = 取或建文本(引.符, 矩形, "符"),
+            文本 = 取或建文本(引.文本, 矩形, "文本"),
+        };
+    }
+
+    private void 刷右行(int 序, string 符, string 文本, bool 显示)
     {
         if (序 < 0 || 序 >= 右行.Count) return;
         var 行 = 右行[序];
@@ -338,9 +467,7 @@ public sealed class 知识子面板 : MonoBehaviour
         if (行.矩形.gameObject.activeSelf != 显示) 行.矩形.gameObject.SetActive(显示);
         if (!显示) return;
         面板基类.设文本(行.符, 符);
-        if (行.符 != null) 行.符.color = 色;
         面板基类.设文本(行.文本, 文本);
-        if (行.文本 != null) 行.文本.color = 色;
     }
 
     private void 显右行(int 序, bool 显示)
@@ -348,22 +475,6 @@ public sealed class 知识子面板 : MonoBehaviour
         if (序 < 0 || 序 >= 右行.Count) return;
         var 矩形 = 右行[序].矩形;
         if (矩形 != null && 矩形.gameObject.activeSelf != 显示) 矩形.gameObject.SetActive(显示);
-    }
-
-    // 逐级表按数据条数补行（同 备左行：复制预制体里的最后一行，位置排它下面）
-    private void 备右行(int 需要)
-    {
-        while (右行.Count < 需要 && 右行.Count > 0)
-        {
-            var 源 = 右行[右行.Count - 1].矩形;
-            if (源 == null) return;
-            var 物 = Instantiate(源.gameObject, 右表, false);
-            物.name = "逐级";
-            补的行.Add(物);
-            var 矩形 = (RectTransform)物.transform;
-            矩形.anchoredPosition = new Vector2(源.anchoredPosition.x, 源.anchoredPosition.y - 源.rect.height);
-            右行.Add(绑右行(矩形));
-        }
     }
 
     // 一级的内容：优先用数据里的 `描述`（那是这本书作者写的那一句）；没写就按"加成 / 解锁了什么"拼一条。
@@ -394,7 +505,109 @@ public sealed class 知识子面板 : MonoBehaviour
         return 名.Count > 0 ? string.Join("、", 名) : "—";
     }
 
-    // ================= 找节点 / 补行的小工具 =================
+    // ================= 找节点 / 补节点 的小工具 =================
+
+    // 引用组里"哪一个是这几个引用共同的节点"：行身上的 Image / Button / 名称 / 说明。
+    //   ⚠ `进度` 是行的**子物体** → 只有它被接上时，退回它的父节点当这一行。
+    private static RectTransform 矩形of(知识行引用 引)
+    {
+        if (引 == null) return null;
+        if (引.底 != null) return 引.底.rectTransform;
+        if (引.按钮 != null) return 引.按钮.transform as RectTransform;
+        if (引.名称 != null) return 引.名称.rectTransform;
+        if (引.说明 != null) return 引.说明.rectTransform;
+        if (引.进度 != null) return 引.进度.parent as RectTransform;
+        return null;
+    }
+
+    // 逐级行引用只有两个文本，行的节点 = 它们的父
+    private static RectTransform 矩形of(逐级行引用 引)
+    {
+        if (引 == null) return null;
+        if (引.符 != null) return 引.符.transform.parent as RectTransform;
+        if (引.文本 != null) return 引.文本.transform.parent as RectTransform;
+        return null;
+    }
+
+    // 父下第 i 个叫 `名` 的子节点（预制体里烘好的行序 → 第 i 行）
+    private static RectTransform 名字行(RectTransform 父, string 名, int i)
+    {
+        if (父 == null || i < 0) return null;
+        int 计 = 0;
+        for (int k = 0; k < 父.childCount; k++)
+        {
+            var 子 = 父.GetChild(k) as RectTransform;
+            if (子 == null || 子.name != 名) continue;
+            if (计 == i) return 子;
+            计++;
+        }
+        return null;
+    }
+
+    private static int 名字行数(RectTransform 父, string 名)
+    {
+        if (父 == null) return 0;
+        int 计 = 0;
+        for (int k = 0; k < 父.childCount; k++)
+        {
+            var 子 = 父.GetChild(k);
+            if (子 != null && 子.name == 名) 计++;
+        }
+        return 计;
+    }
+
+    // 克隆一行：跟预制体走的名字/样式/尺寸；`补的行` 记账，重绑时收掉
+    private RectTransform 克隆(RectTransform 模板, RectTransform 父, string 名)
+    {
+        if (模板 == null || 父 == null) return null;
+        var 物 = Instantiate(模板.gameObject, 父, false);
+        物.name = 名;
+        物.SetActive(true);
+        补的行.Add(物);
+        return (RectTransform)物.transform;
+    }
+
+    // 新行排在上一行下面一行：行高 / 起点都取上一行的 rect（代码不写死任何数字）
+    private static void 摆下一行(RectTransform 新行, RectTransform 上一行)
+    {
+        if (新行 == null) return;
+        if (上一行 == null) { 新行.anchoredPosition = Vector2.zero; return; }
+        新行.anchoredPosition = new Vector2(上一行.anchoredPosition.x,
+                                            上一行.anchoredPosition.y - 上一行.rect.height);
+    }
+
+    // 兜底"进度"节点的摆位（只在代码补建时用；预制体里预置的节点一概不碰）
+    private static void 摆进度(RectTransform 节点)
+    {
+        if (节点 == null) return;
+        节点.anchorMin = new Vector2(0f, 0f);
+        节点.anchorMax = new Vector2(1f, 0f);
+        节点.pivot = new Vector2(0.5f, 0f);
+        节点.anchoredPosition = new Vector2(0f, 4f);
+        节点.sizeDelta = new Vector2(-24f, 4f);
+    }
+
+    // 取现成引用；没有就按名字找；名字也没有就**补建**（挂对父、名字对、组件齐，不带任何外观）
+    private TMP_Text 取或建文本(TMP_Text 现成, RectTransform 父, string 名)
+    {
+        if (现成 != null) return 现成;
+        if (父 == null) return null;
+        var 节点 = 父.Find(名) as RectTransform;
+        if (节点 == null) { 节点 = 新矩形(名, 父); 缺(名); }
+        if (节点 == null) return null;
+        var 件 = 节点.GetComponent<TMP_Text>();
+        if (件 == null) 件 = 节点.gameObject.AddComponent<TextMeshProUGUI>();
+        return 件;
+    }
+
+    private RectTransform 找或建矩形(RectTransform 父, string 名)
+    {
+        if (父 == null) return null;
+        var 现成 = 父.Find(名) as RectTransform;
+        if (现成 != null) return 现成;
+        缺(名);
+        return 新矩形(名, 父);
+    }
 
     private static RectTransform 子矩形(Transform 父, string 名)
     {
@@ -402,10 +615,10 @@ public sealed class 知识子面板 : MonoBehaviour
         return 父.Find(名) as RectTransform;
     }
 
-    private static TMP_Text 子文本(Transform 父, string 名)
+    private static GameObject 子物体(Transform 父, string 名)
     {
         var 子 = 父 != null ? 父.Find(名) : null;
-        return 子 != null ? 子.GetComponent<TMP_Text>() : null;
+        return 子 != null ? 子.gameObject : null;
     }
 
     private void 缺(string 名)
@@ -417,9 +630,19 @@ public sealed class 知识子面板 : MonoBehaviour
     private void 报缺()
     {
         if (缺的节点.Count == 0) return;
-        Debug.LogError("[知识子面板] 预制体里缺这些节点：" + string.Join("、", 缺的节点) +
-                       "。本组件**不再自建骨架** —— 请补进 `Assets/Resources/Prefab/角色面板.prefab`" +
-                       "（整备脚本：`.workbuddy/分析/角色面板-prefab整备.py`）。");
+        Debug.LogError("[知识子面板] 预制体里缺这些节点/引用：" + string.Join("、", 缺的节点) +
+                       "。缺失的引用已按名字兜底、按名字补建（挂对父、名字对、组件齐，**不带任何外观**）；" +
+                       "「高亮」这类子物体**不补建**（补出来只会是个白块），只是不改外观。" +
+                       "请在 `Assets/Resources/Prefab/角色面板.prefab` 里预置同名节点 / 在 Inspector 上接好引用。");
+    }
+
+    private RectTransform 新矩形(string 名, Transform 父)
+    {
+        if (父 == null) return null;
+        var 物体 = new GameObject(名, typeof(RectTransform));
+        物体.transform.SetParent(父, false);
+        补的行.Add(物体);
+        return (RectTransform)物体.transform;
     }
 
     private void 收掉补的行()
