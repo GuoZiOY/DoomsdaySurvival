@@ -9,8 +9,8 @@ using UnityEngine.UI;
 //   `按钮`     = 行自己的 Button（点它 = 选中这条知识）；
 //   `名称`     = 上行（书名）；
 //   `说明`     = 下行（"未入门 共 10 级…" / "3 / 10 级　还差 2 本《X》"）；
-//   `进度`     = 这条知识的**进度子物体**：代码只写 `Image.fillAmount`（= 已解锁级数 / 总级数），
-//                不写颜色、不写字号；填充色 / 底色 / 圆角 / 长度全在预制体里调；
+//   `进度`     = 这条知识的**进度滑条**（Slider）：代码只写 `.value`（= 当前累计经验 / 下一级门槛，0..1），
+//                不写颜色、不写字号、不碰 fill / handle / min / max；填充色 / 底色 / 圆角 / 长度全在预制体里调；
 //   `选中高亮` = **预制体里预置的高亮子物体**：只在"这一条是当前选中"时 `SetActive(true)`。
 [Serializable]
 public class 知识行引用
@@ -19,7 +19,7 @@ public class 知识行引用
     public Button 按钮;
     public TMP_Text 名称;
     public TMP_Text 说明;
-    public RectTransform 进度;
+    public UnityEngine.UI.Slider 进度;
     public GameObject 选中高亮;
 }
 
@@ -42,7 +42,7 @@ public class 逐级行引用
 //
 // ★ 本批口径（用户点名的两条，都要守）：
 //   ① **外观 0 行代码**：颜色、字号、尺寸一律归预制体（在 Unity 里调）。
-//      状态差异只用两样：文字内容本身 + **结构手段**（`SetActive` 预置高亮子物体 / `Image.fillAmount`）。
+//      状态差异只用两样：文字内容本身 + **结构手段**（`SetActive` 预置高亮子物体 / `Slider.value`）。
 //      原来的 `正文色/次要色/强调色/恢复色/选中底` 字段、以及每一处 `Image` / `TMP_Text` 的颜色写入
 //      **全部删掉** —— 代码里再也读不到一个颜色数值。品质色也不再由代码写进富文本（那是"代码写外貌"）。
 //      逐级行的三态（已解锁 / 下一级 / 未解锁）在预制体里只有一颗 `符` 文本，装不下三种颜色 →
@@ -98,14 +98,14 @@ public sealed class 知识子面板 : MonoBehaviour
     private string 选中标识;
     private bool 已绑;
 
-    // 左列一行：矩形 + 按钮 + 名称 + 说明 + 进度图（null = 预制体里还没有"进度"节点 → 那就只写文字）+ 选中高亮
+    // 左列一行：矩形 + 按钮 + 名称 + 说明 + 进度条（null = 行里没找到 `进度` 的 Slider → 跳过这行进度，只写文字）+ 选中高亮
     private sealed class 知识行件
     {
         public RectTransform 矩形;
         public Button 按钮;
         public TMP_Text 名称;
         public TMP_Text 说明;
-        public Image 进度图;
+        public Slider 进度条;
         public GameObject 选中高亮;
     }
 
@@ -271,7 +271,7 @@ public sealed class 知识子面板 : MonoBehaviour
             按钮 = 引.按钮,
             名称 = 取或建文本(引.名称, 矩形, "名称"),
             说明 = 取或建文本(引.说明, 矩形, "说明"),
-            进度图 = 绑进度(引.进度, 矩形),
+            进度条 = 绑进度(引.进度, 矩形, 序 + 1),
             选中高亮 = 引.选中高亮 != null ? 引.选中高亮 : 子物体(矩形, "选中高亮"),
         };
 
@@ -297,8 +297,8 @@ public sealed class 知识子面板 : MonoBehaviour
         面板基类.设文本(行.名称, 书.标识);
         // 选中 → 亮预制体里的 `选中高亮` 子物体（结构手段，代码不碰颜色）
         if (行.选中高亮 != null) 行.选中高亮.SetActive(书.标识 == 选中标识);
-        // 进度 → 只写 `fillAmount`（已解锁级数 / 总级数）；预制体里没有 `进度` 节点就只写文字
-        if (行.进度图 != null) 行.进度图.fillAmount = 总级 > 0 ? Mathf.Clamp01(级 / (float)总级) : 0f;
+        // 进度 → 只写 `.value`（0..1）＝ 该知识"当前累计经验 / 下一级门槛"；min/max/fill/handle 一概归预制体
+        if (行.进度条 != null) 行.进度条.value = 进度比例(书, 玩家, 级, 级内经验);
         if (行.说明 == null) return;
 
         if (!已掌握)
@@ -322,27 +322,37 @@ public sealed class 知识子面板 : MonoBehaviour
             : $"{级} / {总级} 级　还差 {本数} 本《{书.标识}》");
     }
 
-    // 进度：**选的是"写 `Image.fillAmount`"**（不是切"亮/暗"子物体的 SetActive）。
-    //   为什么选它：预制体里没有"亮/暗两套子物体"，而 fillAmount 只改一个数值 ——
-    //   填充色 / 底色 / 圆角 / 长度全留在预制体里，符合"外观归预制体"。
-    //   代价：`进度` 那个节点得是 Image 且 **类型 = Filled、填充方式 = Horizontal**，否则填不动
-    //   （补建的兜底节点会顺手把这两项设上；预制体里请自己设，加张精灵图才看得见）。
-    private Image 绑进度(RectTransform 现成, RectTransform 行矩形)
+    // 进度比例（0..1）＝ **当前累计经验 / 下一级门槛**。
+    //   · 没掌握（0 级）→ 0：给"还没入门"留一条空条；
+    //   · 已满级（级 >= 总级）→ 1：没有"下一级门槛"可比，直接拉满；
+    //   · 其余 → `级内经验 / 门槛[级]`（门槛[级] = 升到 级+1 的**累计**经验，与 `下一级门槛` 同源）。
+    private static float 进度比例(物品数据 书, 玩家档案 玩家, int 级, int 级内经验)
     {
-        var 节点 = 现成 != null ? 现成 : 子矩形(行矩形, "进度");
-        if (节点 == null)
+        if (级 <= 0) return 0f;
+        if (级 >= 书.知识等级.Length) return 1f;
+        int 门槛 = 下一级门槛(书, 玩家, 级);
+        if (门槛 <= 0) return 0f;   // 数据把门槛写成 0 → 分母保不住，别除出 NaN 塞给 Slider
+        return Mathf.Clamp01(级内经验 / (float)门槛);
+    }
+
+    // 进度条：**引用优先 → 行内按名字 `进度` 找（节点上或其子物体上的 Slider）→ 都没有就跳过这一行**。
+    //   为什么"都没有"不补建：补出来的 Slider 没有 Fill Area / Handle，`value` 写了界面上也不动 ——
+    //   那会让人误读成"进度就是 0"，比不显示更坏，所以宁可不写，并在 Console 点名要用户回预制体补。
+    //   ⚠ 预制体侧约定：Slider 的 min = 0 / max = 1（代码只写 .value，不碰这两项），Fill Area 里留一个 Image 当填充。
+    private Slider 绑进度(Slider 现成, RectTransform 行矩形, int 行号)
+    {
+        if (现成 != null) return 现成;
+        var 节点 = 子矩形(行矩形, "进度");
+        if (节点 != null)
         {
-            缺("知识行/进度（预制体里给每条知识行加一个进度子物体）");
-            节点 = 新矩形("进度", 行矩形);
-            if (节点 == null) return null;
-            摆进度(节点);   // 只在"补建"时摆位；预制体里预置的节点一概不碰
+            var 条 = 节点.GetComponent<Slider>();
+            if (条 == null) 条 = 节点.GetComponentInChildren<Slider>(true);   // Slider 挂在壳的子物体上也认
+            if (条 != null) return 条;
         }
-        var 图 = 节点.GetComponent<Image>();
-        if (图 == null) 图 = 节点.gameObject.AddComponent<Image>();
-        // 这两项是"让 fillAmount 生效"的功能参数（不是颜色/字号/尺寸），对外观无话可说
-        图.type = Image.Type.Filled;
-        图.fillMethod = Image.FillMethod.Horizontal;
-        return 图;
+        Debug.LogError($"[知识子面板] 第 {行号} 条知识行没有进度 Slider（引用位为空，行内也没有名为 `进度` 且挂 Slider 的节点）" +
+                       " → 这一行的进度条跳过（**不补建空 Slider**：补出来的没有 Fill/Handle，只会误导）。" +
+                       "请在 `Assets/Resources/Prefab/角色面板.prefab` 里给该行加一个 `进度` 子物体并挂 Slider（min = 0 / max = 1 + Fill Area）。");
+        return null;
     }
 
     // 升到"下一级"所需的**累计**经验；-1 = 已经满级（没有下一级）
@@ -516,7 +526,7 @@ public sealed class 知识子面板 : MonoBehaviour
         if (引.按钮 != null) return 引.按钮.transform as RectTransform;
         if (引.名称 != null) return 引.名称.rectTransform;
         if (引.说明 != null) return 引.说明.rectTransform;
-        if (引.进度 != null) return 引.进度.parent as RectTransform;
+        if (引.进度 != null) return 引.进度.transform.parent as RectTransform;
         return null;
     }
 
@@ -574,17 +584,6 @@ public sealed class 知识子面板 : MonoBehaviour
         if (上一行 == null) { 新行.anchoredPosition = Vector2.zero; return; }
         新行.anchoredPosition = new Vector2(上一行.anchoredPosition.x,
                                             上一行.anchoredPosition.y - 上一行.rect.height);
-    }
-
-    // 兜底"进度"节点的摆位（只在代码补建时用；预制体里预置的节点一概不碰）
-    private static void 摆进度(RectTransform 节点)
-    {
-        if (节点 == null) return;
-        节点.anchorMin = new Vector2(0f, 0f);
-        节点.anchorMax = new Vector2(1f, 0f);
-        节点.pivot = new Vector2(0.5f, 0f);
-        节点.anchoredPosition = new Vector2(0f, 4f);
-        节点.sizeDelta = new Vector2(-24f, 4f);
     }
 
     // 取现成引用；没有就按名字找；名字也没有就**补建**（挂对父、名字对、组件齐，不带任何外观）
