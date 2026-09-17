@@ -87,6 +87,8 @@ public sealed class 玩家档案
     public int 近战伤害 = 10, 枪械伤害 = 8, 总防御 = 5, 速度 = 10, 敏捷 = 5;
     public float 暴击概率 = 0.1f, 闪避概率 = 0.05f;
     public int 抗性百分比;
+    // 天赋标识（`战斗单位.从玩家投影` 要按「铁骨」置 `受伤乘数`）。真实档案里的同名字段见 玩家档案.cs。
+    public List<string> 天赋 = new List<string>();
     public List<string> 战斗技能槽 = new List<string>();
     public List<已学技能记录> 已学技能 = new List<已学技能记录>();
     public string 装备标识(string 槽位) => null;
