@@ -10,7 +10,13 @@ param([switch]$含Editor)
 
 $ErrorActionPreference = "Stop"
 $根 = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$artifacts = Join-Path $根 "Library\Bee\artifacts\1900b0aP.dag"
+# ★ 修：dag 目录名（原来是写死的 1900b0aP.dag）会随 Unity 重新生成 Bee 产物而变，
+#   写死就会在下次重生成后**连编译都没开始**就 throw。这里整个 artifacts 下按文件名递归找，
+#   多个 dag 目录各有一份时取最后写入时间最新的那份（最新的才是 Unity 本次编译用的）。
+$bee产物 = Join-Path $根 "Library\Bee\artifacts"
+$游戏rsp = Get-ChildItem $bee产物 -Recurse -Filter "Assembly-CSharp.rsp" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $游戏rsp) { throw "找不到 Unity 生成的 rsp：Library\Bee\artifacts\...\Assembly-CSharp.rsp（先让 Unity 编译一次：打开 Unity 让它编译一遍，Bee 就会生成它）" }
 
 function 取选项([string]$rsp路径) {
     if (-not (Test-Path $rsp路径)) { throw "找不到 Unity 生成的 rsp：$rsp路径（先让 Unity 编译一次）" }
@@ -33,7 +39,7 @@ $参数 = New-Object System.Collections.Generic.List[string]
 $参数.Add("-target:library")
 $参数.Add("-nologo")
 $参数.Add("-out:$env:TEMP\编译校验-游戏.dll")
-$参数.AddRange([string[]](取选项 (Join-Path $artifacts "Assembly-CSharp.rsp")))
+$参数.AddRange([string[]](取选项 $游戏rsp.FullName))
 $参数.AddRange([string[]](取源 (Join-Path $根 "Assets\Scripts") -排除Editor))
 
 $rsp2 = Join-Path $env:TEMP "编译校验.rsp"
@@ -44,11 +50,12 @@ $码 = $LASTEXITCODE
 if ($码 -eq 0) { Write-Output "[编译校验] 游戏程序集 exit 0 ✅" } else { Write-Output "[编译校验] 游戏程序集 exit $码 ❌" }
 
 if ($含Editor) {
-    # ★ 修（刀61）：Editor 的 rsp 在**另一个 dag 目录**里（`1900b0aE.dag`，运行时那个是 `1900b0aP.dag`），
-    #   而这里原来只在 $artifacts（= 运行时那个 dag）下找 → 永远找不到 → **静默跳过 Editor**，
+    # ★ 修（刀61）：Editor 的 rsp 在**另一个 dag 目录**里（运行时那个是 `1900b0aP.dag`），
+    #   而这里原来只在写死的运行时那个 dag 目录下找 → 永远找不到 → **静默跳过 Editor**，
     #   于是"我编过 Editor 程序集了"这句话一直是假的（Editor 脚本从没被离线校验过）。
-    #   现在整个 artifacts 下递归找，并且**找不到要大声报**（不再静默跳过）。
-    $editorRsp = Get-ChildItem (Join-Path $根 "Library\Bee\artifacts") -Recurse -Filter "Assembly-CSharp-Editor.rsp" -ErrorAction SilentlyContinue | Select-Object -First 1
+    #   现在整个 artifacts 下递归找（同样取最后写入时间最新的那份），并且**找不到要大声报**（不再静默跳过）。
+    $editorRsp = Get-ChildItem $bee产物 -Recurse -Filter "Assembly-CSharp-Editor.rsp" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if (-not $editorRsp) { Write-Output "[编译校验] ❌ 没找到 Assembly-CSharp-Editor.rsp —— Editor 脚本这次**没有被校验**（先在 Unity 里编译一次生成它）"; exit $码 }
     $参数2 = New-Object System.Collections.Generic.List[string]
     $参数2.Add("-target:library")
