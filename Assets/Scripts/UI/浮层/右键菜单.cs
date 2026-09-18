@@ -114,7 +114,7 @@ public sealed class 右键菜单 : MonoBehaviour
     }
 
     // ===== 通用入口：任意动作列表（房间层 等 非物品 场景也统一走这一个菜单）=====
-    // 条目 = (文本, 动作)；框 = 菜单贴着它的右侧（放不下自动翻左侧）
+    // 条目 = (文本, 动作)；框 = 定位参照（菜单贴它的右侧，放不下自动翻左侧）
     public bool 显示动作(IList<(string 文本, Action 动作)> 条目, RectTransform 框, float 兜底宽 = 0f)
     {
         if (菜单根 == null) return false;
@@ -132,7 +132,7 @@ public sealed class 右键菜单 : MonoBehaviour
         音效管理器.实例?.播放成功();
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();
-        定位到物品右侧(框);
+        定位到目标(框);
         return true;
     }
 
@@ -177,7 +177,7 @@ public sealed class 右键菜单 : MonoBehaviour
         音效管理器.实例?.播放成功();   // 右键呼出菜单 → 按钮成功音效
         菜单根.gameObject.SetActive(true);
         菜单根.SetAsLastSibling();   // 置顶（不被其他面板遮挡）
-        定位到物品右侧(框);
+        定位到目标(框);
     }
 
     // 详情：装备槽模式 → 信息面板.显示槽位；物品/家具模式 → 目标面板.菜单查看详情
@@ -267,11 +267,13 @@ public sealed class 右键菜单 : MonoBehaviour
         if (菜单根 != null) 菜单根.gameObject.SetActive(false);
     }
 
-    // 定位：自动计算 目标框尺寸 与 菜单尺寸，优先放 目标右侧（间距 8），右侧放不下 → 自动翻到左侧，仍放不下 → clamp 屏幕内。
-    // 纵向：菜单顶 与 目标顶 平齐（略下移），并 clamp 屏幕内。坐标统一用 世界（与 Canvas 缩放无关）。
-    private void 定位到物品右侧(RectTransform 物品框)
+    // 定位（坐标统一用世界，与 Canvas 缩放无关）：
+    //   · 横向：贴目标**右侧**（间距 8）→ 右侧放不下翻左侧 → 再夹进屏幕；
+    //   · 纵向：菜单的**上边界线**对齐**鼠标点击处**的 y（所有菜单一致）→ 再夹进屏幕。
+    // ⚠ **菜单比屏幕还高/宽时 `Mathf.Clamp` 的 min > max 会给出反的解**（菜单飞出去），所以夹取分开写。
+    private void 定位到目标(RectTransform 框)
     {
-        if (物品框 == null || 菜单根 == null) return;
+        if (框 == null || 菜单根 == null) return;
         // 强制 布局 重建：菜单 首次 激活 时 布局系统 尚未刷新 尺寸（rect 还是 旧值/0）→ 边界修正 用错 尺寸 → 位置 不准。
         // 激活后 ForceRebuild 立即 生效，尺寸 才 正确（第二次 起 布局 已 稳定，重复 重建 无 副作用）。
         LayoutRebuilder.ForceRebuildLayoutImmediate(菜单根);
@@ -279,8 +281,8 @@ public sealed class 右键菜单 : MonoBehaviour
         var 画布根 = 画布 != null ? (RectTransform)画布.transform : null;
         if (画布根 == null) return;
         // —— 自动计算尺寸（世界）——
-        float 物宽 = 物品框.rect.width * 物品框.lossyScale.x;
-        float 物高 = 物品框.rect.height * 物品框.lossyScale.y;
+        float 物宽 = 框.rect.width * 框.lossyScale.x;
+        float 物高 = 框.rect.height * 框.lossyScale.y;
         float 菜单世界宽 = 菜单根.rect.width * 菜单根.lossyScale.x;
         float 菜单世界高 = 菜单根.rect.height * 菜单根.lossyScale.y;
         const float 间距 = 8f, 安全边距 = 4f;
@@ -288,19 +290,51 @@ public sealed class 右键菜单 : MonoBehaviour
         var 屏左下 = 画布根.TransformPoint(new Vector3(画布根.rect.xMin, 画布根.rect.yMin, 0f));
         var 屏右上 = 画布根.TransformPoint(new Vector3(画布根.rect.xMax, 画布根.rect.yMax, 0f));
         float 屏左 = 屏左下.x, 屏右 = 屏右上.x, 屏底 = 屏左下.y, 屏顶 = 屏右上.y;
-        // —— 物品四边（世界；position 是 pivot 点，按 pivot 换算——物品框 pivot 为左上(0,1)）——
-        float 物右 = 物品框.position.x + 物品框.right.x * (物宽 * (1f - 物品框.pivot.x));
-        float 物左 = 物品框.position.x - 物品框.right.x * (物宽 * 物品框.pivot.x);
-        float 物顶 = 物品框.position.y + 物品框.up.y * (物高 * (1f - 物品框.pivot.y));
-        // —— x：右侧 → 左侧 → clamp ——
+        // —— 目标四边（世界；position 是 pivot 点，按 pivot 换算——UI 框多是左上(0,1) pivot）——
+        float 物右 = 框.position.x + 框.right.x * (物宽 * (1f - 框.pivot.x));
+        float 物左 = 框.position.x - 框.right.x * (物宽 * 框.pivot.x);
+        float 物顶 = 框.position.y + 框.up.y * (物高 * (1f - 框.pivot.y));
+
+        // —— x：贴目标右侧 → 放不下翻左侧 → 夹进屏幕 ——
         float 菜单左;
         if (物右 + 间距 + 菜单世界宽 <= 屏右 - 安全边距) 菜单左 = 物右 + 间距;                       // 放右侧
         else if (物左 - 间距 - 菜单世界宽 >= 屏左 + 安全边距) 菜单左 = 物左 - 间距 - 菜单世界宽;      // 翻左侧
-        else 菜单左 = Mathf.Clamp(物右 + 间距, 屏左 + 安全边距, 屏右 - 菜单世界宽 - 安全边距);         // 兜底 clamp
-        // —— y：菜单**上边界**对齐目标的中轴线（沿 x 方向那条中线，即目标竖直中点），再 clamp 屏幕内 ——
-        float 菜单顶 = Mathf.Clamp(物顶 - 物高 * 0.5f, 屏底 + 菜单世界高 + 安全边距, 屏顶 - 安全边距);
+        else 菜单左 = 物右 + 间距;                                                                 // 两边都放不下：贴右侧，下面的夹取会收回来
+        if (屏右 - 菜单世界宽 - 安全边距 < 屏左 + 安全边距) 菜单左 = 屏左 + 安全边距;                // 菜单比屏幕还宽：贴左
+        else 菜单左 = Mathf.Clamp(菜单左, 屏左 + 安全边距, 屏右 - 菜单世界宽 - 安全边距);
+
+        // —— y：菜单的**上边界线**对齐**鼠标点击处**的 y（用户定稿），再夹进屏幕 ——
+        //   为什么不用目标框：右键的意义是"我点在哪、菜单就从哪开始" —— 目标框的高度千差万别
+        //   （技能行很高、物品格很矮），贴目标的 上/中/下 都只是它的近似，鼠标位置才是准的。
+        //   取不到鼠标（没画布 / 没输入）→ 退回目标上边界，至少不会算出一个离谱的位置。
+        float 菜单顶 = 鼠标画布y(画布, 画布根, 物顶) + 内容上边距();
+        if (屏顶 - 安全边距 < 屏底 + 菜单世界高 + 安全边距) 菜单顶 = 屏顶 - 安全边距;                 // 菜单比屏幕还高：贴顶
+        else 菜单顶 = Mathf.Clamp(菜单顶, 屏底 + 菜单世界高 + 安全边距, 屏顶 - 安全边距);
+
         // —— 换算到 pivot 点（position 是 pivot；左/上边 对齐目标）——
         var 目标左上 = new Vector3(菜单左, 菜单顶, 0f);
         菜单根.position = 目标左上 + 菜单根.right * (菜单世界宽 * 菜单根.pivot.x) - 菜单根.up * (菜单世界高 * (1f - 菜单根.pivot.y));
+    }
+
+    // 菜单的**可见内容**比 rect 顶低多少（世界单位）= `VerticalLayoutGroup.padding.Top`。
+    // ★ 这就是"菜单总是比对齐线低一截"的那个参数：场景里的 `选择小菜单` 挂着 VerticalLayoutGroup
+    //   （padding Top 25 / Bottom 30）+ ContentSizeFitter，条目是**从 rect 顶往里缩 padding.top** 才开始排的
+    //   —— rect 顶对齐了鼠标，看起来的菜单位置仍然低 25px。这里补偿掉，对齐线才是"看得见的那条边"。
+    //   （用户把 padding 调成 0 时这里读到 0，自然不会重复扣。）
+    private float 内容上边距()
+    {
+        var 布局 = 菜单根.GetComponent<VerticalLayoutGroup>();
+        return 布局 != null ? 布局.padding.top * 菜单根.lossyScale.y : 0f;
+    }
+
+    // 鼠标当前所在的**画布世界 y**（菜单定位用：上边界贴鼠标点击处那个点）。
+    //   `ScreenPointToWorldPointInRectangle` 把屏幕点投到画布平面上 —— Overlay 画布相机传 null，
+    //   其余（Screen Space - Camera / World）传 画布.worldCamera（与 `点击在菜单内` 同一套口径）。
+    //   转换失败（点在画布外）返回 `兜底`。
+    private float 鼠标画布y(Canvas 画布, RectTransform 画布根, float 兜底)
+    {
+        var 相机 = 画布 != null && 画布.renderMode != RenderMode.ScreenSpaceOverlay ? 画布.worldCamera : null;
+        return RectTransformUtility.ScreenPointToWorldPointInRectangle(画布根, 输入鼠标位置(), 相机, out var 世界)
+            ? 世界.y : 兜底;
     }
 }

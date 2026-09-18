@@ -35,7 +35,8 @@ public sealed class 侧边栏面板 : MonoBehaviour
     public static 侧边栏面板 实例 { get; private set; }
 
     [SerializeField] private Button 设置按钮, 音量按钮, 暂停按钮, 存档按钮, 背包按钮, 角色按钮;
-    [SerializeField] private 设置面板 设置面板;   // 全局设置覆盖层（音量滑条；主菜单与游戏中共用）
+    // 注：设置 / 存档 两个覆盖层**不在这里留引用位** —— 开关收口在 `面板管理器`（打开设置() / 打开存档()），
+    //   本栏只是快捷方式（原来侧边栏也各拖了一份，等于同一个面板两处引用位，谁改了另一处都不知道）。
 
     // 暂停图标（暂停符号 / 继续符号）
     [SerializeField] private Image 暂停图;
@@ -67,7 +68,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
         // 战斗开始/结束 刷新按钮显隐（战斗中禁存档，见 刷新显隐）
         事件?.订阅<战斗开始事件>(_ => 刷新显隐());
         事件?.订阅<战斗结束事件>(_ => 刷新显隐());
-        设置按钮?.onClick.AddListener(() => 设置面板?.切换());
+        设置按钮?.onClick.AddListener(() => 面板管理器.实例?.打开设置());
         音量按钮?.onClick.AddListener(() => { 音效管理器.实例?.切换静音(); 刷新音量(); });
         暂停按钮?.onClick.AddListener(暂停切换);
         存档按钮?.onClick.AddListener(存档);
@@ -97,7 +98,7 @@ public sealed class 侧边栏面板 : MonoBehaviour
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, 拒));
             return;
         }
-        存档面板.打开(false);
+        面板管理器.实例?.打开存档(false);
     }
 
     // 暂停：Time.timeScale 0↔1（游戏世界冻结）；图标切换 暂停/继续

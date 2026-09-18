@@ -86,9 +86,8 @@ using UnityEngine;
             // —— 制作（工作台/灶台/医疗站：按配方 制作 物品）——
             ServiceRegistry.Register(new 工作台制作服务(事件, 数据));
 
-            // —— 对话引擎（剧情驱动）——
-            var 对话 = new DialogueService(事件, 数据, 玩家);
-            ServiceRegistry.Register(对话);
+            // 注：原有一行 `ServiceRegistry.Register(new DialogueService(事件, 数据, 玩家));` —— 本批删：
+            //   对话/剧情整条线不做（用户定稿），`DialogueService` + `显示剧情事件`/`打开结局事件` + 对话面板 一并删。
 
             // 注：原有一行 `ServiceRegistry.Register(new InventoryService(事件, 玩家));` —— v51 刀7c 删：
             // InventoryService 是**唯一确证的死服务**（注册了但全仓库 0 调用；物品增删查都走 玩家档案/持有管理器）。
@@ -105,7 +104,7 @@ using UnityEngine;
             // 自动存档器：订阅跨天/主线/战斗结束/返回主菜单 自动保存（须在业务服务之后注册）
             ServiceRegistry.Register(new 自动存档器(事件, ServiceRegistry.Get<SaveService>(), 玩家));
 
-            Debug.Log($"[GameBootstrap] 核心服务装配完成：剧情 {数据.剧情.Count} / 敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 大世界 {数据.世界.Count}");
-            // UI 由场景「UI管理器」组件装配与驱动（主菜单/剧情/设施面板均由它切换显示）
+            Debug.Log($"[GameBootstrap] 核心服务装配完成：敌人 {数据.敌人.Count} / 物品 {数据.物品.Count} / 技能 {数据.技能.Count} / 任务 {数据.任务.Count} / 大世界 {数据.世界.Count}");
+            // UI 由场景「UI管理器」组件装配与驱动（主菜单/探索 面板均由它切换显示）
         }
     }

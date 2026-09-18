@@ -1,6 +1,6 @@
 // UI 导航事件：逻辑层只发事件，UI 管理器订阅后切换/填充面板（保持逻辑不碰 UI）
-// 注：原有的 `打开设施事件`（设施标识 + 返回节点）与 `打开功能面板事件`（设施逻辑 + 功能标识）
-//     随 v51 刀7e 的**设施子系统整体退役**一起删 —— 前者 0 订阅、后者从未被发布。
+// 注：原有的 `打开设施事件` / `打开功能面板事件`（设施子系统，v51 刀7e 退役）、
+//     `打开对话事件` / `打开任务面板事件` / `打开结局事件` / `显示剧情事件`（对话与剧情整条线不做）都已删。
 
 // 打开战斗面板
 public readonly struct 打开战斗事件
@@ -8,9 +8,6 @@ public readonly struct 打开战斗事件
     public readonly string 返回节点;
     public 打开战斗事件(string 返回节点) { this.返回节点 = 返回节点; }
 }
-
-// 打开结局面板
-public readonly struct 打开结局事件 { }
 
 // 打开主菜单面板
 public readonly struct 打开主菜单事件 { }
@@ -20,16 +17,6 @@ public readonly struct 打开角色面板事件 { }
 
 // 打开营地面板（安全屋：返回营地/进入营地 时）
 public readonly struct 打开营地事件 { }
-
-// 打开任务面板（全局）——侧边栏「任务」按钮调出 系统任务面板（主线/支线/日常）
-public readonly struct 打开任务面板事件 { }
-
-// 打开对话：进入剧情节点（NPC 交谈用）
-public readonly struct 打开对话事件
-{
-    public readonly string 剧情节点;
-    public 打开对话事件(string 剧情节点) { this.剧情节点 = 剧情节点; }
-}
 
 // —— 地图导航事件 ——
 

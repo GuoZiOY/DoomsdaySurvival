@@ -10,7 +10,8 @@ public sealed class 主菜单面板 : 面板基类
     [SerializeField] private Button 继续按钮;
     [SerializeField] private Button 设置按钮;
     [SerializeField] private Button 退出按钮;
-    [SerializeField] private 设置面板 设置面板;   // 全局设置覆盖层（主菜单与游戏中共用），可空（未接线则设置按钮隐藏）
+    // 注：设置 / 存档 两个覆盖层**不在这里留引用位** —— 开关收口在 `面板管理器`（打开设置() / 打开存档()），
+    //   主菜单只是快捷方式（原来这里也各拖了一份，同一个面板两处引用位）。
 
     void Awake()
     {
@@ -22,10 +23,9 @@ public sealed class 主菜单面板 : 面板基类
 
     protected override void 刷新(object 上下文)
     {
-        // 每次显示主菜单：刷新"继续"可用状态 + 设置按钮显隐
+        // 每次显示主菜单：刷新"继续"可用状态
         bool 有存档 = ServiceRegistry.Get<SaveService>()?.有任何可读存档() ?? false;
         if (继续按钮 != null) 继续按钮.interactable = 有存档;
-        if (设置按钮 != null) 设置按钮.gameObject.SetActive(设置面板 != null);
     }
 
     // 开始新游戏：打开 角色创建面板（确认后才真正创建档案）
@@ -57,13 +57,13 @@ public sealed class 主菜单面板 : 面板基类
             ServiceRegistry.Get<EventBus>()?.发布(new 日志事件(日志类型.警告, "没有可继续的存档。"));
             return;
         }
-        存档面板.打开(true);
+        面板管理器.实例?.打开存档(true);
     }
 
     // 设置：打开全局设置面板
     private void 打开设置()
     {
-        设置面板?.打开();
+        面板管理器.实例?.打开设置();
     }
 
     // 退出游戏

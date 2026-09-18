@@ -10,7 +10,7 @@ using UnityEngine;
         private readonly EventBus 事件;
 
         // 各数据表（可读写，供校验/测试注入）
-        public Dictionary<string, 剧情节点> 剧情 { get; private set; } = new Dictionary<string, 剧情节点>();
+        // 注：原有 `剧情`（story）字典 —— 对话/剧情整条线不做（用户定稿），模型/加载/校验本批一并删。
         public Dictionary<string, 敌人数据> 敌人 { get; private set; } = new Dictionary<string, 敌人数据>();
         public Dictionary<string, 敌人特性定义> 敌人特性表 { get; private set; } = new Dictionary<string, 敌人特性定义>();   // 刀45：敌人词缀（只随机）
         public Dictionary<string, 物品数据> 物品 { get; private set; } = new Dictionary<string, 物品数据>();
@@ -95,7 +95,6 @@ using UnityEngine;
         // 统一加载入口：文件名 -> 目标字典 -> 根对象中提取数组
         private void 加载全部()
         {
-            加载("story", 剧情, (剧情根 根) => 根.节点);
             加载("enemies", 敌人, (敌人根 根) => 根.敌人);
             加载("敌人特性", 敌人特性表, (敌人特性根 根) => 根.特性);   // 刀45：敌人词缀表（允许缺失 → 敌人就没有词缀）
             加载物品();   // items.json 已按类型拆分多文件（便于查看修改），全部合并进 物品 字典
@@ -229,47 +228,8 @@ using UnityEngine;
             //   等哪天真在 Unity 里验过一遍"没有任何 加载异常"，再考虑升级成 校验错误。
             if (加载异常.Count > 0) 校验警告.AddRange(加载异常);
 
-            // —— 剧情：选项目标 / 强制战斗敌人 / 下一节点 ——
-            foreach (var (标识, 节点) in 剧情)
-            {
-                if (节点.选项 != null)
-                    foreach (var 选项 in 节点.选项)
-                    {
-                        if (string.IsNullOrEmpty(选项.目标)) continue;
-                        // 特殊目标跳过：**只列 DialogueService.处理选项 真正认的那几个前缀**（战斗: / 地图: / __）。
-                        // v51 刀7e 收紧了这份名单：原来还含 设施: / 探索: / 区域: / 任务: / 购买: / 学习: ——
-                        // 那些系统的服务/指令**都已经删了**，现在还写它们只会落到 进入节点() 然后报"节点不存在"。
-                        // 与其静默跳过（让作者以为它有用），不如让校验把它报成"目标不存在"。
-                        else if (!选项.目标.StartsWith("战斗:") && !选项.目标.StartsWith("地图:") &&
-                                 !选项.目标.StartsWith("__") &&
-                                 !剧情.ContainsKey(选项.目标))
-                        {
-                            校验错误.Add($"剧情[{标识}] → 节点[{选项.目标}] 不存在");
-                        }
-                        // 战斗:敌人组:胜利节点[:助战组] —— 敌人组/助战组 存在性
-                        if (选项.目标.StartsWith("战斗:"))
-                        {
-                            var 部分 = 选项.目标.Split(':');
-                            if (部分.Length >= 2 && !敌人组.ContainsKey(部分[1]))
-                                校验错误.Add($"剧情[{标识}] → 战斗敌人组[{部分[1]}] 不存在");
-                            if (部分.Length >= 4 && !string.IsNullOrEmpty(部分[3]) && !助战组.ContainsKey(部分[3]))
-                                校验错误.Add($"剧情[{标识}] → 助战组[{部分[3]}] 不存在");
-                        }
-                    }
-                // 强制战斗
-                if (!string.IsNullOrEmpty(节点.战斗))
-                {
-                    var 部分 = 节点.战斗.Split(':');
-                    if (部分.Length >= 2 && !敌人.ContainsKey(部分[1]))
-                        校验错误.Add($"剧情[{标识}] 战斗敌人[{部分[1]}] 不存在");
-                }
-                // 下一节点（剧情链自动播放）
-                if (!string.IsNullOrEmpty(节点.下一节点) && !剧情.ContainsKey(节点.下一节点))
-                    校验错误.Add($"剧情[{标识}] → 下一节点[{节点.下一节点}] 不存在");
-            }
-
-            // —— 注：原有一段「区域剧情路由」校验（区域模板/节点/需要物品/需要任务 是否存在）——
-            //    v51 刀7b 随 区域剧情路由 一起删（它挂在已删的 主线阶段 上，消费者 地图服务 也早已退役）。
+            // —— 注：原有一段「剧情」校验（选项目标 / 强制战斗敌人组 / 下一节点 是否存在）——
+            //    随对话/剧情整条线一起删（用户定稿：不做）。`story.json` 本来就不存在，那批数据从没落地过。
 
             // —— 助战组：引用的伙伴单位存在 ——
             foreach (var (标识, 组) in 助战组)

@@ -221,4 +221,8 @@ public sealed class 音效管理器 : MonoBehaviour
     public void 设置搜索中音量(int 音量) { 搜索中音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置装备音量(int 音量) { 装备音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置家具放下音量(int 音量) { 家具放下音量 = Mathf.Clamp(音量, 0, 10); }
+
+    // 读初值用（设置面板打开时把滑条同步成当前值）—— 写入口仍然只有上面那些 `设置XX音量`。
+    public int 背景音乐音量当前 => 背景音乐音量;
+    public int 通用音效音量当前 => 通用音效音量;
 }
