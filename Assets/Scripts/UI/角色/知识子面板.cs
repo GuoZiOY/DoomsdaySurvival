@@ -100,6 +100,10 @@ public sealed class 知识子面板 : MonoBehaviour
     //   （新旧两份还并存一帧）—— 常驻节点（默认隐藏）则只写一次文本、之后只切显隐。
     private TMP_Text 空列表文本;
 
+    // "行模板里没有文本节点"这条 LogWarning 的**一次性开关**（static：配置问题的结论与具体哪个实例无关，
+    //   13 行/多个面板实例只喊一条）。为什么要挡：`空列表文本` 在那种情况下永远是 null，不挡就会每次重算喊一条。
+    private static bool 已喊过缺文本节点;
+
     // 领域 = **标识白名单**（用户定稿）。为什么用白名单而不是猜：领域是给人看的归类词，
     //   猜（比如取"制作"前缀）一定会把新书归错类；白名单里没有的就留空（宁可不写，也不写个错的）。
     private static readonly Dictionary<string, string> 领域表 = new Dictionary<string, string>
@@ -324,7 +328,15 @@ public sealed class 知识子面板 : MonoBehaviour
         刷详情(玩家, 库);
     }
 
-    // 空列表兜底：场景里若有名为"暂无知识"的常驻节点就写它；否则**克隆一次模板行、清掉里面的子节点**当纯文本容器。
+    // 空列表兜底：场景里若有名为"暂无知识"的常驻节点就写它；否则**克隆一次模板行**、只留里面那个文本节点当纯文本容器。
+    //   ⚠ **顺序要紧**（照 `技能子面板.备空列表` 已修好的写法移植，本批修同一个 NullReferenceException）：
+    //     **先认领模板里的文本节点，再清掉其余子节点**。旧写法是"先把克隆的子节点全 `Destroy` 掉、
+    //     再给行根 `AddComponent<TextMeshProUGUI>()`"，随后写 `.text` 就炸在那一行 —— 行根是 Button/Image，
+    //     **临时 Add 出来的 TMP 组件没有经过 Unity 初始化，没有字体/材质/排版状态**（模板里那个真文本节点
+    //     反过来是安全的：它在预制体里就被初始化过，列表行长年也在对同一个节点写文本）。
+    //     于是现在：文本节点就地沿用（连它的父链一起留着，锚点/字号/颜色/布局都不动），其余兄弟节点丢掉。
+    //   ⚠ 模板里连一个文本节点都没有 → **直接不建**（**绝不** `AddComponent`，那正是上面那条崩溃的根因），
+    //     只喊一条 LogWarning —— 宁可没有兜底字，也不许为了"把字显示出来"再造一次同样的炸。
     // 为什么不用基类那个"建一行纯文字标签"的工具：它每次刷新新建一个 TMP 对象（字体 unload/reload + 新旧两份并存的闪），
     //   而"暂无知识"这句话**完全不随档变** —— 常驻一份才对。
     private void 备空列表()
@@ -332,14 +344,42 @@ public sealed class 知识子面板 : MonoBehaviour
         if (空列表文本 != null) return;
 
         var 现成 = 找节点(列表内容, 名空列表);
-        if (现成 != null) { 空列表文本 = 现成.GetComponent<TMP_Text>(); if (空列表文本 != null) return; }
+        if (现成 != null)
+        {
+            // 用户放的兜底节点：文本可能在它自己身上，也可能在它的子节点里（两种都认）
+            空列表文本 = 现成.GetComponent<TMP_Text>() ?? 现成.GetComponentInChildren<TMP_Text>(true);
+            if (空列表文本 != null) return;
+        }
+
+        // 模板里连一个文本节点都没有 → 兜底字没处写，**直接不建**（不硬 AddComponent，见上面的 ⚠）。
+        // ⚠ 这种"接错模板"是**编辑器配置问题**、不是运行期状态：`空列表文本` 会一直是 null，于是每次重算都会走到这里，
+        //   不挡一下就会"切一次页喊一条"。照 `技能行`/`知识行` 那条口径用 static 标志**只喊一条**（配置改好之前
+        //   "有没有这个毛病"这个结论不会变，喊第二遍也不会让人多知道什么）。
+        if (知识行模板 == null || 知识行模板.GetComponentInChildren<TMP_Text>(true) == null)
+        {
+            if (!已喊过缺文本节点)
+            {
+                已喊过缺文本节点 = true;
+                Debug.LogWarning("[知识子面板] 知识行模板里没有文本节点，无法显示空列表提示（缺 " + 名空列表 +
+                                 "）：请把 `知识行模板` 接成一个带 TMP 文本节点的行模板，或在列表容器下自己摆一个名为「" +
+                                 名空列表 + "」的常驻节点。本页照常运行，只是空列表时没有任何提示。");
+            }
+            return;
+        }
 
         var 克隆 = 面板基类.创建模板<Transform>(列表内容, 知识行模板);
         if (克隆 == null) return;
         克隆.name = 名空列表;
-        for (int i = 克隆.childCount - 1; i >= 0; i--) Destroy(克隆.GetChild(i).gameObject);   // 清空行内容：只留一个空文本容器
-        var 文本 = 克隆.GetComponent<TMP_Text>();
-        if (文本 == null) 文本 = 克隆.gameObject.AddComponent<TextMeshProUGUI>();
+
+        var 文本 = 克隆.GetComponent<TMP_Text>() ?? 克隆.GetComponentInChildren<TMP_Text>(true);
+        if (文本 == null) return;   // 上面查过模板，理论上到不了；保险起见不往下走
+
+        for (int i = 克隆.childCount - 1; i >= 0; i--)
+        {
+            var 子 = 克隆.GetChild(i);
+            if (子 == 文本.transform || 文本.transform.IsChildOf(子)) continue;   // 留着那个文本节点（多半就在子节点上），连带它的父链
+            Destroy(子.gameObject);
+        }
         文本.text = 名空列表;       // 字号/颜色沿用模板（本类不碰外观）
         空列表文本 = 文本;
     }
