@@ -40,7 +40,7 @@ public sealed class 主菜单面板 : 面板基类
             var 玩家 = ServiceRegistry.Get<PlayerService>();
             玩家.待选职业 = "退役军人";
             玩家.待选天赋.Clear();
-            玩家.待选天赋.Add("战术本能");
+            玩家.待选天赋.Add("战斗直觉");
             玩家.新游戏();
             ServiceRegistry.Get<大世界探索服务>()?.打开默认世界();
         }

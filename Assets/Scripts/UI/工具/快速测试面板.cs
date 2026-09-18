@@ -481,7 +481,7 @@ public sealed class 快速测试面板 : MonoBehaviour
     {
         if (数据() == null || 档案() == null || 事件() == null) return;
         int 已加 = 0;
-        foreach (var 标识 in new[] { "初级美食制作", "中级美食制作" })
+        foreach (var 标识 in new[] { "初级美食手册", "初级近战指南", "初级制作" })
             if (数据().物品.ContainsKey(标识))
                 已加 += 档案().放入物品(标识, 1);
         事件().发布(new 背包变化事件("", 0, 变化原因.获得));
@@ -766,7 +766,7 @@ public sealed class 快速测试面板 : MonoBehaviour
         if (!数据().敌人组.ContainsKey(敌人组)) { 日志($"[测试] 敌人组 {敌人组} 不存在。", true); return; }
         随机装备武器防具();
         // 补 测试 技能包：学习 + 强制 上槽（槽满 顶 末位；想换 组合 改 此 数组 即可）
-        var 测试技能包 = new[] { "重击", "蓄力重斩", "砸晕", "破甲斩", "绷带包扎", "推进" };
+        var 测试技能包 = new[] { "重击", "蓄力重斩", "骨折", "破甲", "包扎止血", "冲刺" };
         var 测试槽 = 档案().战斗技能槽;
         if (测试槽 == null) 测试槽 = 档案().战斗技能槽 = new System.Collections.Generic.List<string>();
         foreach (var 标识 in 测试技能包)
