@@ -2,7 +2,7 @@
 
 > 城市陷落后的第 87 天。水与电早已消失，街上只剩丧尸与废墟。你是安全屋最后醒着的人——活下去，是唯一的任务。
 
-**游戏演示视频（B 站）**：[\[27届\] Unity 类塔科夫式文字游戏 Demo 演示](https://www.bilibili.com/video/BV1t4eh6REBr) ｜ **仓库**：<https://github.com/GuoZiOY/DoomsdaySurvival>
+**游戏演示视频（B 站）**：[\[27届\] Unity 类塔科夫式文字游戏 Demo 演示](https://www.bilibili.com/video/BV1t4eh6REBr)
 
 Unity 6（6000.4.8f1 / URP）｜ 塔科夫式网格背包 ｜ 即时制行动条战斗 ｜ 五层格子世界 ｜ 全 JSON 数据驱动 ｜ 纯 C# 领域层（可脱离引擎离线验证）｜ **全项目中文编码**（类/方法/字段/参数/注释/数据键名均为中文）
 
