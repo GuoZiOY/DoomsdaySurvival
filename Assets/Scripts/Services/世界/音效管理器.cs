@@ -58,6 +58,15 @@ public sealed class 音效管理器 : MonoBehaviour
     public static float 当前音量 { get; private set; } = 1f;
     public bool 已静音 { get; private set; }
 
+    // —— 音量设置的持久化：**PlayerPrefs** ——
+    // 就是 Unity 自带的那套"全局玩家偏好"存储（Windows = 注册表、macOS = plist、Android/iOS = 应用私有配置），
+    //   正是给 音量/分辨率 这类**全局设置**用的：它不属于任何一局存档，也不该跟着坏档一起丢。
+    //   ⚠ `存档文件` 文件头那条"为什么不用 PlayerPrefs"讲的是**存档槽**（要可备份 / 可多份 / 可 diff /
+    //     不怕玩家清注册表）—— 与"音量"这种全局偏好是两件事，两处口径不冲突。
+    private const string 键全局音量 = "音量.全局";
+    private const string 键音乐音量 = "音量.音乐";
+    private const string 键音效音量 = "音量.音效";
+
     void Awake()
     {
         if (实例 != null && 实例 != this) { Destroy(gameObject); return; }
@@ -66,6 +75,7 @@ public sealed class 音效管理器 : MonoBehaviour
         音效源 = 配置源(true);
         搜索源 = 配置源(true);
         搜索源.loop = true;   // 搜索 进行中 循环（Play 时 设 clip）
+        载入音量设置();
         AudioListener.volume = 已静音 ? 0f : 当前音量;
     }
 
@@ -200,7 +210,21 @@ public sealed class 音效管理器 : MonoBehaviour
     {
         当前音量 = Mathf.Clamp01(音量);
         if (!已静音) AudioListener.volume = 当前音量;
+        PlayerPrefs.SetInt(键全局音量, Mathf.RoundToInt(当前音量 * 10f));   // 只写内存，落盘见 保存音量设置()
     }
+
+    // 启动时读回三个音量（没存过就按满 10，与 Inspector 默认一致）
+    private void 载入音量设置()
+    {
+        设置音量(PlayerPrefs.GetInt(键全局音量, 10) / 10f);
+        设置背景音乐音量(PlayerPrefs.GetInt(键音乐音量, 10));
+        设置通用音效音量(PlayerPrefs.GetInt(键音效音量, 10));
+    }
+
+    // 落盘：`PlayerPrefs.SetInt` 只写内存（Unity 默认在退出时统一写盘）—— 设置面板关闭时显式存一次，
+    //   免得"拖完滑条直接退出 / 编辑器里停 Play"丢掉。
+    //   ⚠ **不要**把它塞进上面三个 setter：滑条拖动是**每帧**回调，那就是每帧一次写盘。
+    public void 保存音量设置() => PlayerPrefs.Save();
 
     // 整数 0~10 → 音量 0~1（各音效独立音量换算）
     private static float 换算(int 整数值) => Mathf.Clamp(整数值, 0, 10) / 10f;
@@ -210,11 +234,12 @@ public sealed class 音效管理器 : MonoBehaviour
     {
         背景音乐音量 = Mathf.Clamp(音量, 0, 10);
         if (音乐源 != null) 音乐源.volume = 换算(背景音乐音量);
+        PlayerPrefs.SetInt(键音乐音量, 背景音乐音量);
     }
 
     public void 设置按钮成功音量(int 音量) { 按钮成功音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置按钮错误音量(int 音量) { 按钮错误音量 = Mathf.Clamp(音量, 0, 10); }
-    public void 设置通用音效音量(int 音量) { 通用音效音量 = Mathf.Clamp(音量, 0, 10); }
+    public void 设置通用音效音量(int 音量) { 通用音效音量 = Mathf.Clamp(音量, 0, 10); PlayerPrefs.SetInt(键音效音量, 通用音效音量); }
     public void 设置拿起音量(int 音量) { 拿起音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置放下音量(int 音量) { 放下音量 = Mathf.Clamp(音量, 0, 10); }
     public void 设置搜索音量(int 音量) { 搜索音量 = Mathf.Clamp(音量, 0, 10); }

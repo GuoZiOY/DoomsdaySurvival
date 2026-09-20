@@ -48,6 +48,10 @@ public sealed class 设置面板 : MonoBehaviour
     // 关闭：失活
     public void 关闭() => gameObject.SetActive(false);
 
+    // 失活即落盘一次：关闭按钮 / 返回主菜单 / 被 `面板管理器.收起覆盖层` 收掉 / 退出游戏 —— 全都会经过这里。
+    //   拖动滑条时只在内存里攒（`PlayerPrefs.SetInt`），真正写盘只在这一下。
+    void OnDisable() => 音效管理器.实例?.保存音量设置();
+
     // 返回主菜单：走 `面板管理器.回主菜单()` —— 它会顺手把本覆盖层收掉（见 面板管理器.收起覆盖层）
     private void 返回主菜单() => 面板管理器.实例?.回主菜单();
 

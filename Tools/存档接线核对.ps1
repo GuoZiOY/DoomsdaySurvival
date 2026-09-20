@@ -161,12 +161,16 @@ if ($自动 -match '保存\(\s*[1-9]') { 报错 "自动存档器 里出现了写
 
 # ---------- 7. 入口唯一：存档面板只从一处打开 ----------
 Write-Output "[7] 存档面板 的入口（侧边栏「存档」/ 主菜单「继续」都必须走它，不许各自直连 SaveService）"
+# ★ 刀103 起入口挪到 `面板管理器.打开存档(bool 读取模式)`：覆盖层（设置/存档）的开关**收口在面板管理器**，
+#   面板引用位也只在管理器那一处 —— 侧边栏/主菜单不再各自拖一份存档面板引用。
+#   所以本段改成数"调用 打开存档( 的文件"，并另判管理器里确实有这个入口。
 $面板调用 = @()
 foreach ($f in $全部cs) {
-    if ($f.Name -eq "存档面板.cs") { continue }
-    if ([IO.File]::ReadAllText($f.FullName, [Text.Encoding]::UTF8).Contains("存档面板.打开(")) { $面板调用 += $f.Name }
+    if ($f.Name -eq "存档面板.cs" -or $f.Name -eq "面板管理器.cs") { continue }
+    if ([IO.File]::ReadAllText($f.FullName, [Text.Encoding]::UTF8).Contains("打开存档(")) { $面板调用 += $f.Name }
 }
-if ($面板调用.Count -lt 2) { 报错 ("存档面板.打开() 的调用方只有 {0} 个（{1}）—— 侧边栏与主菜单都该走它" -f $面板调用.Count, ($面板调用 -join ", ")) }
+if ($面板调用.Count -lt 2) { 报错 ("打开存档() 的调用方只有 {0} 个（{1}）—— 侧边栏与主菜单都该走它" -f $面板调用.Count, ($面板调用 -join ", ")) }
+if (-not (读 "Assets\Scripts\UI\框架\面板管理器.cs").Contains("public void 打开存档(")) { 报错 "面板管理器 里没有 打开存档(...) —— 入口唯一这条口径就断了" }
 $主菜单 = 读 "Assets\Scripts\UI\主菜单\主菜单面板.cs"
 if ($主菜单.Contains("玩家.读档()")) { 报错 "主菜单面板 还在直接调 玩家.读档() —— 绕过存档面板就选不了槽、也看不见坏档" }
 
